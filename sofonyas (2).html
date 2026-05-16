@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="am">
+<head>
+    <meta charset="UTF-8">
+    <title>የሶፎንያስ ድር ገፅ</title>
+    <link rel="stylesheet" href="sofonyas (1).css">
+    
+</head>
+<body>
+    <nav>
+        <ul>
+            <li><a href="https://t.me/+Bqeu85XkOu4yMzFk">Home</a></li>
+            <li><a href="#about">About</a></li>
+            <li><a href="#view">View</a></li>
+            <li><a href="contact.html">Contact</a></li>
+        </ul>
+    </nav>
+
+<header>
+       <div id="logo">
+    <img src="10 .jpg" alt="sofi" class="logo-img">
+   </div> 
+
+    <h1>እንኳን ወደ ቤተ ገብርኤል በደህና መጡ!</h1>
+    <p>ይህ የመቅደላ አምባ ዩኒቨርሲቲ ቤተ ገብርኤል ድር ገፅ ነው</p>
+<section>
+</header>
+
+    <div class="card">
+        <h2>ስለ ቤተ ገብርኤል</h2>
+        <p>ቤተ ገብርኤል በመቅደላ አምባ ዩኒቨርሲቲ በፈለገ ሰላም አዲስ አምባ ግቢ ጉባኤ የቤተሰብ እናት አባት አደረጃጀት ውስጥ አንዱና ተናፋቂው ቡድን ነው</p>
+    </div>
+
+    <div class="card">
+        <h2>በዚህ ዌቭሳይት የሚካተቱ ትምህርቶች</h2>
+        <ul>
+            <li>ነገረ ሃይማኖት</li>
+            <li>ስርዓተ ቤተ ክርስቲያን</li>
+            <li>ነገረ ቅባት</li>
+        </ul>
+    </div>
+
+
+<section class="card contact-form">
+<h3>እንኳን ወደ ቤተ ገብርኤል በደህና መጡ!</h3>
+<form id="contactForm" novalidate>
+<label for="name">ስም</label>
+<input id="name" name="name" required placeholder="ስምዎን እዚህ ያስገቡ"><br><br>
+
+
+<label for="email">ኢሜይል</label>
+<input id="email" name="email" type="email" required placeholder="እባክዎ ኢሜይዎን ያስገቡ"><br><br>
+
+<label for="የተማሪው መለያ ቁጥር">የተማሪው መለያ ቁጥር</label>
+   <input type="text" id="የተማሪው መለያ ቁጥር" name="የተማሪው መለያ ቁጥር" placeholder="እባክዎ መለያ ቁጥር ያስገቡ" required>
+
+
+
+
+
+<div class="controls"><br>
+
+<button type="submit" id="resetBtn" class="button  ">ግባ</button>&nbsp &nbsp &nbsp &nbsp &nbsp;
+<button type="reset" id="clearAll" class="button">አጥፋ</button>
+</div>
+</form>
+<div id="formMsg" class="small" aria-live="polite" style="margin-top:10px"></div>
+</section>
+</main>
+
+
+
+
+<script>
+  const contactForm = document.getElementById('contactForm');
+  const emailInput = document.getElementById('email');
+  const formMsg = document.getElementById('formMsg');
+
+  function showMessage(message, isError = true) {
+    formMsg.textContent = message;
+    formMsg.style.color = isError ? 'red' : 'green';
+  }
+
+  emailInput.addEventListener('input', () => {
+    if (emailInput.validity.typeMismatch) {
+      emailInput.setCustomValidity('እባክዎ ትክክለኛ ኢሜይል ያስገቡ።');
+    } else if (emailInput.validity.valueMissing) {
+      emailInput.setCustomValidity('እባክዎ ኢሜይል ያስገቡ።');
+    } else {
+      emailInput.setCustomValidity('');
+    }
+  });
+
+  contactForm.addEventListener('submit', function (event) {
+    if (!contactForm.checkValidity()) {
+      event.preventDefault();
+      if (emailInput.validity.typeMismatch) {
+        showMessage('ይህ ኢሜይል አድራሻ ትክክል አይደለም።');
+      } else if (emailInput.validity.valueMissing) {
+        showMessage('እባክዎ ኢሜይል ያስገቡ።');
+      } else {
+        showMessage('እባክዎ ቅጽዎን በትክክል ይሙከሩ።');
+      }
+    } else {
+      event.preventDefault();
+      showMessage('የቅጽ ማረጋገጫ ተሳክቷል።', false);
+    }
+  });
+</script>
+
+
+    <div class="card">
+        <h2>እባክዎ ያነጋግሩኝ</h2>
+        <p>Email:yilkaldemeke21@gmail.com</p>
+    </div>
+
+    <footer>
+      <p><b>ይህ ዌቭሳይት የተሰራው በዲ/ን ሶፎንያስ ደመቀ(ወ/ጊዮርጊስ) ነው።</b></p>
+ </footer>
+</section>
+</body>
+</html>
