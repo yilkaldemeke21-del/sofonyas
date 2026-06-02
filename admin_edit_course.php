@@ -29,12 +29,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $description = safe($_POST['description'] ?? '');
     $price = (float)($_POST['price'] ?? 0);
     $instructor = safe($_POST['instructor'] ?? '');
+    $pdf_file = $course['pdf_file'];
+    $uploadDir = __DIR__ . '/uploads/course_pdfs';
 
-    if ($course_name && $course_code) {
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0755, true);
+    }
+
+    if (!empty($_FILES['course_pdf']['name'])) {
+        $file = $_FILES['course_pdf'];
+        $allowedExt = ['pdf'];
+        $fileExt = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            $error = 'PDF የወረደ ጊዜ ስህተት ነበር።';
+        } elseif (!in_array($fileExt, $allowedExt, true)) {
+            $error = 'እባክዎ ፒዲኤፍ ብቻ ይምረጡ።';
+        } else {
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+            $mimeType = $finfo->file($file['tmp_name']);
+            if ($mimeType !== 'application/pdf') {
+                $error = 'ፋይሉ ፒዲኤፍ አይደለም።';
+            } else {
+                $filename = time() . '_' . bin2hex(random_bytes(5)) . '.' . $fileExt;
+                $destination = $uploadDir . '/' . $filename;
+
+                if (!move_uploaded_file($file['tmp_name'], $destination)) {
+                    $error = 'PDF ፋይሉን ማንቀሳቀስ አልተቻለም።';
+                } else {
+                    if ($course['pdf_file'] && file_exists(__DIR__ . '/' . $course['pdf_file'])) {
+                        @unlink(__DIR__ . '/' . $course['pdf_file']);
+                    }
+                    $pdf_file = 'uploads/course_pdfs/' . $filename;
+                }
+            }
+        }
+    }
+
+    if (!$error && $course_name && $course_code) {
         try {
             $stmt = $pdo->prepare(
                 'UPDATE courses SET course_name = :course_name, course_code = :course_code, 
-                 description = :description, price = :price, instructor = :instructor 
+                 description = :description, price = :price, instructor = :instructor, pdf_file = :pdf_file 
                  WHERE id = :id'
             );
             $stmt->execute([
@@ -43,6 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':description' => $description,
                 ':price' => $price,
                 ':instructor' => $instructor,
+                ':pdf_file' => $pdf_file,
                 ':id' => $course_id,
             ]);
             $success = 'ኮርስ በስኬት ተሻሽሏል።';
@@ -54,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (Exception $e) {
             $error = 'ስህተት: ' . $e->getMessage();
         }
-    } else {
+    } elseif (!$error) {
         $error = 'እባክዎ ሁሉንም አስገዳጅ መስኮች ይሙሉ።';
     }
 }
@@ -101,7 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="success"><?php echo $success; ?></div>
         <?php endif; ?>
         
-        <form method="post">
+        <form method="post" enctype="multipart/form-data">
             <div class="form-group">
                 <label for="course_name">የኮርስ ስም *</label>
                 <input type="text" id="course_name" name="course_name" value="<?php echo safe($course['course_name']); ?>" required>
@@ -126,6 +163,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label for="instructor">አስተማሪ</label>
                 <input type="text" id="instructor" name="instructor" value="<?php echo safe($course['instructor']); ?>">
             </div>
+
+            <div class="form-group">
+                <label for="course_pdf">PDF እቃ ይጨምሩ</label>
+                <input type="file" id="course_pdf" name="course_pdf" accept="application/pdf">
+            </div>
+
+            <?php if (!empty($course['pdf_file'])): ?>
+                <div class="form-group">
+                    <label>አሁን ያለው PDF</label>
+                    <p><a href="<?php echo safe($course['pdf_file']); ?>" target="_blank">PDF እይ</a></p>
+                </div>
+            <?php endif; ?>
             
             <button type="submit">ይህን ኮርስ ይህን ማስተካከል</button>
         </form>

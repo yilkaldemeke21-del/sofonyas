@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS `courses` (
   `description` TEXT,
   `price` DECIMAL(10,2) NOT NULL DEFAULT 0,
   `instructor` VARCHAR(255),
+  `pdf_file` VARCHAR(255) DEFAULT NULL,
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -39,5 +40,23 @@ CREATE TABLE IF NOT EXISTS `students` (
   `password_hash` VARCHAR(255) NOT NULL,
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO `students` (`name`, `email`, `student_id`, `password_hash`) VALUES (
+  'Yilkal Demeke',
+  'yilkaldemeke21@gmail.com',
+  '27',
+  '$2y$10$oaASCPbpzgJumFdhtnZ5.e0VeyFpxH6IUTAwsTIHVKMuo4U6wyera'
+);
+
+INSERT IGNORE INTO `registrations` (`id`, `name`, `email`, `student_id`, `course`, `amount`, `payment_status`, `created_at`) VALUES (
+  'reg_27',
+  'Yilkal Demeke',
+  'yilkaldemeke21@gmail.com',
+  '27',
+  'ነገረ ሃይማኖት',
+  0.00,
+  'unpaid',
+  NOW()
+);
 
 INSERT IGNORE INTO `admin_users` (`username`, `password_hash`, `email`) VALUES ('admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin@sofonyas.com');

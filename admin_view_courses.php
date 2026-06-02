@@ -83,6 +83,9 @@ $courses = $stmt->fetchAll();
                             <td>
                                 <strong><?php echo safe($course['course_name']); ?></strong>
                                 <br><small><?php echo safe($course['description']); ?></small>
+                                <?php if (!empty($course['pdf_file'])): ?>
+                                    <br><a href="<?php echo safe($course['pdf_file']); ?>" target="_blank">PDF እይ</a>
+                                <?php endif; ?>
                             </td>
                             <td><?php echo safe($course['course_code']); ?></td>
                             <td><?php echo number_format($course['price'], 2); ?></td>

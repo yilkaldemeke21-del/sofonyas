@@ -16,12 +16,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $description = safe($_POST['description'] ?? '');
     $price = (float)($_POST['price'] ?? 0);
     $instructor = safe($_POST['instructor'] ?? '');
+    $pdf_file = null;
+    $uploadDir = __DIR__ . '/uploads/course_pdfs';
 
-    if ($course_name && $course_code) {
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0755, true);
+    }
+
+    if (!empty($_FILES['course_pdf']['name'])) {
+        $file = $_FILES['course_pdf'];
+        $allowedExt = ['pdf'];
+        $fileExt = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            $error = 'PDF የወረደ ጊዜ ስህተት ነበር።';
+        } elseif (!in_array($fileExt, $allowedExt, true)) {
+            $error = 'እባክዎ ፒዲኤፍ ብቻ ይምረጡ።';
+        } else {
+            $finfo = new finfo(FILEINFO_MIME_TYPE);
+            $mimeType = $finfo->file($file['tmp_name']);
+            if ($mimeType !== 'application/pdf') {
+                $error = 'ፋይሉ ፒዲኤፍ አይደለም።';
+            } else {
+                $filename = time() . '_' . bin2hex(random_bytes(5)) . '.' . $fileExt;
+                $destination = $uploadDir . '/' . $filename;
+
+                if (!move_uploaded_file($file['tmp_name'], $destination)) {
+                    $error = 'PDF ፋይሉን ማንቀሳቀስ አልተቻለም።';
+                } else {
+                    $pdf_file = 'uploads/course_pdfs/' . $filename;
+                }
+            }
+        }
+    }
+
+    if (!$error && $course_name && $course_code) {
         try {
             $stmt = $pdo->prepare(
-                'INSERT INTO courses (course_name, course_code, description, price, instructor) 
-                 VALUES (:course_name, :course_code, :description, :price, :instructor)'
+                'INSERT INTO courses (course_name, course_code, description, price, instructor, pdf_file) 
+                 VALUES (:course_name, :course_code, :description, :price, :instructor, :pdf_file)'
             );
             $stmt->execute([
                 ':course_name' => $course_name,
@@ -29,12 +62,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':description' => $description,
                 ':price' => $price,
                 ':instructor' => $instructor,
+                ':pdf_file' => $pdf_file,
             ]);
             $success = 'ኮርስ በስኬት ታክሏል።';
         } catch (Exception $e) {
             $error = 'ስህተት: ' . $e->getMessage();
         }
-    } else {
+    } elseif (!$error) {
         $error = 'እባክዎ ሁሉንም አስገዳጅ መስኮች ይሙሉ።';
     }
 }
@@ -81,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="success"><?php echo $success; ?></div>
         <?php endif; ?>
         
-        <form method="post">
+        <form method="post" enctype="multipart/form-data">
             <div class="form-group">
                 <label for="course_name">የኮርስ ስም *</label>
                 <input type="text" id="course_name" name="course_name" required placeholder="ይ.ቤ: ነገረ ሃይማኖት">
@@ -105,6 +139,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="form-group">
                 <label for="instructor">አስተማሪ</label>
                 <input type="text" id="instructor" name="instructor" placeholder="አስተማሪ ስም">
+            </div>
+
+            <div class="form-group">
+                <label for="course_pdf">PDF እቃ ይጨምሩ</label>
+                <input type="file" id="course_pdf" name="course_pdf" accept="application/pdf">
             </div>
             
             <button type="submit">ኮርስ ጨምር</button>
