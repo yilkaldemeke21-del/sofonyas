@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>20 Question Exam</title>
+    <title>12 Question Exam</title>
     <style>
         body { font-family: Arial, sans-serif; background: #f4f7fb; color: #233; margin: 0; }
         .wrap { max-width: 1100px; margin: 30px auto; padding: 20px; }
@@ -58,8 +58,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
 <div class="wrap">
     <div class="card">
-        <h1>20 Question Online Exam</h1>
-        <p class="small">ይህ በ PHP የተሰራ 20 ጥያቄ ስርዓት ነው።</p>
+        <h1>12 Question Online Exam</h1>
+        <p class="small">ይህ በ PHP የተሰራ 12 ጥያቄ ስርዓት ነው።</p>
         <form method="post">
             <?php foreach ($questions as $index => $item): ?>
                 <div class="question">
