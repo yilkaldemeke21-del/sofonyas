@@ -43,7 +43,7 @@
 
 <section class="card contact-form">
 <h3>እንኳን ወደ ቤተ ገብርኤል በደህና መጡ!</h3>
-<form id="contactForm" novalidate>
+<form id="contactForm" action="register.php" method="post" novalidate>
 <label for="name">ስም</label>
 <input id="name" name="name" required placeholder="ስምዎን እዚህ ያስገቡ"><br><br>
 
@@ -51,12 +51,16 @@
 <label for="email">ኢሜይል</label>
 <input id="email" name="email" type="email" required placeholder="እባክዎ ኢሜይዎን ያስገቡ"><br><br>
 
-<label for="የተማሪው መለያ ቁጥር">የተማሪው መለያ ቁጥር</label>
-   <input type="text" id="የተማሪው መለያ ቁጥር" name="የተማሪው መለያ ቁጥር" placeholder="እባክዎ መለያ ቁጥር ያስገቡ" required>
+<label for="student_id">የተማሪ መለያ ቁጥር</label>
+<input type="text" id="student_id" name="student_id" placeholder="እባክዎ መለያ ቁጥር ያስገቡ" required><br><br>
 
 
 
+<label for="course">ኮርስ</label>
+<input type="text" id="course" name="course" placeholder="እባክዎ የኮርስ ስም ያስገቡ" required><br><br>
 
+<label for="amount">ክፍያ መጠን (ብር)</label>
+<input type="number" id="amount" name="amount" value="0" min="0" placeholder="ብዛት ያስገቡ" required><br><br>
 
 <div class="controls"><br>
 
@@ -102,8 +106,9 @@
         showMessage('እባክዎ ቅጽዎን በትክክል ይሙከሩ።');
       }
     } else {
-      event.preventDefault();
+      // form is valid — allow normal submit to proceed to register.php
       showMessage('የቅጽ ማረጋገጫ ተሳክቷል።', false);
+      // do not call event.preventDefault() here so browser will submit the form
     }
   });
 </script>
