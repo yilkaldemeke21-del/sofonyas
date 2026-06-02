@@ -16,10 +16,12 @@ $summary = [
     'total' => count($registrations),
     'paid' => 0,
     'unpaid' => 0,
+    'revenue' => 0,
 ];
 foreach ($registrations as $row) {
     if (($row['payment_status'] ?? '') === 'paid') {
         $summary['paid']++;
+        $summary['revenue'] += (float)$row['amount'];
     } else {
         $summary['unpaid']++;
     }
@@ -52,6 +54,7 @@ foreach ($registrations as $row) {
         <div class="stat"><strong>ጠቅላላ ተመዝጋቢዎች</strong><br><?php echo $summary['total']; ?></div>
         <div class="stat"><strong>ክፍያ የተከፈለ</strong><br><?php echo $summary['paid']; ?></div>
         <div class="stat"><strong>ክፍያ ያልተከፈለ</strong><br><?php echo $summary['unpaid']; ?></div>
+        <div class="stat"><strong>ጠቅላላ ገቢ (ብር)</strong><br><?php echo number_format($summary['revenue'], 2); ?></div>
     </div>
 
     <?php if (empty($registrations)): ?>

@@ -93,7 +93,7 @@ $total_revenue = $result['total_revenue'] ?? 0;
     <div class="actions">
         <a href="admin_courses.php" class="action-btn">➕ ኮርስ ጨምር</a>
         <a href="admin_view_courses.php" class="action-btn">📚 ኮርሶችን ተመልከት</a>
-        <a href="dashboard.php" class="action-btn">👥 ተማሪዎችን ተመልከት</a>
+        <a href="admin_registrations.php" class="action-btn">👥 የተማሪ ምዝገቦች</a>
     </div>
 
     <div class="table-section">

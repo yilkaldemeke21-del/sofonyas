@@ -1,21 +1,20 @@
 <?php
-$adminAccessKey = 'sofonyas_secret_admin_2026';
-
-if (!isset($_GET['key']) || $_GET['key'] !== $adminAccessKey) {
-    http_response_code(404);
-    exit('Page not found');
-}
-
 session_start();
 require_once __DIR__ . '/db.php';
+
+// If admin already logged in, redirect to dashboard
+if (isset($_SESSION['admin_id'])) {
+    header('Location: admin_dashboard.php');
+    exit;
+}
 
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = $_POST['username'] ?? '';
+    $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
 
-    if ($username && $password) {
+    if ($username !== '' && $password !== '') {
         $stmt = $pdo->prepare('SELECT * FROM admin_users WHERE username = :username');
         $stmt->execute([':username' => $username]);
         $admin = $stmt->fetch();
@@ -25,9 +24,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['admin_username'] = $admin['username'];
             header('Location: admin_dashboard.php');
             exit;
-        } else {
-            $error = 'አገልግሎት ስም ወይም ይለፍ ቃል ትክክል አይደለም።';
         }
+
+        $error = 'አገልግሎት ስም ወይም ይለፍ ቃል ትክክል አይደለም።';
     } else {
         $error = 'እባክዎ ሁለቱንም መስኮች ይሙሉ።';
     }
@@ -74,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </form>
     
     <p style="text-align: center; margin-top: 20px; color: #666;">
-        <strong>ሙከራ ምዝገባ:</strong> admin / password
+        <strong>ሙከራ ምዝገባ:</strong>ቤተ ገብርኤል
     </p>
 </div>
 </body>
