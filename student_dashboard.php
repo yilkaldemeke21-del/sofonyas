@@ -79,9 +79,10 @@ foreach ($registrations as $row) {
         </div>
     </div>
 
-    <h2>የአሁኑ ምዝገቦች</h2>
+    <h2>የእርስዎ ተመዝጋቢ ኮርሶች</h2>
+    <p style="margin-bottom: 16px; color: #475569;">ከዚህ በኋላ የተመዘገቡትን ኮርሶች እና የክፍያ ሁኔታዎች በቀላሉ ይመልከቱ።</p>
     <?php if (empty($registrations)): ?>
-        <p>እስካሁን ምንም ምዝገብ የለም።</p>
+        <p>እስካሁን ምንም ተመዝጋቢ ኮርስ አልተመዘገበም።</p>
     <?php else: ?>
         <table>
             <thead>
