@@ -62,15 +62,15 @@ foreach ($registrations as $row) {
 
     <div class="stats">
         <div class="card">
-            <h2>ጠቅላላ ምዝገቦች</h2>
+            <h2>ጠቅላላ መዝገቦች</h2>
             <p><?php echo $summary['total']; ?></p>
         </div>
         <div class="card">
-            <h2>ክፍያ ተከፈለ</h2>
+            <h2>ክፍያ የከፈለ</h2>
             <p><?php echo $summary['paid']; ?></p>
         </div>
         <div class="card">
-            <h2>ክፍያ ያልተከፈለ</h2>
+            <h2>ክፍያ ያልከፈለ</h2>
             <p><?php echo $summary['unpaid']; ?></p>
         </div>
         <div class="card">

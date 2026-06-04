@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
 <div class="wrapper">
-    <h1>የተማሪ ግባ</h1>
+    <h1>የተማሪዎች መግቢያ</h1>
     <?php if ($error): ?>
         <div class="message error"><?php echo safe($error); ?></div>
     <?php endif; ?>

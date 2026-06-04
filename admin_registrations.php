@@ -26,7 +26,7 @@ $registrations = $stmt->fetchAll();
 <html lang="am">
 <head>
     <meta charset="UTF-8">
-    <title>የተማሪ ምዝገቦች</title>
+    <title>የተማሪ ምዝገባ</title>
     <style>
         body { font-family: Arial, sans-serif; background: #f5f7fa; color: #333; }
         .navbar { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
@@ -58,9 +58,9 @@ $registrations = $stmt->fetchAll();
 
 <div class="container">
     <div class="card">
-        <h1>የተማሪ ምዝገቦች</h1>
+        <h1>የተማሪ ምዝገባ</h1>
         <?php if (empty($registrations)): ?>
-            <p>ምንም የተማሪ ምዝገብ የለም።</p>
+            <p>ምንም የተማሪ መዝገብ የለም።</p>
         <?php else: ?>
             <table>
                 <thead>

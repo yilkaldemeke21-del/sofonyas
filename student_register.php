@@ -11,7 +11,7 @@ $amount = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = trim($_POST['name'] ?? '');
-    $email = trim($_POST['email'] ?? '');
+    $email = strtolower(trim($_POST['email'] ?? ''));
     $studentId = trim($_POST['student_id'] ?? '');
     $password = $_POST['password'] ?? '';
     $course = trim($_POST['course'] ?? '');
@@ -45,35 +45,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (empty($errors)) {
-        $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+        try {
+            $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
-        $stmt = $pdo->prepare('INSERT INTO students (name, email, student_id, password_hash) VALUES (:name, :email, :student_id, :password_hash)');
-        $stmt->execute([
-            ':name' => $name,
-            ':email' => $email,
-            ':student_id' => $studentId,
-            ':password_hash' => $passwordHash,
-        ]);
+            $stmt = $pdo->prepare('INSERT INTO students (name, email, student_id, password_hash) VALUES (:name, :email, :student_id, :password_hash)');
+            $stmt->execute([
+                ':name' => $name,
+                ':email' => $email,
+                ':student_id' => $studentId,
+                ':password_hash' => $passwordHash,
+            ]);
 
-        $registrationId = uniqid('reg_', true);
-        $stmt = $pdo->prepare('INSERT INTO registrations (`id`, `name`, `email`, `student_id`, `course`, `amount`, `payment_status`, `created_at`) VALUES (:id, :name, :email, :student_id, :course, :amount, :payment_status, :created_at)');
-        $stmt->execute([
-            ':id' => $registrationId,
-            ':name' => $name,
-            ':email' => $email,
-            ':student_id' => $studentId,
-            ':course' => $course,
-            ':amount' => $amount,
-            ':payment_status' => 'unpaid',
-            ':created_at' => date('Y-m-d H:i:s'),
-        ]);
+            $registrationId = uniqid('reg_', true);
+            $stmt = $pdo->prepare('INSERT INTO registrations (`id`, `name`, `email`, `student_id`, `course`, `amount`, `payment_status`, `created_at`) VALUES (:id, :name, :email, :student_id, :course, :amount, :payment_status, :created_at)');
+            $stmt->execute([
+                ':id' => $registrationId,
+                ':name' => $name,
+                ':email' => $email,
+                ':student_id' => $studentId,
+                ':course' => $course,
+                ':amount' => $amount,
+                ':payment_status' => 'unpaid',
+                ':created_at' => date('Y-m-d H:i:s'),
+            ]);
 
-        $_SESSION['student_id'] = $studentId;
-        $_SESSION['student_email'] = $email;
-        $_SESSION['student_name'] = $name;
+            $_SESSION['student_id'] = $studentId;
+            $_SESSION['student_email'] = $email;
+            $_SESSION['student_name'] = $name;
 
-        header('Location: student_dashboard.php');
-        exit;
+            header('Location: student_dashboard.php');
+            exit;
+        } catch (PDOException $e) {
+            $errors[] = 'ተማሪውን መመዝገብ አልተሳካም። ኢሜይል ወይም የተማሪ መለያ ቁጥር አስምር ሊሆን ይችላል።';
+        }
     }
 }
 ?>

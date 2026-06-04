@@ -53,14 +53,12 @@
 
 <label for="student_id">የተማሪ መለያ ቁጥር</label>
 <input type="text" id="student_id" name="student_id" placeholder="እባክዎ መለያ ቁጥር ያስገቡ" required><br><br>
+register
+<label for="password">ፓስወርድ</label>
+<input id="password" name="password" type="password"
+placeholder="ፓስወርድ ያስገቡ" required><br><br>
 
 
-
-<label for="course">ኮርስ</label>
-<input type="text" id="course" name="course" placeholder="እባክዎ የኮርስ ስም ያስገቡ" required><br><br>
-
-<label for="amount">ክፍያ መጠን (ብር)</label>
-<input type="number" id="amount" name="amount" value="0" min="0" placeholder="ብዛት ያስገቡ" required><br><br>
 
 <div class="controls"><br>
 
@@ -69,42 +67,9 @@
 </div>
 </form>
 <div id="formMsg" class="small" aria-live="polite" style="margin-top:10px"></div>
-<p style="margin-top: 20px; text-align: center;"><a href="dashboard.php" class="button">የመማሪያ ዳሽቦርድ እይ</a></p>
-  const contactForm = document.getElementById('contactForm');
-  const emailInput = document.getElementById('email');
-  const formMsg = document.getElementById('formMsg');
 
-  function showMessage(message, isError = true) {
-    formMsg.textContent = message;
-    formMsg.style.color = isError ? 'red' : 'green';
-  }
-
-  emailInput.addEventListener('input', () => {
-    if (emailInput.validity.typeMismatch) {
-      emailInput.setCustomValidity('እባክዎ ትክክለኛ ኢሜይል ያስገቡ።');
-    } else if (emailInput.validity.valueMissing) {
-      emailInput.setCustomValidity('እባክዎ ኢሜይል ያስገቡ።');
-    } else {
-      emailInput.setCustomValidity('');
-    }
-  });
-
-  contactForm.addEventListener('submit', function (event) {
-    if (!contactForm.checkValidity()) {
-      event.preventDefault();
-      if (emailInput.validity.typeMismatch) {
-        showMessage('ይህ ኢሜይል አድራሻ ትክክል አይደለም።');
-      } else if (emailInput.validity.valueMissing) {
-        showMessage('እባክዎ ኢሜይል ያስገቡ።');
-      } else {
-        showMessage('እባክዎ ቅጽዎን በትክክል ይሙከሩ።');
-      }
-    } else {
-      // form is valid — allow normal submit to proceed to register.php
-      showMessage('የቅጽ ማረጋገጫ ተሳክቷል።', false);
-      // do not call event.preventDefault() here so browser will submit the form
-    }
-  });
+  
+;
 </script>
 
 

@@ -45,7 +45,7 @@ INSERT IGNORE INTO `students` (`name`, `email`, `student_id`, `password_hash`) V
   'Yilkal Demeke',
   'yilkaldemeke21@gmail.com',
   '27',
-  '$2y$10$oaASCPbpzgJumFdhtnZ5.e0VeyFpxH6IUTAwsTIHVKMuo4U6wyera'
+  '$2y$10$7y8kWM.22Ewzaycs9o2iJOewINLr4nVEac2u7j9wJviTcWxxqMhIu'
 );
 
 INSERT IGNORE INTO `registrations` (`id`, `name`, `email`, `student_id`, `course`, `amount`, `payment_status`, `created_at`) VALUES (
@@ -59,4 +59,4 @@ INSERT IGNORE INTO `registrations` (`id`, `name`, `email`, `student_id`, `course
   NOW()
 );
 
-INSERT IGNORE INTO `admin_users` (`username`, `password_hash`, `email`) VALUES ('admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin@sofonyas.com');
+INSERT IGNORE INTO `admin_users` (`username`, `password_hash`, `email`) VALUES ('sofonyas', '$2y$10$46zeuBUB4D6qkdAp9B7OG.ekP7SB3IljRJUHezvp3pfOEVWlTahxC', 'yilkaldemeke21@gmail.com');

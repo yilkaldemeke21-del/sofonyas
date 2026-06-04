@@ -52,7 +52,7 @@ $courses = $stmt->fetchAll();
 <div class="navbar">
     <h2>ኮርሶችን ተመልከት</h2>
     <div>
-        <a href="admin_courses.php" class="add-btn">➕ ነው ኮርስ ጨምር</a>
+        <a href="admin_courses.php" class="add-btn">➕ ኮርስ ጨምር</a>
         <a href="admin_dashboard.php">ወደ ዳሽቦርድ ተመለስ</a>
     </div>
 </div>
