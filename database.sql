@@ -41,6 +41,28 @@ CREATE TABLE IF NOT EXISTS `students` (
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS `questions` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `question_text` TEXT NOT NULL,
+  `option_a` VARCHAR(255) NOT NULL,
+  `option_b` VARCHAR(255) NOT NULL,
+  `option_c` VARCHAR(255) NOT NULL,
+  `option_d` VARCHAR(255) NOT NULL,
+  `correct_answer` VARCHAR(255) NOT NULL,
+  `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `exam_submissions` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `student_id` VARCHAR(100) NOT NULL,
+  `student_name` VARCHAR(255) NOT NULL,
+  `exam_type` VARCHAR(50) NOT NULL,
+  `score` INT NOT NULL DEFAULT 0,
+  `total_questions` INT NOT NULL DEFAULT 0,
+  `answers` JSON DEFAULT NULL,
+  `submitted_at` DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 INSERT IGNORE INTO `students` (`name`, `email`, `student_id`, `password_hash`) VALUES (
   'Yilkal Demeke',
   'yilkaldemeke21@gmail.com',

@@ -1,4 +1,15 @@
 <?php
+session_start();
+require_once __DIR__ . '/db.php';
+
+if (!isset($_SESSION['student_id'])) {
+    header('Location: student_login.php');
+    exit;
+}
+
+$studentId = (int)$_SESSION['student_id'];
+$studentName = $_SESSION['student_name'] ?? 'Student';
+
 $questions = [
     ['question' => '1. እግዚአብሔር ወልድ ከቅድስት ድንግል ማርያም ከሥጋዋ ሥጋን ከነፍሷ ነፍስን ነስቶ ሲዋሐድ ለወልድ ብቻ የሚሰጥ ግብር የትኛው ነው?', 'options' => ['ሀ. ሥጋን መክፈል', 'ለ. ሥጋን ማክበር', 'ሐ. ሥጋንና መለኮትን ማዋሐድ', 'መ. ለሥጋ ክብር መሆን'], 'correct' => 'መ. ለሥጋ ክብር መሆን'],
     ['question' => '2. ስለምስጠመረ ሥላሴ ትክክል ያልሆነው የቱ ነው?', 'options' => ['ሀ. ሥላሴ ማለት ሦስት ማለት ነው', 'ለ. አብ አምላክ፤ ወልድ አምላክ፤ መንፈስ ቅዱስ አምላክ፤ አንድ አምላክ', 'ሐ. ሥላሴ በስም በአካል በግብር በኩነት ሦስት ሲሆኑ በመለኮት አንድ ናቸው', 'መ. መልስ የለም'], 'correct' => 'ሀ. ሥላሴ ማለት ሦስት ማለት ነው'],
@@ -20,20 +31,39 @@ $questions = [
     ['question' => '9.ሥላሴን በአካል ፫ ስንል ልብ ልንላቸው የሚገቡ ነገሮች የትኞቹ ናቸው?', 'options' => ['ሀ.ሦስት አካል ስንል ሦስት እግዚአብሔር የምንል መሆኑ', 'ለ.እያንዳንዳቸው ልብ፣ቃል፣እስትንፋስ አላቸው የምንል መሆኑ', 'ሐ.ሦስት አካል ስንል አንዱ አካል ከሌላው አካል ተለይቶ የተገኘበት
 ዘመን የሚታወቅና አባት ከልጁ ቀድሞ የሚገኝ መሆኑ፤', 'መ. መልስ የለም'], 'correct' => 'መ. መልስ የለም'],
     ['question' => '10.አብ በሁሉ የመላ ከሆነ ወልድና መንፈስ ቅዱስ በምን ይመላሉ?', 'options' => ['ሀ.አባታችን ሆይ በሰማይ የምትኖር የምንለውም ከምድር ከፍ ብሎ
-በሰማይ ስለሚኖሩ ነው።', 'ለ.እነርሱ የሚኖሩት በምድር ነው።', 'ሐ.እነርሱ የሚኖሩ በራሳቸው ዓለምነት ነው', 'መ.መልስ የለም'], 'ምንድነውcorrect' => 'ሐ.እነርሱ የሚኖሩ በራሳቸው ዓለምነት ነው'],
+በሰማይ ስለሚኖሩ ነው።', 'ለ.እነርሱ የሚኖሩት በምድር ነው።', 'ሐ.እነርሱ የሚኖሩ በራሳቸው ዓለምነት ነው', 'መ.መልስ የለም'], 'correct' => 'ሐ.እነርሱ የሚኖሩ በራሳቸው ዓለምነት ነው'],
     ['question' => '12.በኦሪት ዘፍጥረት "ሰውን እንደምሳሌያችንና እንደ መልካችን
 እንፍጠር ሲሉ ሥላሴ ይህ የምን ግብር ነው??', 'options' => ['ሀ.አፍአዊ ግብር', 'ለ.ውሳጣዊ ግብር', 'ሐ.ግብረ ዋህድና', 'መ.ሀ እና ለ'], 'correct' => 'መ.ሀ እና ለ'],
     
 ];
 
 $score = 0;
+$answers = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     foreach ($questions as $index => $item) {
         $answer = $_POST['q' . $index] ?? '';
-        if ($answer === $item['correct']) {
+        $isCorrect = ($answer === $item['correct']);
+        if ($isCorrect) {
             $score++;
         }
+        $answers[] = [
+            'question' => $item['question'],
+            'selected' => $answer,
+            'correct' => $item['correct'],
+            'is_correct' => $isCorrect,
+        ];
     }
+
+    $pdo->exec('CREATE TABLE IF NOT EXISTS exam_submissions (id INT AUTO_INCREMENT PRIMARY KEY, student_id VARCHAR(100) NOT NULL, student_name VARCHAR(255) NOT NULL, exam_type VARCHAR(50) NOT NULL, score INT NOT NULL DEFAULT 0, total_questions INT NOT NULL DEFAULT 0, answers JSON DEFAULT NULL, submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP)');
+    $stmt = $pdo->prepare('INSERT INTO exam_submissions (student_id, student_name, exam_type, score, total_questions, answers) VALUES (:student_id, :student_name, :exam_type, :score, :total_questions, :answers)');
+    $stmt->execute([
+        ':student_id' => $studentId,
+        ':student_name' => $studentName,
+        ':exam_type' => 'exam20',
+        ':score' => $score,
+        ':total_questions' => count($questions),
+        ':answers' => json_encode($answers, JSON_UNESCAPED_UNICODE),
+    ]);
 }
 ?>
 <!DOCTYPE html>
@@ -77,6 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php if ($_SERVER['REQUEST_METHOD'] === 'POST'): ?>
             <div class="result">
                 <strong>ውጤት:</strong> እርስዎ <?php echo $score; ?> / <?php echo count($questions); ?> በትክክል መለሱ።
+                <br />ውጤታችሁ በስርዓቱ ተቀምጧል።
             </div>
         <?php endif; ?>
     </div>

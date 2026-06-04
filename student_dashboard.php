@@ -79,6 +79,13 @@ foreach ($registrations as $row) {
         </div>
     </div>
 
+    <div class="card" style="margin-bottom: 24px;">
+        <h2>ቀጥታ ፈተናዎች</h2>
+        <p style="margin-bottom: 12px; color: #475569;">የተማሪዎ ፈተናዎችን ከዚህ በኋላ ይመልከቱ።</p>
+        <a class="button" href="exam20.php" style="display:inline-block; margin-right:10px;">ፈተና 20</a>
+        <a class="button" href="short_exam.php" style="display:inline-block;">አጭር ፈተና</a>
+    </div>
+
     <h2>የእርስዎ ተመዝጋቢ ኮርሶች</h2>
     <p style="margin-bottom: 16px; color: #475569;">ከዚህ በኋላ የተመዘገቡትን ኮርሶች እና የክፍያ ሁኔታዎች በቀላሉ ይመልከቱ።</p>
     <?php if (empty($registrations)): ?>

@@ -1,30 +1,37 @@
 <?php
-include("../config/db.php");
+session_start();
+require_once __DIR__ . '/db.php';
 
-if($_SESSION['role']!='admin'){
-die("Access Denied");
+if (!isset($_SESSION['admin_id'])) {
+    header('Location: admin_login.php');
+    exit;
 }
 
-if(isset($_POST['save'])){
+if (isset($_POST['save'])) {
+    $pdo->exec('CREATE TABLE IF NOT EXISTS questions (id INT AUTO_INCREMENT PRIMARY KEY, question_text TEXT NOT NULL, option_a VARCHAR(255) NOT NULL, option_b VARCHAR(255) NOT NULL, option_c VARCHAR(255) NOT NULL, option_d VARCHAR(255) NOT NULL, correct_answer VARCHAR(255) NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)');
 
-$q=$_POST['question'];
+    $q = trim($_POST['question'] ?? '');
+    $a = trim($_POST['a'] ?? '');
+    $b = trim($_POST['b'] ?? '');
+    $c = trim($_POST['c'] ?? '');
+    $d = trim($_POST['d'] ?? '');
+    $correct = trim($_POST['correct'] ?? 'A');
 
-$a=$_POST['a'];
-$b=$_POST['b'];
-$c=$_POST['c'];
-$d=$_POST['d'];
+    try {
+        $stmt = $pdo->prepare('INSERT INTO questions (question_text, option_a, option_b, option_c, option_d, correct_answer) VALUES (:q, :a, :b, :c, :d, :correct)');
+        $stmt->execute([
+            ':q' => $q,
+            ':a' => $a,
+            ':b' => $b,
+            ':c' => $c,
+            ':d' => $d,
+            ':correct' => $correct,
+        ]);
 
-$correct=$_POST['correct'];
-
-$conn->query("
-INSERT INTO questions
-(question_text,option_a,option_b,option_c,option_d,correct_answer)
-
-VALUES
-('$q','$a','$b','$c','$d','$correct')
-");
-
-echo "Question Added";
+        echo 'Question Added';
+    } catch (PDOException $e) {
+        echo 'Error: ' . $e->getMessage();
+    }
 }
 ?>
 

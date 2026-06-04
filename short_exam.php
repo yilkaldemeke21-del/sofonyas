@@ -1,4 +1,15 @@
 <?php
+session_start();
+require_once __DIR__ . '/db.php';
+
+if (!isset($_SESSION['student_id'])) {
+    header('Location: student_login.php');
+    exit;
+}
+
+$studentId = (int)$_SESSION['student_id'];
+$studentName = $_SESSION['student_name'] ?? 'Student';
+
 $questions = [
     ['q' => '፩ኛ. ሥላሴን በአካል ፫ ስንል ልብ ልንላቸው የሚገቡ ነገሮች እነማን ናቸው?(2%)?', 'a' => ''],
     ['q' => '፪ኛ.ተዋህዶን ስናነሳ "በ" እና "እንደ" የሚል ርስት እየሰጠን የምንናገረው መቼ ላይ ነው?(1%)?', 'a' => 'ድኅረ ተዋሕዶ'],
@@ -72,6 +83,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $score++;
         }
     }
+
+    $pdo->exec('CREATE TABLE IF NOT EXISTS exam_submissions (id INT AUTO_INCREMENT PRIMARY KEY, student_id VARCHAR(100) NOT NULL, student_name VARCHAR(255) NOT NULL, exam_type VARCHAR(50) NOT NULL, score INT NOT NULL DEFAULT 0, total_questions INT NOT NULL DEFAULT 0, answers JSON DEFAULT NULL, submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP)');
+    $stmt = $pdo->prepare('INSERT INTO exam_submissions (student_id, student_name, exam_type, score, total_questions, answers) VALUES (:student_id, :student_name, :exam_type, :score, :total_questions, :answers)');
+    $stmt->execute([
+        ':student_id' => $studentId,
+        ':student_name' => $studentName,
+        ':exam_type' => 'short_exam',
+        ':score' => $score,
+        ':total_questions' => count($questions),
+        ':answers' => json_encode($results, JSON_UNESCAPED_UNICODE),
+    ]);
 }
 ?>
 <!DOCTYPE html>
