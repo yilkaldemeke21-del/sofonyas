@@ -10,6 +10,28 @@ if (!isset($_SESSION['admin_id'])) {
 $message = '';
 $error = '';
 
+try {
+    $pdo->exec('CREATE TABLE IF NOT EXISTS questions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        question_type VARCHAR(30) NOT NULL DEFAULT "multiple_choice",
+        question_text TEXT NOT NULL,
+        option_a VARCHAR(255) NOT NULL,
+        option_b VARCHAR(255) NOT NULL,
+        option_c VARCHAR(255) NOT NULL,
+        option_d VARCHAR(255) NOT NULL,
+        correct_answer VARCHAR(255) NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+} catch (PDOException $e) {
+    // Ignore if the table already exists.
+}
+
+try {
+    $pdo->exec('ALTER TABLE questions ADD COLUMN question_type VARCHAR(30) NOT NULL DEFAULT "multiple_choice"');
+} catch (PDOException $e) {
+    // Ignore if the column already exists.
+}
+
 if (isset($_GET['delete'])) {
     $question_id = (int)$_GET['delete'];
     try {
