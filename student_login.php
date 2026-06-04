@@ -17,8 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($email === '' || $password === '') {
         $error = 'እባክዎ ኢሜይልና የይለፍ ቃል ያስገቡ።';
     } else {
-        $stmt = $pdo->prepare('SELECT * FROM students WHERE email = :email');
-        $stmt->execute([':email' => $email]);
+        $stmt = $pdo->prepare('SELECT * FROM students WHERE email = :email OR student_id = :student_id LIMIT 1');
+        $stmt->execute([':email' => $email, ':student_id' => $email]);
         $student = $stmt->fetch();
 
         if ($student && password_verify($password, $student['password_hash'])) {

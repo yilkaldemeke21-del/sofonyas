@@ -9,6 +9,16 @@ if (!isset($_SESSION['student_id'])) {
 
 $studentId = (int)$_SESSION['student_id'];
 $studentName = $_SESSION['student_name'] ?? 'Student';
+$EXAM_LIMIT_SECONDS = 150 * 60;
+
+if (!isset($_SESSION['exam20_started_at'])) {
+    $_SESSION['exam20_started_at'] = time();
+    $_SESSION['exam20_deadline'] = $_SESSION['exam20_started_at'] + $EXAM_LIMIT_SECONDS;
+}
+
+$startedAt = (int)($_SESSION['exam20_started_at'] ?? time());
+$deadline = (int)($_SESSION['exam20_deadline'] ?? ($startedAt + $EXAM_LIMIT_SECONDS));
+$timeExpired = (time() >= $deadline);
 
 $questions = [
     ['question' => '1. እግዚአብሔር ወልድ ከቅድስት ድንግል ማርያም ከሥጋዋ ሥጋን ከነፍሷ ነፍስን ነስቶ ሲዋሐድ ለወልድ ብቻ የሚሰጥ ግብር የትኛው ነው?', 'options' => ['ሀ. ሥጋን መክፈል', 'ለ. ሥጋን ማክበር', 'ሐ. ሥጋንና መለኮትን ማዋሐድ', 'መ. ለሥጋ ክብር መሆን'], 'correct' => 'መ. ለሥጋ ክብር መሆን'],
@@ -40,6 +50,11 @@ $questions = [
 $score = 0;
 $answers = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if ($timeExpired || time() >= $deadline) {
+        $_SESSION['exam20_message'] = 'የፈተና ጊዜ አልቋል፤ በ2:30 ሰዓት በኋላ መስጠት አይቻልም።';
+        header('Location: exam20.php');
+        exit;
+    }
     foreach ($questions as $index => $item) {
         $answer = $_POST['q' . $index] ?? '';
         $isCorrect = ($answer === $item['correct']);
@@ -90,7 +105,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="card">
         <h1>12 Question Online Exam</h1>
         <p class="small">ይህ በ PHP የተሰራ 12 ጥያቄ ስርዓት ነው።</p>
-        <form method="post">
+        <p class="small" style="color:#b91c1c; font-weight:700;">የጊዜ ገደብ: 2:30 ሰዓት (150 ደቂቃ)</p>
+        <div id="timerBox" class="result" style="margin-bottom:16px;">ቀሪ ጊዜ: <strong id="timerText">--:--:--</strong></div>
+        <?php if (!empty($_SESSION['exam20_message'])): ?>
+            <div class="result" style="background:#fef2f2;border-color:#fecaca;color:#991b1b;"><?php echo safe($_SESSION['exam20_message']); ?></div>
+            <?php unset($_SESSION['exam20_message']); ?>
+        <?php endif; ?>
+        <form method="post" id="examForm">
             <?php foreach ($questions as $index => $item): ?>
                 <div class="question">
                     <p><?php echo $item['question']; ?></p>
@@ -102,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <?php endforeach; ?>
                 </div>
             <?php endforeach; ?>
-            <button type="submit">ውጤት አሳይ</button>
+            <button type="submit" id="submitBtn" <?php echo $timeExpired ? 'disabled' : ''; ?>>ውጤት አሳይ</button>
         </form>
         <?php if ($_SERVER['REQUEST_METHOD'] === 'POST'): ?>
             <div class="result">
@@ -112,5 +133,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
     </div>
 </div>
+    <script>
+        const deadline = <?php echo $deadline; ?> * 1000;
+        const timerText = document.getElementById('timerText');
+        const submitBtn = document.getElementById('submitBtn');
+        const examForm = document.getElementById('examForm');
+
+        function updateTimer() {
+            const now = Date.now();
+            const diff = deadline - now;
+
+            if (diff <= 0) {
+                timerText.textContent = '00:00:00';
+                if (submitBtn) submitBtn.disabled = true;
+                if (examForm) {
+                    examForm.querySelectorAll('input[type="radio"]').forEach((el) => el.disabled = true);
+                }
+                return;
+            }
+
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            timerText.textContent = String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+        }
+
+        updateTimer();
+        setInterval(updateTimer, 1000);
+    </script>
 </body>
 </html>

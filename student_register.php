@@ -6,8 +6,12 @@ $errors = [];
 $name = '';
 $email = '';
 $studentId = '';
-$course = '';
-$amount = '';
+$course = trim($_GET['course'] ?? '');
+$amount = trim($_GET['amount'] ?? '0');
+
+if ($course === '' && isset($_GET['course'])) {
+    $course = '';
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $name = trim($_POST['name'] ?? '');
