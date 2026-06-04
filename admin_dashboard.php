@@ -21,9 +21,15 @@ $unpaid_count = $stmt->fetch()['unpaid'];
 $stmt = $pdo->query('SELECT COUNT(*) as courses FROM courses');
 $total_courses = $stmt->fetch()['courses'];
 
+$stmt = $pdo->query('SELECT COUNT(*) as students FROM students');
+$total_students = $stmt->fetch()['students'];
+
 $stmt = $pdo->query('SELECT SUM(amount) as total_revenue FROM registrations WHERE payment_status = "paid"');
 $result = $stmt->fetch();
 $total_revenue = $result['total_revenue'] ?? 0;
+
+$recent_students = $pdo->query('SELECT * FROM students ORDER BY created_at DESC LIMIT 5')->fetchAll();
+$recent_courses = $pdo->query('SELECT * FROM courses ORDER BY created_at DESC LIMIT 5')->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="am">
@@ -84,6 +90,10 @@ $total_revenue = $result['total_revenue'] ?? 0;
             <div class="value"><?php echo $total_courses; ?></div>
         </div>
         <div class="stat-card">
+            <h3>ጠቅላላ ተማሪዎች</h3>
+            <div class="value"><?php echo $total_students; ?></div>
+        </div>
+        <div class="stat-card">
             <h3>ጠቅላላ ገቢ (ብር)</h3>
             <div class="value"><?php echo number_format($total_revenue, 2); ?></div>
         </div>
@@ -129,6 +139,62 @@ $total_revenue = $result['total_revenue'] ?? 0;
                         </tr>
                     <?php endforeach;
                 endif; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="table-section" style="margin-top: 30px;">
+        <h3>የቅርብ ተማሪዎች</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>ስም</th>
+                    <th>ኢሜይል</th>
+                    <th>መለያ</th>
+                    <th>ታሪክ</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($recent_students)): ?>
+                    <tr><td colspan="4" style="text-align: center;">ምንም ተማሪ የለም</td></tr>
+                <?php else: ?>
+                    <?php foreach ($recent_students as $student): ?>
+                        <tr>
+                            <td><?php echo safe($student['name']); ?></td>
+                            <td><?php echo safe($student['email']); ?></td>
+                            <td><?php echo safe($student['student_id']); ?></td>
+                            <td><?php echo date('M d, Y', strtotime($student['created_at'])); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="table-section" style="margin-top: 30px;">
+        <h3>የቅርብ ኮርሶች</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>ኮርስ ስም</th>
+                    <th>ኮድ</th>
+                    <th>ዋጋ</th>
+                    <th>ታሪክ</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($recent_courses)): ?>
+                    <tr><td colspan="4" style="text-align: center;">ምንም ኮርስ የለም</td></tr>
+                <?php else: ?>
+                    <?php foreach ($recent_courses as $course): ?>
+                        <tr>
+                            <td><?php echo safe($course['course_name']); ?></td>
+                            <td><?php echo safe($course['course_code']); ?></td>
+                            <td><?php echo number_format($course['price'], 2); ?> ብር</td>
+                            <td><?php echo date('M d, Y', strtotime($course['created_at'])); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
             </tbody>
         </table>
     </div>

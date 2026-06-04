@@ -8,6 +8,7 @@ if (!isset($_SESSION['admin_id'])) {
 }
 
 $message = '';
+$error = '';
 
 // Handle delete
 if (isset($_GET['delete'])) {
@@ -18,9 +19,15 @@ if (isset($_GET['delete'])) {
 }
 
 // Get all courses
-$stmt = $pdo->query('SELECT * FROM courses ORDER BY created_at DESC');
-$courses = $stmt->fetchAll();
+try {
+    $stmt = $pdo->query('SELECT * FROM courses ORDER BY created_at DESC');
+    $courses = $stmt->fetchAll();
+} catch (PDOException $e) {
+    $courses = [];
+    $error = 'DB ችግኝ አለ። ' . $e->getMessage();
+}
 ?>
+
 <!DOCTYPE html>
 <html lang="am">
 <head>
@@ -61,6 +68,9 @@ $courses = $stmt->fetchAll();
     <div class="card">
         <?php if ($message): ?>
             <div class="message"><?php echo $message; ?></div>
+        <?php endif; ?>
+        <?php if ($error): ?>
+            <div class="message" style="background:#ffe7e7;color:#a41616;"><?php echo safe($error); ?></div>
         <?php endif; ?>
         
         <?php if (empty($courses)): ?>
