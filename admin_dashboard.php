@@ -92,8 +92,9 @@ $total_revenue = $result['total_revenue'] ?? 0;
     <h2 style="margin-bottom: 20px;">ድርጊቶች</h2>
     <div class="actions">
         <a href="admin_courses.php" class="action-btn">➕ ኮርስ ጨምር</a>
-        <a href="admin_view_courses.php" class="action-btn">📚 ኮርሶችን ተመልከት</a>
-        <a href="admin_registrations.php" class="action-btn">👥 የተማሪ ምዝገቦች</a>
+        <a href="admin_view_courses.php" class="action-btn">�️ ኮርሶችን አስተካክል / ሰርዝ</a>
+        <a href="admin_students.php" class="action-btn">👥 ተማሪዎችን አስተዳድር</a>
+        <a href="admin_registrations.php" class="action-btn">📝 ምዝገቦችን አስተዳድር</a>
     </div>
 
     <div class="table-section">

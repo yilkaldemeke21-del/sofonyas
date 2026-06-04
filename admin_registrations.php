@@ -19,6 +19,14 @@ if (isset($_GET['mark_paid'])) {
     exit;
 }
 
+if (isset($_GET['delete'])) {
+    $id = $_GET['delete'];
+    $stmt = $pdo->prepare('DELETE FROM registrations WHERE id = :id');
+    $stmt->execute([':id' => $id]);
+    header('Location: admin_registrations.php');
+    exit;
+}
+
 $stmt = $pdo->query('SELECT * FROM registrations ORDER BY created_at DESC');
 $registrations = $stmt->fetchAll();
 ?>
@@ -43,6 +51,8 @@ $registrations = $stmt->fetchAll();
         .unpaid { background: #ffe6e6; color: #a41616; }
         .button { display: inline-block; padding: 8px 14px; border-radius: 6px; text-decoration: none; color: white; background: #3f6ad8; }
         .button:hover { background: #2c4db3; }
+        .danger { background: #e74c3c; }
+        .danger:hover { background: #c0392b; }
     </style>
 </head>
 <body>
@@ -89,6 +99,7 @@ $registrations = $stmt->fetchAll();
                                 <?php else: ?>
                                     ተከፍሏል
                                 <?php endif; ?>
+                                <a class="button danger" href="admin_registrations.php?delete=<?php echo urlencode($row['id']); ?>" onclick="return confirm('ይህን ምዝገባ ሰርዝ?');">ሰርዝ</a>
                             </td>
                         </tr>
                     <?php endforeach; ?>
