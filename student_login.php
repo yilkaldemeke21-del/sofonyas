@@ -44,11 +44,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         h1 { margin-bottom: 18px; color: #1f2937; }
         label { display: block; margin-top: 14px; margin-bottom: 6px; font-weight: bold; }
         input { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; }
-        .button { margin-top: 18px; width: 100%; padding: 12px 18px; background: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer; }
-        .button:hover { background: #1d4ed8; }
+        .button { margin-top: 18px; width: 100%; padding: 14px 18px; background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 16px; box-shadow: 0 12px 24px rgba(16, 185, 129, 0.22); transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .button:hover { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); transform: translateY(-1px); box-shadow: 0 14px 26px rgba(16, 185, 129, 0.28); }
         .message { margin-bottom: 20px; padding: 14px; border-radius: 10px; }
         .error { background: #fee2e2; color: #991b1b; }
         .small-link { margin-top: 18px; display: block; color: #334155; text-decoration: none; }
+        .demo-box { margin-top: 22px; padding: 16px; border-radius: 12px; background: #f0fdf4; border: 1px solid #d1fae5; color: #14532d; }
+        .demo-box strong { display: block; margin-bottom: 8px; font-size: 15px; }
+        .demo-box code { display: inline-block; background: #ecfdf5; padding: 4px 8px; border-radius: 6px; color: #065f46; font-size: 14px; }
     </style>
 </head>
 <body>
@@ -58,15 +61,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="message error"><?php echo safe($error); ?></div>
     <?php endif; ?>
     <form method="post">
-        <label for="email">ኢሜይል</label>
-        <input id="email" type="email" name="email" value="<?php echo safe($email); ?>" required>
+        <label for="email">ኢሜይል ወይም የተማሪ መለያ</label>
+        <input id="email" type="text" name="email" value="<?php echo safe($email); ?>" required>
 
         <label for="password">የይለፍ ቃል</label>
         <input id="password" type="password" name="password" required>
 
         <button class="button" type="submit">ግባ</button>
     </form>
-    <a class="small-link" href="student_register.php">እንደ አዲስ ተማሪ ይመዝገቡ</a>
+    <div class="demo-box">
+        <strong>Demo Student</strong>
+        የተማሪ መለያ: <code>sofi2127</code><br>
+        ይለፍ ቃል: <code>student123</code>
+    </div>
 </div>
 </body>
 </html>
