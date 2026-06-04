@@ -105,6 +105,7 @@ $recent_courses = $pdo->query('SELECT * FROM courses ORDER BY created_at DESC LI
         <a href="tutorial.php" class="action-btn">📚 ትምህርት / ኮርሶች</a>
         <a href="admin_view_courses.php" class="action-btn">📚 ኮርሶችን አስተካክል / ሰርዝ</a>
         <a href="admin_students.php" class="action-btn">👥 ተማሪዎችን አስተዳድር</a>
+        <a href="admin_questions.php" class="action-btn">🧠 ጥያቄዎችን አስተዳድር</a>
         <a href="admin_registrations.php" class="action-btn">📝 ምዝገቦችን አስተዳድር</a>
         <a href="admin_exam_results.php" class="action-btn">📊 የፈተና ውጤቶች</a>
     </div>
