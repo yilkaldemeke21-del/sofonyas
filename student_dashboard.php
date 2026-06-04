@@ -86,6 +86,12 @@ foreach ($registrations as $row) {
         <a class="button" href="short_exam.php" style="display:inline-block;">አጭር ፈተና</a>
     </div>
 
+    <div class="card" style="margin-bottom: 24px;">
+        <h2>📚 ትምህርት / ኮርሶች</h2>
+        <p style="margin-bottom: 12px; color: #475569;">ከዚህ በኋላ የተጫኑትን ኮርሶችና የPDF ማዕከሎች እይታ ይመልከቱ።</p>
+        <a class="button" href="tutorial.php" style="display:inline-block;">ወደ ትምህርት ገጽ</a>
+    </div>
+
     <h2>የእርስዎ ተመዝጋቢ ኮርሶች</h2>
     <p style="margin-bottom: 16px; color: #475569;">ከዚህ በኋላ የተመዘገቡትን ኮርሶች እና የክፍያ ሁኔታዎች በቀላሉ ይመልከቱ።</p>
     <?php if (empty($registrations)): ?>
