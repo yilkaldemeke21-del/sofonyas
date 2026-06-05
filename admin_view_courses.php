@@ -10,6 +10,20 @@ if (!isset($_SESSION['admin_id'])) {
 $message = '';
 $error = '';
 
+function is_youtube_url($url) {
+    return preg_match('/(?:youtube\.com\/watch\?v=|youtu\.be\/)/i', $url) === 1;
+}
+
+function youtube_embed_url($url) {
+    $videoId = '';
+    if (preg_match('/youtube\.com\/watch\?v=([^&\s]+)/i', $url, $m)) {
+        $videoId = $m[1];
+    } elseif (preg_match('/youtu\.be\/([^?&\s]+)/i', $url, $m)) {
+        $videoId = $m[1];
+    }
+    return $videoId ? 'https://www.youtube.com/embed/' . $videoId : '';
+}
+
 // Handle delete
 if (isset($_GET['delete'])) {
     $course_id = (int)$_GET['delete'];
@@ -53,6 +67,11 @@ try {
         .delete-btn:hover { background: #c0392b; }
         .add-btn { background: #667eea; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; }
         .add-btn:hover { background: #764ba2; }
+        .media-block { margin-top: 8px; }
+        .media-preview { display: inline-block; margin-top: 6px; max-width: 100%; border-radius: 6px; border: 1px solid #e5e7eb; }
+        .media-link { display: inline-block; margin-top: 4px; color: #667eea; text-decoration: none; }
+        .media-link:hover { text-decoration: underline; }
+        .media-frame { width: 100%; max-width: 320px; height: 180px; border: 0; border-radius: 6px; }
     </style>
 </head>
 <body>
@@ -95,6 +114,45 @@ try {
                                 <br><small><?php echo safe($course['description']); ?></small>
                                 <?php if (!empty($course['pdf_file'])): ?>
                                     <br><a href="<?php echo safe($course['pdf_file']); ?>" target="_blank">PDF እይ</a>
+                                <?php endif; ?>
+                                <?php if (!empty($course['tutorial_topic'])): ?>
+                                    <br><strong>Topic:</strong> <?php echo safe($course['tutorial_topic']); ?>
+                                <?php endif; ?>
+                                <?php if (!empty($course['tutorial_text'])): ?>
+                                    <br><strong>Text:</strong> <?php echo safe($course['tutorial_text']); ?>
+                                <?php endif; ?>
+                                <?php if (!empty($course['tutorial_image'])): ?>
+                                    <div class="media-block">
+                                        <strong>Image:</strong><br>
+                                        <img class="media-preview" src="<?php echo safe($course['tutorial_image']); ?>" alt="Tutorial image" style="max-width: 180px;">
+                                        <br><a class="media-link" href="<?php echo safe($course['tutorial_image']); ?>" target="_blank">Open image</a>
+                                    </div>
+                                <?php endif; ?>
+                                <?php if (!empty($course['tutorial_audio'])): ?>
+                                    <div class="media-block">
+                                        <strong>Audio:</strong><br>
+                                        <audio controls class="media-preview" style="max-width: 280px; background:#fff;">
+                                            <source src="<?php echo safe($course['tutorial_audio']); ?>">
+                                            እርስዎ የአውዶ ተጫዋች የለዎት።
+                                        </audio>
+                                        <br><a class="media-link" href="<?php echo safe($course['tutorial_audio']); ?>" target="_blank">Open audio</a>
+                                    </div>
+                                <?php endif; ?>
+                                <?php if (!empty($course['tutorial_video'])): ?>
+                                    <div class="media-block">
+                                        <strong>Video:</strong><br>
+                                        <?php if (is_youtube_url($course['tutorial_video'])): 
+                                            $embedUrl = youtube_embed_url($course['tutorial_video']);
+                                        ?>
+                                            <iframe class="media-frame" src="<?php echo safe($embedUrl); ?>" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+                                        <?php else: ?>
+                                            <video class="media-preview" controls style="max-width: 320px;">
+                                                <source src="<?php echo safe($course['tutorial_video']); ?>">
+                                                እርስዎ የቪድዮ ተጫዋች የለዎት።
+                                            </video>
+                                        <?php endif; ?>
+                                        <br><a class="media-link" href="<?php echo safe($course['tutorial_video']); ?>" target="_blank">Open video</a>
+                                    </div>
                                 <?php endif; ?>
                             </td>
                             <td><?php echo safe($course['course_code']); ?></td>

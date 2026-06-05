@@ -10,12 +10,47 @@ if (!isset($_SESSION['admin_id'])) {
 $error = '';
 $success = '';
 
+try {
+    $pdo->exec('CREATE TABLE IF NOT EXISTS courses (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        course_name VARCHAR(255) NOT NULL,
+        course_code VARCHAR(50) NOT NULL UNIQUE,
+        description TEXT,
+        price DECIMAL(10,2) NOT NULL DEFAULT 0,
+        instructor VARCHAR(255),
+        pdf_file VARCHAR(255) DEFAULT NULL,
+        tutorial_topic VARCHAR(255) DEFAULT NULL,
+        tutorial_text TEXT DEFAULT NULL,
+        tutorial_image VARCHAR(255) DEFAULT NULL,
+        tutorial_audio VARCHAR(255) DEFAULT NULL,
+        tutorial_video VARCHAR(255) DEFAULT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+} catch (PDOException $e) {
+    // Ignore if the table already exists.
+}
+
+try {
+    $pdo->exec('ALTER TABLE courses ADD COLUMN tutorial_topic VARCHAR(255) DEFAULT NULL');
+    $pdo->exec('ALTER TABLE courses ADD COLUMN tutorial_text TEXT DEFAULT NULL');
+    $pdo->exec('ALTER TABLE courses ADD COLUMN tutorial_image VARCHAR(255) DEFAULT NULL');
+    $pdo->exec('ALTER TABLE courses ADD COLUMN tutorial_audio VARCHAR(255) DEFAULT NULL');
+    $pdo->exec('ALTER TABLE courses ADD COLUMN tutorial_video VARCHAR(255) DEFAULT NULL');
+} catch (PDOException $e) {
+    // Ignore if the columns already exist.
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $course_name = safe($_POST['course_name'] ?? '');
     $course_code = safe($_POST['course_code'] ?? '');
     $description = safe($_POST['description'] ?? '');
     $price = (float)($_POST['price'] ?? 0);
     $instructor = safe($_POST['instructor'] ?? '');
+    $tutorial_topic = safe($_POST['tutorial_topic'] ?? '');
+    $tutorial_text = safe($_POST['tutorial_text'] ?? '');
+    $tutorial_image = safe($_POST['tutorial_image'] ?? '');
+    $tutorial_audio = safe($_POST['tutorial_audio'] ?? '');
+    $tutorial_video = safe($_POST['tutorial_video'] ?? '');
     $pdf_file = null;
     $uploadDir = __DIR__ . '/uploads/course_pdfs';
 
@@ -53,8 +88,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$error && $course_name && $course_code) {
         try {
             $stmt = $pdo->prepare(
-                'INSERT INTO courses (course_name, course_code, description, price, instructor, pdf_file) 
-                 VALUES (:course_name, :course_code, :description, :price, :instructor, :pdf_file)'
+                'INSERT INTO courses (course_name, course_code, description, price, instructor, pdf_file, tutorial_topic, tutorial_text, tutorial_image, tutorial_audio, tutorial_video) 
+                 VALUES (:course_name, :course_code, :description, :price, :instructor, :pdf_file, :tutorial_topic, :tutorial_text, :tutorial_image, :tutorial_audio, :tutorial_video)'
             );
             $stmt->execute([
                 ':course_name' => $course_name,
@@ -63,6 +98,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':price' => $price,
                 ':instructor' => $instructor,
                 ':pdf_file' => $pdf_file,
+                ':tutorial_topic' => $tutorial_topic,
+                ':tutorial_text' => $tutorial_text,
+                ':tutorial_image' => $tutorial_image,
+                ':tutorial_audio' => $tutorial_audio,
+                ':tutorial_video' => $tutorial_video,
             ]);
             $success = 'ኮርስ በስኬት ታክሏል።';
         } catch (Exception $e) {
@@ -139,6 +179,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="form-group">
                 <label for="instructor">አስተማሪ</label>
                 <input type="text" id="instructor" name="instructor" placeholder="አስተማሪ ስም">
+            </div>
+
+            <div class="form-group">
+                <label for="tutorial_topic">የትዕይንት ርዕስ / Topic</label>
+                <input type="text" id="tutorial_topic" name="tutorial_topic" placeholder="ለምሳሌ፦ ክፍል 1፡ ሥላሴ መሰረት">
+            </div>
+
+            <div class="form-group">
+                <label for="tutorial_text">የትዕይንት / አጫጭር መመሪያ ጽሑፍ</label>
+                <textarea id="tutorial_text" name="tutorial_text" placeholder="በትክክል ለማብራራት ስለ ትምህርቱ ጽሑፍ ያስገቡ..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="tutorial_image">የምስል / Image Link (URL)</label>
+                <input type="url" id="tutorial_image" name="tutorial_image" placeholder="https://.../image.jpg ወይም https://.../photo.png">
+            </div>
+
+            <div class="form-group">
+                <label for="tutorial_audio">የድምፅ / Audio Link (URL)</label>
+                <input type="url" id="tutorial_audio" name="tutorial_audio" placeholder="https://.../audio.mp3 ወይም Google Drive link">
+            </div>
+
+            <div class="form-group">
+                <label for="tutorial_video">የቪድዮ / Video Link (URL / YouTube)</label>
+                <input type="url" id="tutorial_video" name="tutorial_video" placeholder="https://.../video.mp4 ወይም YouTube link">
             </div>
 
             <div class="form-group">

@@ -29,6 +29,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $description = safe($_POST['description'] ?? '');
     $price = (float)($_POST['price'] ?? 0);
     $instructor = safe($_POST['instructor'] ?? '');
+    $tutorial_topic = safe($_POST['tutorial_topic'] ?? '');
+    $tutorial_text = safe($_POST['tutorial_text'] ?? '');
+    $tutorial_image = safe($_POST['tutorial_image'] ?? '');
+    $tutorial_audio = safe($_POST['tutorial_audio'] ?? '');
+    $tutorial_video = safe($_POST['tutorial_video'] ?? '');
     $pdf_file = $course['pdf_file'];
     $uploadDir = __DIR__ . '/uploads/course_pdfs';
 
@@ -70,7 +75,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $stmt = $pdo->prepare(
                 'UPDATE courses SET course_name = :course_name, course_code = :course_code, 
-                 description = :description, price = :price, instructor = :instructor, pdf_file = :pdf_file 
+                 description = :description, price = :price, instructor = :instructor, pdf_file = :pdf_file,
+                 tutorial_topic = :tutorial_topic, tutorial_text = :tutorial_text, tutorial_image = :tutorial_image, tutorial_audio = :tutorial_audio, tutorial_video = :tutorial_video
                  WHERE id = :id'
             );
             $stmt->execute([
@@ -80,6 +86,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':price' => $price,
                 ':instructor' => $instructor,
                 ':pdf_file' => $pdf_file,
+                ':tutorial_topic' => $tutorial_topic,
+                ':tutorial_text' => $tutorial_text,
+                ':tutorial_image' => $tutorial_image,
+                ':tutorial_audio' => $tutorial_audio,
+                ':tutorial_video' => $tutorial_video,
                 ':id' => $course_id,
             ]);
             $success = 'ኮርስ በስኬት ተሻሽሏል።';
@@ -162,6 +173,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="form-group">
                 <label for="instructor">አስተማሪ</label>
                 <input type="text" id="instructor" name="instructor" value="<?php echo safe($course['instructor']); ?>">
+            </div>
+
+            <div class="form-group">
+                <label for="tutorial_topic">የትዕይንት ርዕስ / Topic</label>
+                <input type="text" id="tutorial_topic" name="tutorial_topic" value="<?php echo safe($course['tutorial_topic'] ?? ''); ?>">
+            </div>
+
+            <div class="form-group">
+                <label for="tutorial_text">የትዕይንት / አጫጭር መመሪያ ጽሑፍ</label>
+                <textarea id="tutorial_text" name="tutorial_text"><?php echo safe($course['tutorial_text'] ?? ''); ?></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="tutorial_image">የምስል / Image Link (URL)</label>
+                <input type="url" id="tutorial_image" name="tutorial_image" value="<?php echo safe($course['tutorial_image'] ?? ''); ?>">
+            </div>
+
+            <div class="form-group">
+                <label for="tutorial_audio">የድምፅ / Audio Link (URL)</label>
+                <input type="url" id="tutorial_audio" name="tutorial_audio" value="<?php echo safe($course['tutorial_audio'] ?? ''); ?>">
+            </div>
+
+            <div class="form-group">
+                <label for="tutorial_video">የቪድዮ / Video Link (URL / YouTube)</label>
+                <input type="url" id="tutorial_video" name="tutorial_video" value="<?php echo safe($course['tutorial_video'] ?? ''); ?>">
             </div>
 
             <div class="form-group">

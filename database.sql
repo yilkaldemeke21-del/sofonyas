@@ -17,6 +17,11 @@ CREATE TABLE IF NOT EXISTS `courses` (
   `price` DECIMAL(10,2) NOT NULL DEFAULT 0,
   `instructor` VARCHAR(255),
   `pdf_file` VARCHAR(255) DEFAULT NULL,
+  `tutorial_topic` VARCHAR(255) DEFAULT NULL,
+  `tutorial_text` TEXT DEFAULT NULL,
+  `tutorial_image` VARCHAR(255) DEFAULT NULL,
+  `tutorial_audio` VARCHAR(255) DEFAULT NULL,
+  `tutorial_video` VARCHAR(255) DEFAULT NULL,
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

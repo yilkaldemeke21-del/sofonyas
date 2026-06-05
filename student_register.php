@@ -6,6 +6,7 @@ $errors = [];
 $name = '';
 $email = '';
 $studentId = '';
+$confirmPassword = '';
 $course = trim($_GET['course'] ?? '');
 $amount = trim($_GET['amount'] ?? '0');
 
@@ -18,6 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = strtolower(trim($_POST['email'] ?? ''));
     $studentId = trim($_POST['student_id'] ?? '');
     $password = $_POST['password'] ?? '';
+    $confirmPassword = $_POST['confirm_password'] ?? '';
     $course = trim($_POST['course'] ?? '');
     $amount = trim($_POST['amount'] ?? '0');
 
@@ -27,11 +29,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $errors[] = 'እባክዎ ትክክለኛ ኢሜይል ያስገቡ።';
     }
-    if ($studentId === '') {
-        $errors[] = 'የተማሪ መለያ ቁጥር ያስገቡ።';
-    }
     if ($password === '') {
         $errors[] = 'የይለፍ ቃል ያስገቡ።';
+    } elseif (strlen($password) < 6) {
+        $errors[] = 'የይለፍ ቃል ብዛት ቢያንስ 6 መሆን አለበት።';
+    }
+    if ($password !== $confirmPassword) {
+        $errors[] = 'የይለፍ ቃላት አይመሳሰሉም።';
     }
     if ($course === '') {
         $errors[] = 'ኮርሱን ያስገቡ።';
@@ -49,6 +53,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (empty($errors)) {
+        if ($studentId === '') {
+            $base = strtoupper(substr(preg_replace('/[^A-Z0-9]/', '', str_replace([' ', '@', '.'], '', $email)), 0, 6));
+            $base = $base !== '' ? $base : 'STU';
+
+            do {
+                $studentId = $base . str_pad((string) random_int(100, 999), 3, '0', STR_PAD_LEFT);
+                $check = $pdo->prepare('SELECT id FROM students WHERE student_id = :student_id LIMIT 1');
+                $check->execute([':student_id' => $studentId]);
+            } while ($check->fetch());
+        }
+
         try {
             $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
@@ -123,11 +138,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <label for="email">ኢሜይል</label>
         <input id="email" type="email" name="email" value="<?php echo safe($email); ?>" required>
 
-        <label for="student_id">የተማሪ መለያ</label>
-        <input id="student_id" name="student_id" value="<?php echo safe($studentId); ?>" required>
+        <label for="student_id">የተማሪ መለያ (አማራጭ)</label>
+        <input id="student_id" name="student_id" value="<?php echo safe($studentId); ?>" placeholder="ባዶ ቢተው በራስ-ሰር ይፈጥራል">
 
         <label for="password">የይለፍ ቃል</label>
-        <input id="password" type="password" name="password" required>
+        <input id="password" type="password" name="password" minlength="6" autocomplete="new-password" required>
+
+        <label for="confirm_password">የይለፍ ቃል እንደገና</label>
+        <input id="confirm_password" type="password" name="confirm_password" minlength="6" autocomplete="new-password" required>
 
         <label for="course">ኮርስ</label>
         <input id="course" name="course" value="<?php echo safe($course); ?>" required>
@@ -137,6 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <button class="button" type="submit">ምዝገብ</button>
     </form>
+    <p style="margin-top: 14px; color: #475569; font-size: 14px;">የተማሪ መለያ ባዶ ከተተው በራስ-ሰር ይፈጥራል፣ የይለፍ ቃል ቢያንስ 6 ቁምፊ መሆን አለበት።</p>
     <a class="small-link" href="student_login.php">ከዚህ በፊት እንደ ተማሪ ይገቡ</a>
 </div>
 </body>
