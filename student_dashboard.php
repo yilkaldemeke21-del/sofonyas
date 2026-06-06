@@ -12,18 +12,68 @@ $stmt = $pdo->prepare('SELECT * FROM students WHERE student_id = :student_id');
 $stmt->execute([':student_id' => $studentId]);
 $student = $stmt->fetch();
 
+try {
+    $pdo->exec('CREATE TABLE IF NOT EXISTS certificates (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id VARCHAR(100) NOT NULL,
+        student_name VARCHAR(255) NOT NULL,
+        exam_type VARCHAR(50) NOT NULL,
+        score INT NOT NULL DEFAULT 0,
+        total_questions INT NOT NULL DEFAULT 0,
+        issued_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+} catch (PDOException $e) {
+}
+
+try {
+    $pdo->exec('CREATE TABLE IF NOT EXISTS notifications (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id VARCHAR(100) NOT NULL,
+        message TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        is_read TINYINT(1) NOT NULL DEFAULT 0
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+} catch (PDOException $e) {
+}
+
 $stmt = $pdo->prepare('SELECT * FROM registrations WHERE student_id = :student_id ORDER BY created_at DESC');
 $stmt->execute([':student_id' => $studentId]);
 $registrations = $stmt->fetchAll();
 
-$summary = ['total' => count($registrations), 'paid' => 0, 'unpaid' => 0, 'revenue' => 0.0];
+$enrolled_courses = count($registrations);
+$paid_courses = 0;
+$revenue = 0.0;
 foreach ($registrations as $row) {
     if ($row['payment_status'] === 'paid') {
-        $summary['paid']++;
-        $summary['revenue'] += (float)$row['amount'];
-    } else {
-        $summary['unpaid']++;
+        $paid_courses++;
+        $revenue += (float)$row['amount'];
     }
+}
+
+$summary = ['total' => $enrolled_courses, 'paid' => $paid_courses, 'unpaid' => $enrolled_courses - $paid_courses, 'revenue' => $revenue];
+
+$stmt = $pdo->prepare('SELECT COUNT(*) as total FROM exam_submissions WHERE student_id = :student_id');
+$stmt->execute([':student_id' => $studentId]);
+$completed_lessons = (int)$stmt->fetch()['total'];
+
+$stmt = $pdo->prepare('SELECT COUNT(*) as total FROM certificates WHERE student_id = :student_id');
+$stmt->execute([':student_id' => $studentId]);
+$certificates = (int)$stmt->fetch()['total'];
+
+$progress_percentage = 0;
+if ($enrolled_courses > 0) {
+    $progress_percentage = (int)min(100, round((($completed_lessons * 20) + ($certificates * 30) + ($paid_courses * 10)) / max(1, $enrolled_courses * 10) ));
+}
+
+$stmt = $pdo->prepare('SELECT * FROM notifications WHERE student_id = :student_id ORDER BY created_at DESC LIMIT 5');
+$stmt->execute([':student_id' => $studentId]);
+$notifications = $stmt->fetchAll();
+
+if (empty($notifications)) {
+    $notifications = [
+        ['message' => 'አዲስ ትምህርት ለመጀመር ዝግጁ ነው።', 'created_at' => date('Y-m-d H:i:s')],
+        ['message' => 'የኮርስ እድገትዎን በማስተካከል ይቀጥሉ።', 'created_at' => date('Y-m-d H:i:s')],
+    ];
 }
 ?>
 <!DOCTYPE html>
@@ -62,16 +112,24 @@ foreach ($registrations as $row) {
 
     <div class="stats">
         <div class="card">
-            <h2>ጠቅላላ መዝገቦች</h2>
+            <h2>Enrolled Courses</h2>
             <p><?php echo $summary['total']; ?></p>
         </div>
         <div class="card">
-            <h2>ክፍያ የከፈለ</h2>
-            <p><?php echo $summary['paid']; ?></p>
+            <h2>Progress Percentage</h2>
+            <p><?php echo $progress_percentage; ?>%</p>
         </div>
         <div class="card">
-            <h2>ክፍያ ያልከፈለ</h2>
-            <p><?php echo $summary['unpaid']; ?></p>
+            <h2>Completed Lessons</h2>
+            <p><?php echo $completed_lessons; ?></p>
+        </div>
+        <div class="card">
+            <h2>Certificates</h2>
+            <p><?php echo $certificates; ?></p>
+        </div>
+        <div class="card">
+            <h2>Notifications</h2>
+            <p><?php echo count($notifications); ?></p>
         </div>
         <div class="card">
             <h2>ጠቅላላ ገቢ (ብር)</h2>
@@ -89,7 +147,17 @@ foreach ($registrations as $row) {
     <div class="card" style="margin-bottom: 24px;">
         <h2>📚 ትምህርት / ኮርሶች</h2>
         <p style="margin-bottom: 12px; color: #475569;">ከዚህ በኋላ የተጫኑትን ኮርሶችና የPDF ማዕከሎች እይታ ይመልከቱ።</p>
-        <a class="button" href="tutorial.php" style="display:inline-block;">ወደ ትምህርት ገጽ</a>
+        <a class="button" href="tutorial.php" style="display:inline-block; margin-right:10px;">ወደ ትምህርት ገጽ</a>
+        <a class="button" href="register.php" style="display:inline-block;">Enroll Courses</a>
+    </div>
+
+    <div class="card" style="margin-bottom: 24px;">
+        <h2>🔔 Notifications</h2>
+        <ul style="margin: 0; padding-left: 18px; color: #475569;">
+            <?php foreach ($notifications as $note): ?>
+                <li style="margin-bottom: 8px;"><?php echo safe($note['message']); ?> <small style="color:#64748b;">(<?php echo date('Y-m-d H:i', strtotime($note['created_at'])); ?>)</small></li>
+            <?php endforeach; ?>
+        </ul>
     </div>
 
     <h2>የእርስዎ ተመዝጋቢ ኮርሶች</h2>
