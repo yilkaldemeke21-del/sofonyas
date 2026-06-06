@@ -69,6 +69,10 @@ $stmt = $pdo->prepare('SELECT * FROM notifications WHERE student_id = :student_i
 $stmt->execute([':student_id' => $studentId]);
 $notifications = $stmt->fetchAll();
 
+$stmt = $pdo->prepare('SELECT * FROM certificates WHERE student_id = :student_id ORDER BY issued_at DESC');
+$stmt->execute([':student_id' => $studentId]);
+$student_certificates = $stmt->fetchAll();
+
 if (empty($notifications)) {
     $notifications = [
         ['message' => 'አዲስ ትምህርት ለመጀመር ዝግጁ ነው።', 'created_at' => date('Y-m-d H:i:s')],
@@ -145,7 +149,13 @@ if (empty($notifications)) {
     </div>
 
     <div class="card" style="margin-bottom: 24px;">
-        <h2>📚 ትምህርት / ኮርሶች</h2>
+        <h2>� Live Classes</h2>
+        <p style="margin-bottom: 12px; color: #475569;">YouTube Live, Zoom, Live Chat እና የክፍል መርሃ ግብር ወደ ቀጥታ ክፍል ለመግባት ይጠቀሙ።</p>
+        <a class="button" href="live_class.php" style="display:inline-block;">Join Live Class</a>
+    </div>
+
+    <div class="card" style="margin-bottom: 24px;">
+        <h2>�📚 ትምህርት / ኮርሶች</h2>
         <p style="margin-bottom: 12px; color: #475569;">ከዚህ በኋላ የተጫኑትን ኮርሶችና የPDF ማዕከሎች እይታ ይመልከቱ።</p>
         <a class="button" href="tutorial.php" style="display:inline-block; margin-right:10px;">ወደ ትምህርት ገጽ</a>
         <a class="button" href="register.php" style="display:inline-block;">Enroll Courses</a>
@@ -158,6 +168,37 @@ if (empty($notifications)) {
                 <li style="margin-bottom: 8px;"><?php echo safe($note['message']); ?> <small style="color:#64748b;">(<?php echo date('Y-m-d H:i', strtotime($note['created_at'])); ?>)</small></li>
             <?php endforeach; ?>
         </ul>
+    </div>
+
+    <div class="card" style="margin-bottom: 24px;">
+        <h2>📜 Course Completion Certificate</h2>
+        <p style="margin-bottom: 12px; color: #475569;">የተሰጡትን ሰርቲፊኬቶች እዚህ ይመልከቱ፣ ወደ PDF ይውርዱ እና የማረጋገጫ ቁጥር ይመልከቱ።</p>
+        <?php if (empty($student_certificates)): ?>
+            <p style="color:#64748b;">እስካሁን ሰርቲፊኬት አልተሰጠም።</p>
+        <?php else: ?>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ፈተና</th>
+                        <th>ውጤት</th>
+                        <th>Verification Number</th>
+                        <th>PDF Certificate Download</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($student_certificates as $cert): ?>
+                        <tr>
+                            <td><?php echo safe($cert['exam_type']); ?></td>
+                            <td><?php echo (int)$cert['score']; ?> / <?php echo (int)$cert['total_questions']; ?></td>
+                            <td>VC-<?php echo str_pad((string)$cert['id'], 6, '0', STR_PAD_LEFT); ?></td>
+                            <td>
+                                <a class="button" href="admin_certificate.php?download=<?php echo (int)$cert['id']; ?>" style="display:inline-block; font-size: 13px;">Download PDF</a>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php endif; ?>
     </div>
 
     <h2>የእርስዎ ተመዝጋቢ ኮርሶች</h2>

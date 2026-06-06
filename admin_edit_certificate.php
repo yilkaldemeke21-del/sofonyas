@@ -28,23 +28,27 @@ $student_name = $certificate['student_name'] ?? '';
 $exam_type = $certificate['exam_type'] ?? '';
 $score = (int)($certificate['score'] ?? 0);
 $total_questions = (int)($certificate['total_questions'] ?? 0);
+$issued_at = $certificate['issued_at'] ?? date('Y-m-d H:i:s');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $student_name = trim($_POST['student_name'] ?? '');
     $exam_type = trim($_POST['exam_type'] ?? '');
     $score = max(0, (int)($_POST['score'] ?? 0));
     $total_questions = max(1, (int)($_POST['total_questions'] ?? 1));
+    $issued_at = trim($_POST['issued_at'] ?? '');
+    $issued_at = $issued_at !== '' ? date('Y-m-d H:i:s', strtotime($issued_at)) : date('Y-m-d H:i:s');
 
     if ($student_name === '' || $exam_type === '') {
         $error = 'ስም እና ፈተና አይነት ያስገቡ።';
     } else {
         try {
-            $stmt = $pdo->prepare('UPDATE certificates SET student_name = :student_name, exam_type = :exam_type, score = :score, total_questions = :total_questions WHERE id = :id');
+            $stmt = $pdo->prepare('UPDATE certificates SET student_name = :student_name, exam_type = :exam_type, score = :score, total_questions = :total_questions, issued_at = :issued_at WHERE id = :id');
             $stmt->execute([
                 ':student_name' => $student_name,
                 ':exam_type' => $exam_type,
                 ':score' => $score,
                 ':total_questions' => $total_questions,
+                ':issued_at' => $issued_at,
                 ':id' => $cert_id,
             ]);
             $success = 'ሰርቲፊኬት በትክክል ተስተካክሏል።';
@@ -52,6 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $certificate['exam_type'] = $exam_type;
             $certificate['score'] = $score;
             $certificate['total_questions'] = $total_questions;
+            $certificate['issued_at'] = $issued_at;
         } catch (PDOException $e) {
             $error = 'ስህተት: ' . $e->getMessage();
         }
@@ -78,6 +83,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         button { background: #667eea; color: white; border: none; cursor: pointer; font-weight: bold; }
         .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .field { margin-bottom: 12px; }
+        .preview { border: 1px solid #e5e7eb; border-radius: 14px; padding: 16px; background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%); margin-bottom: 16px; box-shadow: 0 12px 30px rgba(124,58,237,0.10); }
+        .logo-chip { display: inline-flex; align-items: center; gap: 10px; font-weight: bold; color: #5b21b6; font-size: 14px; }
+        .logo-box { width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, #7c3aed, #a78bfa); color: white; display: grid; place-items: center; font-weight: bold; box-shadow: 0 8px 16px rgba(124,58,237,0.25); }
+        .preview h3 { margin: 8px 0 8px; font-size: 20px; color: #111827; }
+        .mini { color: #475569; font-size: 13px; line-height: 1.5; }
+        .mini strong { color: #111827; }
     </style>
 </head>
 <body>
@@ -89,6 +100,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="card">
         <?php if ($error): ?><div class="msg err"><?php echo safe($error); ?></div><?php endif; ?>
         <?php if ($success): ?><div class="msg ok"><?php echo safe($success); ?></div><?php endif; ?>
+
+        <div class="preview">
+            <div class="logo-chip"><span class="logo-box">S</span> Sofyias Learning Platform</div>
+            <h3>Certificate Preview</h3>
+            <p class="mini">Student: <strong><?php echo safe($student_name ?: 'Student Name'); ?></strong></p>
+            <p class="mini">Exam: <strong><?php echo safe($exam_type ?: 'Exam Type'); ?></strong></p>
+            <p class="mini">Score: <strong><?php echo (int)$score; ?> / <?php echo (int)$total_questions; ?></strong></p>
+            <p class="mini">Issued: <strong><?php echo safe(date('Y-m-d H:i', strtotime($issued_at))); ?></strong></p>
+            <p class="mini">These values will also appear in the PDF certificate download.</p>
+        </div>
+
         <form method="post">
             <div class="field">
                 <label for="student_name">ተማሪ ስም</label>
@@ -107,6 +129,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <label for="total_questions">ጠቅላላ ጥያቄዎች</label>
                     <input type="number" id="total_questions" name="total_questions" min="1" value="<?php echo (int)$total_questions; ?>" required>
                 </div>
+            </div>
+            <div class="field">
+                <label for="issued_at">Issued Date</label>
+                <input type="datetime-local" id="issued_at" name="issued_at" value="<?php echo date('Y-m-d\TH:i', strtotime($issued_at)); ?>" required>
             </div>
             <button type="submit">ሰርቲፊኬት አስተካክል</button>
         </form>
