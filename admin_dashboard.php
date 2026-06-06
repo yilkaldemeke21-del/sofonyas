@@ -24,6 +24,13 @@ $total_courses = $stmt->fetch()['courses'];
 $stmt = $pdo->query('SELECT COUNT(*) as students FROM students');
 $total_students = $stmt->fetch()['students'];
 
+try {
+    $stmt = $pdo->query('SELECT COUNT(*) as certificates FROM certificates');
+    $total_certificates = (int)($stmt->fetch()['certificates'] ?? 0);
+} catch (PDOException $e) {
+    $total_certificates = 0;
+}
+
 $stmt = $pdo->query('SELECT SUM(amount) as total_revenue FROM registrations WHERE payment_status = "paid"');
 $result = $stmt->fetch();
 $total_revenue = $result['total_revenue'] ?? 0;
@@ -94,6 +101,10 @@ $recent_courses = $pdo->query('SELECT * FROM courses ORDER BY created_at DESC LI
             <div class="value"><?php echo $total_students; ?></div>
         </div>
         <div class="stat-card">
+            <h3>ጠቅላላ ሰርቲፊኬቶች</h3>
+            <div class="value"><?php echo $total_certificates; ?></div>
+        </div>
+        <div class="stat-card">
             <h3>ጠቅላላ ገቢ (ብር)</h3>
             <div class="value"><?php echo number_format($total_revenue, 2); ?></div>
         </div>
@@ -101,6 +112,10 @@ $recent_courses = $pdo->query('SELECT * FROM courses ORDER BY created_at DESC LI
 
     <h2 style="margin-bottom: 20px;">ድርጊቶች</h2>
     <div class="actions">
+        <a href="admin_courses.php" class="action-btn">📹 ቪዲዮዎችን ጨምር</a>
+        <a href="admin_questions.php" class="action-btn">🧪Quizzes ጨምር </a>
+        <a href="admin_exam_results.php" class="action-btn">📊 ሪፖርቶችን ተመልከት</a>
+        <a href="admin_certificate.php" class="action-btn">📜 ሰርቲፊኬት አስተዳድር</a>
         <a href="admin_courses.php" class="action-btn">➕ ኮርስ ጨምር</a>
         <a href="tutorial.php" class="action-btn">📚 ትምህርት / ኮርሶች</a>
         <a href="admin_view_courses.php" class="action-btn">📚 ኮርሶችን አስተካክል / ሰርዝ</a>
