@@ -84,8 +84,11 @@ HTML;
     return $tmp_pdf;
 }
 
-if (!isset($_SESSION['admin_id'])) {
-    header('Location: admin_login.php');
+$is_admin = isset($_SESSION['admin_id']);
+$is_student = isset($_SESSION['student_id']);
+
+if (!$is_admin && !$is_student) {
+    header('Location: student_login.php');
     exit;
 }
 
@@ -143,6 +146,11 @@ if (isset($_GET['delete'])) {
     }
 }
 
+if (!$is_admin) {
+    header('Location: student_dashboard.php');
+    exit;
+}
+
 try {
     $stmt = $pdo->query('SELECT es.*, s.email FROM exam_submissions es LEFT JOIN students s ON s.student_id = es.student_id ORDER BY es.submitted_at DESC');
     $submissions = $stmt->fetchAll();
@@ -168,8 +176,13 @@ try {
 if (isset($_GET['download'])) {
     $cert_id = (int)$_GET['download'];
     try {
-        $stmt = $pdo->prepare('SELECT * FROM certificates WHERE id = :id');
-        $stmt->execute([':id' => $cert_id]);
+        if ($is_student) {
+            $stmt = $pdo->prepare('SELECT * FROM certificates WHERE id = :id AND student_id = :student_id');
+            $stmt->execute([':id' => $cert_id, ':student_id' => $_SESSION['student_id']]);
+        } else {
+            $stmt = $pdo->prepare('SELECT * FROM certificates WHERE id = :id');
+            $stmt->execute([':id' => $cert_id]);
+        }
         $certificate = $stmt->fetch();
 
         if ($certificate) {
