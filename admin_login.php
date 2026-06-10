@@ -73,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </form>
     
     <p style="text-align: center; margin-top: 20px; color: #666;">
-        <strong>ሙከራ ምዝገባ:</strong>ቤተ ገብርኤል
+        <strong>ዲ/ን ሶፎንያስ ደመቀ:</strong>ቤተ ገብርኤል
     </p>
 </div>
 </body>

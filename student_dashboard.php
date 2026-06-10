@@ -73,6 +73,120 @@ $stmt = $pdo->prepare('SELECT * FROM certificates WHERE student_id = :student_id
 $stmt->execute([':student_id' => $studentId]);
 $student_certificates = $stmt->fetchAll();
 
+// Create notifications tables if they don't exist
+try {
+    $pdo->exec('CREATE TABLE IF NOT EXISTS email_notifications (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        admin_id INT NOT NULL,
+        recipient_email VARCHAR(255) NOT NULL,
+        subject VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        sent_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+} catch (PDOException $e) {}
+
+try {
+    $pdo->exec('CREATE TABLE IF NOT EXISTS course_updates (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        course_id INT NOT NULL,
+        update_message TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+} catch (PDOException $e) {}
+
+try {
+    $pdo->exec('CREATE TABLE IF NOT EXISTS exam_reminders (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id VARCHAR(100) NOT NULL,
+        exam_type VARCHAR(100) NOT NULL,
+        exam_date DATETIME NOT NULL,
+        reminder_message TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+} catch (PDOException $e) {}
+
+try {
+    $pdo->exec('CREATE TABLE IF NOT EXISTS event_announcements (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        event_title VARCHAR(255) NOT NULL,
+        event_description TEXT NOT NULL,
+        event_date DATETIME NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+} catch (PDOException $e) {}
+
+// Get student-specific notifications
+$stmt = $pdo->prepare('SELECT * FROM email_notifications WHERE recipient_email = :email ORDER BY sent_at DESC LIMIT 5');
+$stmt->execute([':email' => $student['email']]);
+$student_email_notifications = $stmt->fetchAll();
+
+$stmt = $pdo->query('SELECT cu.*, c.course_name FROM course_updates cu JOIN courses c ON cu.course_id = c.id ORDER BY cu.created_at DESC LIMIT 5');
+$student_course_updates = $stmt->fetchAll();
+
+$stmt = $pdo->prepare('SELECT * FROM exam_reminders WHERE student_id = :student_id ORDER BY created_at DESC LIMIT 5');
+$stmt->execute([':student_id' => $studentId]);
+$student_exam_reminders = $stmt->fetchAll();
+
+$stmt = $pdo->query('SELECT * FROM event_announcements ORDER BY event_date DESC LIMIT 5');
+$student_events = $stmt->fetchAll();
+
+// Create notifications tables if they don't exist
+try {
+    $pdo->exec('CREATE TABLE IF NOT EXISTS email_notifications (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        admin_id INT NOT NULL,
+        recipient_email VARCHAR(255) NOT NULL,
+        subject VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        sent_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+} catch (PDOException $e) {}
+
+try {
+    $pdo->exec('CREATE TABLE IF NOT EXISTS course_updates (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        course_id INT NOT NULL,
+        update_message TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+} catch (PDOException $e) {}
+
+try {
+    $pdo->exec('CREATE TABLE IF NOT EXISTS exam_reminders (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id VARCHAR(100) NOT NULL,
+        exam_type VARCHAR(100) NOT NULL,
+        exam_date DATETIME NOT NULL,
+        reminder_message TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+} catch (PDOException $e) {}
+
+try {
+    $pdo->exec('CREATE TABLE IF NOT EXISTS event_announcements (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        event_title VARCHAR(255) NOT NULL,
+        event_description TEXT NOT NULL,
+        event_date DATETIME NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+} catch (PDOException $e) {}
+
+// Get student-specific notifications
+$stmt = $pdo->prepare('SELECT * FROM email_notifications WHERE recipient_email = :email ORDER BY sent_at DESC LIMIT 5');
+$stmt->execute([':email' => $student['email']]);
+$student_email_notifications = $stmt->fetchAll();
+
+$stmt = $pdo->query('SELECT cu.*, c.course_name FROM course_updates cu JOIN courses c ON cu.course_id = c.id ORDER BY cu.created_at DESC LIMIT 5');
+$student_course_updates = $stmt->fetchAll();
+
+$stmt = $pdo->prepare('SELECT * FROM exam_reminders WHERE student_id = :student_id ORDER BY created_at DESC LIMIT 5');
+$stmt->execute([':student_id' => $studentId]);
+$student_exam_reminders = $stmt->fetchAll();
+
+$stmt = $pdo->query('SELECT * FROM event_announcements ORDER BY event_date DESC LIMIT 5');
+$student_events = $stmt->fetchAll();
+
 if (empty($notifications)) {
     $notifications = [
         ['message' => 'አዲስ ትምህርት ለመጀመር ዝግጁ ነው።', 'created_at' => date('Y-m-d H:i:s')],
@@ -162,12 +276,118 @@ if (empty($notifications)) {
     </div>
 
     <div class="card" style="margin-bottom: 24px;">
-        <h2>🔔 Notifications</h2>
+        <h2>🔔 ማስታወቂያዎች</h2>
         <ul style="margin: 0; padding-left: 18px; color: #475569;">
             <?php foreach ($notifications as $note): ?>
                 <li style="margin-bottom: 8px;"><?php echo safe($note['message']); ?> <small style="color:#64748b;">(<?php echo date('Y-m-d H:i', strtotime($note['created_at'])); ?>)</small></li>
             <?php endforeach; ?>
         </ul>
+    </div>
+
+    <h2 style="margin-top: 30px; margin-bottom: 16px;">📢 Notifications on Dashboard</h2>
+
+    <div class="card" style="margin-bottom: 24px;">
+        <h2>📧 Email Notifications</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>ርዕስ</th>
+                    <th>መልእክት</th>
+                    <th>ታሪክ</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($student_email_notifications)): ?>
+                    <tr><td colspan="3" style="text-align: center;">ምንም ኢሜይል ማስታወቂያ የለም</td></tr>
+                <?php else: ?>
+                    <?php foreach ($student_email_notifications as $email): ?>
+                        <tr>
+                            <td><?php echo safe($email['subject']); ?></td>
+                            <td><?php echo substr(safe($email['message']), 0, 50) . '...'; ?></td>
+                            <td><?php echo date('M d, Y H:i', strtotime($email['sent_at'])); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card" style="margin-bottom: 24px;">
+        <h2>📚 Course Updates</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>ኮርስ ስም</th>
+                    <th>ዘገባ</th>
+                    <th>ታሪክ</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($student_course_updates)): ?>
+                    <tr><td colspan="3" style="text-align: center;">ምንም የኮርስ ዘገባ የለም</td></tr>
+                <?php else: ?>
+                    <?php foreach ($student_course_updates as $update): ?>
+                        <tr>
+                            <td><?php echo safe($update['course_name']); ?></td>
+                            <td><?php echo substr(safe($update['update_message']), 0, 50) . '...'; ?></td>
+                            <td><?php echo date('M d, Y H:i', strtotime($update['created_at'])); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card" style="margin-bottom: 24px;">
+        <h2>🔔 Exam Reminders</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>ፈተና ዓይነት</th>
+                    <th>የፈተና ቀን</th>
+                    <th>ታሪክ</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($student_exam_reminders)): ?>
+                    <tr><td colspan="3" style="text-align: center;">ምንም የፈተና ማስታወቂያ የለም</td></tr>
+                <?php else: ?>
+                    <?php foreach ($student_exam_reminders as $reminder): ?>
+                        <tr>
+                            <td><?php echo safe($reminder['exam_type']); ?></td>
+                            <td><?php echo date('M d, Y H:i', strtotime($reminder['exam_date'])); ?></td>
+                            <td><?php echo date('M d, Y', strtotime($reminder['created_at'])); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card" style="margin-bottom: 24px;">
+        <h2>🎉 Event Announcements</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>ጭብጥ ርዕስ</th>
+                    <th>ገለጻ</th>
+                    <th>የጭብጥ ቀን</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($student_events)): ?>
+                    <tr><td colspan="3" style="text-align: center;">ምንም ጭብጥ ዘገባ የለም</td></tr>
+                <?php else: ?>
+                    <?php foreach ($student_events as $event): ?>
+                        <tr>
+                            <td><?php echo safe($event['event_title']); ?></td>
+                            <td><?php echo substr(safe($event['event_description']), 0, 50) . '...'; ?></td>
+                            <td><?php echo date('M d, Y H:i', strtotime($event['event_date'])); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
     </div>
 
     <div class="card" style="margin-bottom: 24px;">

@@ -37,6 +37,102 @@ $total_revenue = $result['total_revenue'] ?? 0;
 
 $recent_students = $pdo->query('SELECT * FROM students ORDER BY created_at DESC LIMIT 5')->fetchAll();
 $recent_courses = $pdo->query('SELECT * FROM courses ORDER BY created_at DESC LIMIT 5')->fetchAll();
+
+// Create notifications tables if they don't exist
+try {
+    $pdo->exec('CREATE TABLE IF NOT EXISTS email_notifications (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        admin_id INT NOT NULL,
+        recipient_email VARCHAR(255) NOT NULL,
+        subject VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        sent_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+} catch (PDOException $e) {}
+
+try {
+    $pdo->exec('CREATE TABLE IF NOT EXISTS course_updates (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        course_id INT NOT NULL,
+        update_message TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+} catch (PDOException $e) {}
+
+try {
+    $pdo->exec('CREATE TABLE IF NOT EXISTS exam_reminders (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id VARCHAR(100) NOT NULL,
+        exam_type VARCHAR(100) NOT NULL,
+        exam_date DATETIME NOT NULL,
+        reminder_message TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+} catch (PDOException $e) {}
+
+try {
+    $pdo->exec('CREATE TABLE IF NOT EXISTS event_announcements (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        event_title VARCHAR(255) NOT NULL,
+        event_description TEXT NOT NULL,
+        event_date DATETIME NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+} catch (PDOException $e) {}
+
+// Get recent notifications
+$recent_email_notifications = $pdo->query('SELECT * FROM email_notifications ORDER BY sent_at DESC LIMIT 5')->fetchAll();
+$recent_course_updates = $pdo->query('SELECT cu.*, c.course_name FROM course_updates cu JOIN courses c ON cu.course_id = c.id ORDER BY cu.created_at DESC LIMIT 5')->fetchAll();
+$recent_exam_reminders = $pdo->query('SELECT * FROM exam_reminders ORDER BY created_at DESC LIMIT 5')->fetchAll();
+$recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_date DESC LIMIT 5')->fetchAll();
+
+// Create notifications tables if they don't exist
+try {
+    $pdo->exec('CREATE TABLE IF NOT EXISTS email_notifications (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        admin_id INT NOT NULL,
+        recipient_email VARCHAR(255) NOT NULL,
+        subject VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        sent_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+} catch (PDOException $e) {}
+
+try {
+    $pdo->exec('CREATE TABLE IF NOT EXISTS course_updates (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        course_id INT NOT NULL,
+        update_message TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+} catch (PDOException $e) {}
+
+try {
+    $pdo->exec('CREATE TABLE IF NOT EXISTS exam_reminders (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id VARCHAR(100) NOT NULL,
+        exam_type VARCHAR(100) NOT NULL,
+        exam_date DATETIME NOT NULL,
+        reminder_message TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+} catch (PDOException $e) {}
+
+try {
+    $pdo->exec('CREATE TABLE IF NOT EXISTS event_announcements (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        event_title VARCHAR(255) NOT NULL,
+        event_description TEXT NOT NULL,
+        event_date DATETIME NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+} catch (PDOException $e) {}
+
+// Get recent notifications
+$recent_email_notifications = $pdo->query('SELECT * FROM email_notifications ORDER BY sent_at DESC LIMIT 5')->fetchAll();
+$recent_course_updates = $pdo->query('SELECT cu.*, c.course_name FROM course_updates cu JOIN courses c ON cu.course_id = c.id ORDER BY cu.created_at DESC LIMIT 5')->fetchAll();
+$recent_exam_reminders = $pdo->query('SELECT * FROM exam_reminders ORDER BY created_at DESC LIMIT 5')->fetchAll();
+$recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_date DESC LIMIT 5')->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="am">
@@ -121,6 +217,7 @@ $recent_courses = $pdo->query('SELECT * FROM courses ORDER BY created_at DESC LI
         <a href="tutorial.php" class="action-btn">📚 ትምህርት / ኮርሶች</a>
         <a href="admin_view_courses.php" class="action-btn">📚 ኮርሶችን አስተካክል / ሰርዝ</a>
         <a href="admin_students.php" class="action-btn">👥 ተማሪዎችን አስተዳድር</a>
+        <a href="password_store.php" class="action-btn">🔐 የይለፍ ቃል ማስቀመጫ</a>
         <a href="admin_questions.php" class="action-btn">🧠 ጥያቄዎችን አስተዳድር</a>
         <a href="admin_registrations.php" class="action-btn">📝 ምዝገቦችን አስተዳድር</a>
         <a href="admin_exam_results.php" class="action-btn">📊 የፈተና ውጤቶች</a>
@@ -211,6 +308,116 @@ $recent_courses = $pdo->query('SELECT * FROM courses ORDER BY created_at DESC LI
                             <td><?php echo safe($course['course_code']); ?></td>
                             <td><?php echo number_format($course['price'], 2); ?> ብር</td>
                             <td><?php echo date('M d, Y', strtotime($course['created_at'])); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <h2 style="margin-bottom: 20px; margin-top: 30px;">📢 Notifications on Dashboard</h2>
+
+    <div class="table-section">
+        <h3>📧 Email Notifications</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>ተቀባይ</th>
+                    <th>ርእስ</th>
+                    <th>መልዕክት</th>
+                    <th>ታሪክ</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($recent_email_notifications)): ?>
+                    <tr><td colspan="4" style="text-align: center;">ምንም ኢሜይል ማስታወቂያ የለም</td></tr>
+                <?php else: ?>
+                    <?php foreach ($recent_email_notifications as $email): ?>
+                        <tr>
+                            <td><?php echo safe($email['recipient_email']); ?></td>
+                            <td><?php echo safe($email['subject']); ?></td>
+                            <td><?php echo substr(safe($email['message']), 0, 50) . '...'; ?></td>
+                            <td><?php echo date('M d, Y H:i', strtotime($email['sent_at'])); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="table-section" style="margin-top: 30px;">
+        <h3>📚 Course Updates</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>ኮርስ ስም</th>
+                    <th>ዝርዝር</th>
+                    <th>ታሪክ</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($recent_course_updates)): ?>
+                    <tr><td colspan="3" style="text-align: center;">ምንም የኮርስ ዝርዝር ተሻሸር የለም</td></tr>
+                <?php else: ?>
+                    <?php foreach ($recent_course_updates as $update): ?>
+                        <tr>
+                            <td><?php echo safe($update['course_name']); ?></td>
+                            <td><?php echo substr(safe($update['update_message']), 0, 50) . '...'; ?></td>
+                            <td><?php echo date('M d, Y H:i', strtotime($update['created_at'])); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="table-section" style="margin-top: 30px;">
+        <h3>🔔 Exam Reminders</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>ተማሪ መለያ</th>
+                    <th>ፈተና ዓይነት</th>
+                    <th>ፈተና ቀን</th>
+                    <th>ታሪክ</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($recent_exam_reminders)): ?>
+                    <tr><td colspan="4" style="text-align: center;">ምንም ፈተና ማስታወቂያ የለም</td></tr>
+                <?php else: ?>
+                    <?php foreach ($recent_exam_reminders as $reminder): ?>
+                        <tr>
+                            <td><?php echo safe($reminder['student_id']); ?></td>
+                            <td><?php echo safe($reminder['exam_type']); ?></td>
+                            <td><?php echo date('M d, Y H:i', strtotime($reminder['exam_date'])); ?></td>
+                            <td><?php echo date('M d, Y', strtotime($reminder['created_at'])); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="table-section" style="margin-top: 30px;">
+        <h3>🎉 Event Announcements</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>ፍጥረታዊ ርዕስ</th>
+                    <th>መግለጫ</th>
+                    <th>ፍጥረታዊ ቀን</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($recent_events)): ?>
+                    <tr><td colspan="3" style="text-align: center;">ምንም ፍጥረታዊ ዝበሌ የለም</td></tr>
+                <?php else: ?>
+                    <?php foreach ($recent_events as $event): ?>
+                        <tr>
+                            <td><?php echo safe($event['event_title']); ?></td>
+                            <td><?php echo substr(safe($event['event_description']), 0, 50) . '...'; ?></td>
+                            <td><?php echo date('M d, Y H:i', strtotime($event['event_date'])); ?></td>
                         </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>

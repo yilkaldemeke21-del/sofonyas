@@ -10,6 +10,34 @@ if (!isset($_SESSION['admin_id'])) {
 $error = '';
 $success = '';
 
+function ensureCourseTutorialColumns(PDO $pdo): void
+{
+    $existingColumns = [];
+    $columnStmt = $pdo->query("SELECT COLUMN_NAME FROM information_schema.columns WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'courses'");
+
+    foreach ($columnStmt->fetchAll(PDO::FETCH_COLUMN) as $columnName) {
+        $existingColumns[$columnName] = true;
+    }
+
+    $columnDefinitions = [
+        'tutorial_topic' => 'ALTER TABLE courses ADD COLUMN tutorial_topic VARCHAR(255) DEFAULT NULL',
+        'tutorial_text' => 'ALTER TABLE courses ADD COLUMN tutorial_text TEXT DEFAULT NULL',
+        'tutorial_image' => 'ALTER TABLE courses ADD COLUMN tutorial_image VARCHAR(255) DEFAULT NULL',
+        'tutorial_audio' => 'ALTER TABLE courses ADD COLUMN tutorial_audio VARCHAR(255) DEFAULT NULL',
+        'tutorial_video' => 'ALTER TABLE courses ADD COLUMN tutorial_video VARCHAR(255) DEFAULT NULL',
+    ];
+
+    foreach ($columnDefinitions as $columnName => $sql) {
+        if (!isset($existingColumns[$columnName])) {
+            try {
+                $pdo->exec($sql);
+            } catch (PDOException $e) {
+                // Ignore if another process already updated this schema.
+            }
+        }
+    }
+}
+
 try {
     $pdo->exec('CREATE TABLE IF NOT EXISTS courses (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -30,15 +58,7 @@ try {
     // Ignore if the table already exists.
 }
 
-try {
-    $pdo->exec('ALTER TABLE courses ADD COLUMN tutorial_topic VARCHAR(255) DEFAULT NULL');
-    $pdo->exec('ALTER TABLE courses ADD COLUMN tutorial_text TEXT DEFAULT NULL');
-    $pdo->exec('ALTER TABLE courses ADD COLUMN tutorial_image VARCHAR(255) DEFAULT NULL');
-    $pdo->exec('ALTER TABLE courses ADD COLUMN tutorial_audio VARCHAR(255) DEFAULT NULL');
-    $pdo->exec('ALTER TABLE courses ADD COLUMN tutorial_video VARCHAR(255) DEFAULT NULL');
-} catch (PDOException $e) {
-    // Ignore if the columns already exist.
-}
+ensureCourseTutorialColumns($pdo);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $course_name = safe($_POST['course_name'] ?? '');

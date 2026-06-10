@@ -78,7 +78,6 @@ $registrations = $stmt->fetchAll();
                         <th>ስም</th>
                         <th>ኢሜይል</th>
                         <th>የተማሪ መለያ</th>
-                        <th>የይለፍ ቃል</th>
                         <th>ኮርስ</th>
                         <th>መጠን</th>
                         <th>የክፍያ ሁኔታ</th>
@@ -91,7 +90,6 @@ $registrations = $stmt->fetchAll();
                             <td><?php echo safe($row['name']); ?></td>
                             <td><?php echo safe($row['email']); ?></td>
                             <td><?php echo safe($row['student_id']); ?></td>
-                            <td><?php echo safe($row['student_password']); ?></td>
                             <td><?php echo safe($row['course']); ?></td>
                             <td><?php echo number_format($row['amount'], 2); ?> ብር</td>
                             <td><span class="badge <?php echo ($row['payment_status'] === 'paid' ? 'paid' : 'unpaid'); ?>"><?php echo safe($row['payment_status']); ?></span></td>
