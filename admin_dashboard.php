@@ -71,13 +71,13 @@ $recent_courses = $pdo->query('SELECT * FROM courses ORDER BY created_at DESC LI
 <div class="navbar">
     <h1>🎓 ቤተ ገብርኤል - ዳሽቦርድ</h1>
     <div>
-        <span>ደህና መጡ, <?php echo safe($_SESSION['admin_username']); ?>!</span>
+        <span>እንኳን ደህና መጡ, <?php echo safe($_SESSION['admin_username']); ?>!</span>
         <a href="admin_logout.php">ውጣ</a>
     </div>
 </div>
 
 <div class="container">
-    <h2 style="margin-bottom: 20px;">ወጥኖ ቅልጥ ስታቲስቲክስ</h2>
+    <h2 style="margin-bottom: 20px;">የዲያቆን ሶፎንያስ ዌብሳይት(የቤተ ገብርኤል አጠቃላይ መረጃ) </h2>
     
     <div class="stats-grid">
         <div class="stat-card">
@@ -85,11 +85,11 @@ $recent_courses = $pdo->query('SELECT * FROM courses ORDER BY created_at DESC LI
             <div class="value"><?php echo $total_registrations; ?></div>
         </div>
         <div class="stat-card">
-            <h3>ክፍያ ተከፈለ</h3>
+            <h3>ክፍያ የከፈለ</h3>
             <div class="value"><?php echo $paid_count; ?></div>
         </div>
         <div class="stat-card">
-            <h3>ክፍያ ያልተከፈለ</h3>
+            <h3>ክፍያ ያልከፈለ</h3>
             <div class="value"><?php echo $unpaid_count; ?></div>
         </div>
         <div class="stat-card">

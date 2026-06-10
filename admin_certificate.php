@@ -146,7 +146,7 @@ if (isset($_GET['delete'])) {
     }
 }
 
-if (!$is_admin) {
+if (!$is_admin && !isset($_GET['download'])) {
     header('Location: student_dashboard.php');
     exit;
 }
