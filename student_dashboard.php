@@ -274,7 +274,7 @@ if (empty($notifications)) {
         <a class="button" href="tutorial.php" style="display:inline-block; margin-right:10px;">ወደ ትምህርት ገጽ</a>
         <a class="button" href="discussion_forum.php" style="display:inline-block; margin-right:10px;">💬 Discussion Forum</a>
         <a class="button" href="library.php" style="display:inline-block; margin-right:10px;">ላይበራሪ ዳሽቦርድ</a>
-        <a class="button" href="register.php" style="display:inline-block;">Enroll Courses</a>
+        <a class="button" href="tutorial.php" style="display:inline-block;">Enroll Courses</a>
     </div>
 
     <div class="card" style="margin-bottom: 24px;">

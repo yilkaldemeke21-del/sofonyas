@@ -45,11 +45,21 @@ foreach ($registrations as $row) {
         .paid { background: #d4f1d8; color: #1d6a2b; }
         .unpaid { background: #ffe6e6; color: #a41616; }
         .button { display: inline-block; padding: 8px 14px; border-radius: 6px; text-decoration: none; color: white; background: #3f6ad8; }
+        .top-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0 18px; }
+        .top-actions a { background: #2563eb; color: #fff; padding: 10px 12px; border-radius: 8px; text-decoration: none; font-weight: 700; }
+        .top-actions a.secondary { background: #7c3aed; }
+        .top-actions a.ghost { background: #0f766e; }
     </style>
 </head>
 <body>
 <div class="container">
     <h1>ኦንላይን ዳሽቦርድ</h1>
+    <p style="color:#475569; margin-top:6px;">የተማሪዎች ምዝገባ፣ ክፍያ ሁኔታ እና ቀጥታ ድርጊቶች ለመከታተል የተዘጋጀ።</p>
+    <div class="top-actions">
+        <a href="http://localhost/admin_dashboard.php">🛠️ አድሚን ዳሽቦርድ</a>
+        <a class="secondary" href="http://localhost/discussion_forum.php">💬 Discussion Forum</a>
+        <a class="ghost" href="http://localhost/library.php">📚 Library Dashboard</a>
+    </div>
     <div class="stats">
         <div class="stat"><strong>ጠቅላላ ተመዝጋቢዎች</strong><br><?php echo $summary['total']; ?></div>
         <div class="stat"><strong>ክፍያ የተከፈለ</strong><br><?php echo $summary['paid']; ?></div>

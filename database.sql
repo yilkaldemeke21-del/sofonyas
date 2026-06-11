@@ -13,7 +13,11 @@ CREATE TABLE IF NOT EXISTS `courses` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,
   `course_name` VARCHAR(255) NOT NULL,
   `course_code` VARCHAR(50) NOT NULL UNIQUE,
+  `short_description` TEXT DEFAULT NULL,
   `description` TEXT,
+  `category` VARCHAR(100) DEFAULT NULL,
+  `level` VARCHAR(50) DEFAULT NULL,
+  `thumbnail` VARCHAR(255) DEFAULT NULL,
   `price` DECIMAL(10,2) NOT NULL DEFAULT 0,
   `instructor` VARCHAR(255),
   `pdf_file` VARCHAR(255) DEFAULT NULL,
@@ -22,6 +26,10 @@ CREATE TABLE IF NOT EXISTS `courses` (
   `tutorial_image` VARCHAR(255) DEFAULT NULL,
   `tutorial_audio` VARCHAR(255) DEFAULT NULL,
   `tutorial_video` VARCHAR(255) DEFAULT NULL,
+  `modules` TEXT DEFAULT NULL,
+  `quiz` TEXT DEFAULT NULL,
+  `assignment` TEXT DEFAULT NULL,
+  `certificate_requirements` TEXT DEFAULT NULL,
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

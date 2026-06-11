@@ -10,34 +10,6 @@ if (!isset($_SESSION['admin_id'])) {
 $error = '';
 $success = '';
 
-function ensureCourseTutorialColumns(PDO $pdo): void
-{
-    $existingColumns = [];
-    $columnStmt = $pdo->query("SELECT COLUMN_NAME FROM information_schema.columns WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'courses'");
-
-    foreach ($columnStmt->fetchAll(PDO::FETCH_COLUMN) as $columnName) {
-        $existingColumns[$columnName] = true;
-    }
-
-    $columnDefinitions = [
-        'tutorial_topic' => 'ALTER TABLE courses ADD COLUMN tutorial_topic VARCHAR(255) DEFAULT NULL',
-        'tutorial_text' => 'ALTER TABLE courses ADD COLUMN tutorial_text TEXT DEFAULT NULL',
-        'tutorial_image' => 'ALTER TABLE courses ADD COLUMN tutorial_image VARCHAR(255) DEFAULT NULL',
-        'tutorial_audio' => 'ALTER TABLE courses ADD COLUMN tutorial_audio VARCHAR(255) DEFAULT NULL',
-        'tutorial_video' => 'ALTER TABLE courses ADD COLUMN tutorial_video VARCHAR(255) DEFAULT NULL',
-    ];
-
-    foreach ($columnDefinitions as $columnName => $sql) {
-        if (!isset($existingColumns[$columnName])) {
-            try {
-                $pdo->exec($sql);
-            } catch (PDOException $e) {
-                // Ignore if another process already updated this schema.
-            }
-        }
-    }
-}
-
 try {
     $pdo->exec('CREATE TABLE IF NOT EXISTS courses (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -58,12 +30,16 @@ try {
     // Ignore if the table already exists.
 }
 
-ensureCourseTutorialColumns($pdo);
+ensureCourseColumns($pdo);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $course_name = safe($_POST['course_name'] ?? '');
     $course_code = safe($_POST['course_code'] ?? '');
+    $short_description = safe($_POST['short_description'] ?? '');
     $description = safe($_POST['description'] ?? '');
+    $category = safe($_POST['category'] ?? '');
+    $level = safe($_POST['level'] ?? '');
+    $thumbnail = safe($_POST['thumbnail'] ?? '');
     $price = (float)($_POST['price'] ?? 0);
     $instructor = safe($_POST['instructor'] ?? '');
     $tutorial_topic = safe($_POST['tutorial_topic'] ?? '');
@@ -71,6 +47,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $tutorial_image = safe($_POST['tutorial_image'] ?? '');
     $tutorial_audio = safe($_POST['tutorial_audio'] ?? '');
     $tutorial_video = safe($_POST['tutorial_video'] ?? '');
+    $modules = safe($_POST['modules'] ?? '');
+    $quiz = safe($_POST['quiz'] ?? '');
+    $assignment = safe($_POST['assignment'] ?? '');
+    $certificate_requirements = safe($_POST['certificate_requirements'] ?? '');
     $pdf_file = null;
     $uploadDir = __DIR__ . '/uploads/course_pdfs';
 
@@ -108,13 +88,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$error && $course_name && $course_code) {
         try {
             $stmt = $pdo->prepare(
-                'INSERT INTO courses (course_name, course_code, description, price, instructor, pdf_file, tutorial_topic, tutorial_text, tutorial_image, tutorial_audio, tutorial_video) 
-                 VALUES (:course_name, :course_code, :description, :price, :instructor, :pdf_file, :tutorial_topic, :tutorial_text, :tutorial_image, :tutorial_audio, :tutorial_video)'
+                'INSERT INTO courses (course_name, course_code, short_description, description, category, level, thumbnail, price, instructor, pdf_file, tutorial_topic, tutorial_text, tutorial_image, tutorial_audio, tutorial_video, modules, quiz, assignment, certificate_requirements) 
+                 VALUES (:course_name, :course_code, :short_description, :description, :category, :level, :thumbnail, :price, :instructor, :pdf_file, :tutorial_topic, :tutorial_text, :tutorial_image, :tutorial_audio, :tutorial_video, :modules, :quiz, :assignment, :certificate_requirements)'
             );
             $stmt->execute([
                 ':course_name' => $course_name,
                 ':course_code' => $course_code,
+                ':short_description' => $short_description,
                 ':description' => $description,
+                ':category' => $category,
+                ':level' => $level,
+                ':thumbnail' => $thumbnail,
                 ':price' => $price,
                 ':instructor' => $instructor,
                 ':pdf_file' => $pdf_file,
@@ -123,6 +107,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':tutorial_image' => $tutorial_image,
                 ':tutorial_audio' => $tutorial_audio,
                 ':tutorial_video' => $tutorial_video,
+                ':modules' => $modules,
+                ':quiz' => $quiz,
+                ':assignment' => $assignment,
+                ':certificate_requirements' => $certificate_requirements,
             ]);
             $success = 'ኮርስ በስኬት ታክሏል።';
         } catch (Exception $e) {
@@ -187,8 +175,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
             
             <div class="form-group">
-                <label for="description">መግለጫ</label>
+                <label for="short_description">አጭር መግለጫ</label>
+                <textarea id="short_description" name="short_description" placeholder="ኮርሱ በአጭሩ ምን ይማራል?"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="description">ሙሉ መግለጫ</label>
                 <textarea id="description" name="description" placeholder="ስለ ኮርሱ ተጨማሪ መግለጫ..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="category">የትምህርት ምድብ</label>
+                <input type="text" id="category" name="category" placeholder="ለምሳሌ፦ ነገረ ቅባት, ነገረ ሃይማኖት, ነገረ ማርያም">
+            </div>
+
+            <div class="form-group">
+                <label for="level">የትምህርት ደረጃ</label>
+                <select id="level" name="level">
+                    <option value="ጀማሪ">Beginner</option>
+                    <option value="መካከለኛ">Intermediate</option>
+                    <option value="ከፍተኛ">Advanced</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="thumbnail">ምስል / Thumbnail (URL)</label>
+                <input type="url" id="thumbnail" name="thumbnail" placeholder="https://.../thumbnail.jpg">
             </div>
             
             <div class="form-group">
@@ -224,6 +236,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="form-group">
                 <label for="tutorial_video">የቪድዮ / Video Link (URL / YouTube)</label>
                 <input type="url" id="tutorial_video" name="tutorial_video" placeholder="https://.../video.mp4 ወይም YouTube link">
+            </div>
+
+            <div class="form-group">
+                <label for="modules">ሞጁሎች</label>
+                <textarea id="modules" name="modules" placeholder="Module 1: Introduction&#10;Module 2: HTML Basics"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="quiz">Quiz / ጥያቄዎች</label>
+                <textarea id="quiz" name="quiz" placeholder="እያንዳንዱ ጥያቄ ወይም ማስታወሻ ያስገቡ..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="assignment">Assignment / ስራ</label>
+                <textarea id="assignment" name="assignment" placeholder="የስራ መግለጫ ያስገቡ..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="certificate_requirements">Certificate Requirements</label>
+                <textarea id="certificate_requirements" name="certificate_requirements" placeholder="80% ውጤት&#10;Quiz ማለፍ&#10;Assignment ማጠናቀቅ"></textarea>
             </div>
 
             <div class="form-group">
