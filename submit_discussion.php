@@ -36,6 +36,23 @@ try {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 
+    $pdo->exec('CREATE TABLE IF NOT EXISTS notifications (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id VARCHAR(100) NOT NULL,
+        message TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        is_read TINYINT(1) NOT NULL DEFAULT 0
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+
+    $pdo->exec('CREATE TABLE IF NOT EXISTS email_notifications (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        admin_id INT NOT NULL,
+        recipient_email VARCHAR(255) NOT NULL,
+        subject VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        sent_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+
     $stmt = $pdo->prepare('INSERT INTO discussion_posts (topic, message, author_name, author_role, created_at) VALUES (:topic, :message, :author_name, :author_role, NOW())');
     $stmt->execute([
         ':topic' => $topic,
@@ -43,6 +60,24 @@ try {
         ':author_name' => $authorName,
         ':author_role' => $authorRole,
     ]);
+
+    if (isset($_SESSION['student_id'])) {
+        $studentNotice = 'እርስዎ የጻፉት ውይይት ተመዝግቧል። አስተዳዳሪዎች መልስ ይሰጣሉ።';
+        $stmt = $pdo->prepare('INSERT INTO notifications (student_id, message, created_at) VALUES (:student_id, :message, NOW())');
+        $stmt->execute([':student_id' => $_SESSION['student_id'], ':message' => $studentNotice]);
+    }
+
+    $adminStmt = $pdo->query('SELECT id, email FROM admin_users');
+    foreach ($adminStmt->fetchAll() as $admin) {
+        $adminMsg = 'አዲስ የውይይት ልጥፍ ተሰብስቧል። ርዕስ: ' . $topic . ' በ ' . $authorName . ' አማካኝነት';
+        $stmt = $pdo->prepare('INSERT INTO email_notifications (admin_id, recipient_email, subject, message, sent_at) VALUES (:admin_id, :recipient_email, :subject, :message, NOW())');
+        $stmt->execute([
+            ':admin_id' => (int)$admin['id'],
+            ':recipient_email' => $admin['email'],
+            ':subject' => 'የውይይት ፎርም አዲስ ልጥፍ',
+            ':message' => $adminMsg,
+        ]);
+    }
 
     header('Location: discussion_forum.php?status=success');
     exit;

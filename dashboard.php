@@ -56,9 +56,9 @@ foreach ($registrations as $row) {
     <h1>ኦንላይን ዳሽቦርድ</h1>
     <p style="color:#475569; margin-top:6px;">የተማሪዎች ምዝገባ፣ ክፍያ ሁኔታ እና ቀጥታ ድርጊቶች ለመከታተል የተዘጋጀ።</p>
     <div class="top-actions">
-        <a href="http://localhost/admin_dashboard.php">🛠️ አድሚን ዳሽቦርድ</a>
-        <a class="secondary" href="http://localhost/discussion_forum.php">💬 Discussion Forum</a>
-        <a class="ghost" href="http://localhost/library.php">📚 Library Dashboard</a>
+        <a href="admin_dashboard.php">🛠️ አድሚን ዳሽቦርድ</a>
+        <a class="secondary" href="discussion_forum.php">💬 ዲስኬሽን ፎርም</a>
+        <a class="ghost" href="library.php">📚 ላይበራሪ ዳሽቦርድ</a>
     </div>
     <div class="stats">
         <div class="stat"><strong>ጠቅላላ ተመዝጋቢዎች</strong><br><?php echo $summary['total']; ?></div>

@@ -208,21 +208,21 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
 
     <h2 style="margin-bottom: 20px;">ድርጊቶች</h2>
     <div class="actions">
-        <a href="http://localhost/admin_courses.php" class="action-btn">📹 ቪዲዮዎችን ጨምር</a>
-        <a href="http://localhost/admin_questions.php" class="action-btn">🧪Quizzes ጨምር </a>
-        <a href="http://localhost/admin_exam_results.php" class="action-btn">📊 ሪፖርቶችን ተመልከት</a>
-        <a href="http://localhost/admin_certificate.php" class="action-btn">📜 ሰርቲፊኬት አስተዳድር</a>
-        <a href="http://localhost/live_class.php" class="action-btn">📡 ላይቭ ክላስ</a>
-        <a href="http://localhost/discussion_forum.php" class="action-btn">💬 ዲስኬሽን ፎርም</a>
-        <a href="http://localhost/library.php" class="action-btn">📚 ላይበራሪ ዳሽቦርድ</a>
-        <a href="http://localhost/admin_courses.php" class="action-btn">➕ ኮርስ ጨምር</a>
-        <a href="http://localhost/tutorial.php" class="action-btn">📚 ትምህርት / ኮርሶች</a>
-        <a href="http://localhost/admin_view_courses.php" class="action-btn">📚 ኮርሶችን አስተካክል / ሰርዝ</a>
-        <a href="http://localhost/admin_students.php" class="action-btn">👥 ተማሪዎችን አስተዳድር</a>
-        <a href="http://localhost/password_store.php" class="action-btn">🔐 የይለፍ ቃል ማስቀመጫ</a>
-        <a href="http://localhost/admin_questions.php" class="action-btn">🧠 ጥያቄዎችን አስተዳድር</a>
-        <a href="http://localhost/admin_registrations.php" class="action-btn">📝 ምዝገቦችን አስተዳድር</a>
-        <a href="http://localhost/admin_exam_results.php" class="action-btn">📊 የፈተና ውጤቶች</a>
+        <a href="admin_courses.php" class="action-btn">📹 ቪዲዮዎችን ጨምር</a>
+        <a href="admin_questions.php" class="action-btn">🧪Quizzes ጨምር </a>
+        <a href="admin_exam_results.php" class="action-btn">📊 ሪፖርቶችን ተመልከት</a>
+        <a href="admin_certificate.php" class="action-btn">📜 ሰርቲፊኬት አስተዳድር</a>
+        <a href="live_class.php" class="action-btn">📡 ላይቭ ክላስ</a>
+        <a href="discussion_forum.php" class="action-btn">💬 ዲስኬሽን ፎርም</a>
+        <a href="library.php" class="action-btn">📚 ላይበራሪ ዳሽቦርድ</a>
+        <a href="admin_courses.php" class="action-btn">➕ ኮርስ ጨምር</a>
+        <a href="admin_view_courses.php" class="action-btn">📚 ኮርሶች / ትምህርት ዝርዝር</a>
+        <a href="admin_view_courses.php" class="action-btn">📚 ኮርሶችን አስተካክል / ሰርዝ</a>
+        <a href="admin_students.php" class="action-btn">👥 ተማሪዎችን አስተዳድር</a>
+        <a href="password_store.php" class="action-btn">🔐 የይለፍ ቃል ማስቀመጫ</a>
+        <a href="admin_questions.php" class="action-btn">🧠 ጥያቄዎችን አስተዳድር</a>
+        <a href="admin_registrations.php" class="action-btn">📝 ምዝገቦችን አስተዳድር</a>
+        <a href="admin_exam_results.php" class="action-btn">📊 የፈተና ውጤቶች</a>
     </div>
 
     <div class="table-section">

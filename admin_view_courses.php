@@ -111,7 +111,27 @@ try {
                         <tr>
                             <td>
                                 <strong><?php echo safe($course['course_name']); ?></strong>
-                                <br><small><?php echo safe($course['description']); ?></small>
+                                <?php if (!empty($course['short_description'])): ?>
+                                    <br><small><?php echo safe($course['short_description']); ?></small>
+                                <?php endif; ?>
+                                <?php if (!empty($course['description'])): ?>
+                                    <br><small><?php echo safe($course['description']); ?></small>
+                                <?php endif; ?>
+                                <?php if (!empty($course['category']) || !empty($course['level'])): ?>
+                                    <br><strong>Category/Level:</strong> <?php echo safe($course['category'] ?? ''); ?><?php echo (!empty($course['category']) && !empty($course['level']) ? ' · ' : ''); ?><?php echo safe($course['level'] ?? ''); ?>
+                                <?php endif; ?>
+                                <?php if (!empty($course['modules'])): ?>
+                                    <br><strong>Modules:</strong> <?php echo nl2br(safe($course['modules'])); ?>
+                                <?php endif; ?>
+                                <?php if (!empty($course['quiz'])): ?>
+                                    <br><strong>Quiz:</strong> <?php echo nl2br(safe($course['quiz'])); ?>
+                                <?php endif; ?>
+                                <?php if (!empty($course['assignment'])): ?>
+                                    <br><strong>Assignment:</strong> <?php echo nl2br(safe($course['assignment'])); ?>
+                                <?php endif; ?>
+                                <?php if (!empty($course['certificate_requirements'])): ?>
+                                    <br><strong>Certificate Requirements:</strong> <?php echo nl2br(safe($course['certificate_requirements'])); ?>
+                                <?php endif; ?>
                                 <?php if (!empty($course['pdf_file'])): ?>
                                     <br><a href="<?php echo safe($course['pdf_file']); ?>" target="_blank">PDF እይ</a>
                                 <?php endif; ?>
