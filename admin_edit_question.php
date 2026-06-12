@@ -13,6 +13,14 @@ $error = '';
 $success = '';
 $question_type = 'multiple_choice';
 
+function normalizeQuestionType($value) {
+    $type = strtolower(trim((string)($value ?? 'multiple_choice')));
+    if (in_array($type, ['multiple_choice', 'short_answer', 'fill_in_blank'], true)) {
+        return $type;
+    }
+    return 'multiple_choice';
+}
+
 if ($question_id) {
     $stmt = $pdo->prepare('SELECT * FROM questions WHERE id = :id');
     $stmt->execute([':id' => $question_id]);
@@ -26,7 +34,7 @@ if (!$question) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $question_type = ($_POST['question_type'] ?? 'multiple_choice') === 'short_answer' ? 'short_answer' : 'multiple_choice';
+    $question_type = normalizeQuestionType($_POST['question_type'] ?? 'multiple_choice');
     $question_text = trim($_POST['question_text'] ?? '');
 
     if ($question_type === 'multiple_choice') {
@@ -124,6 +132,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label for="question_type">የጥያቄ አይነት</label>
                 <select id="question_type" name="question_type" onchange="toggleQuestionType(this.value)">
                     <option value="multiple_choice" <?php echo $question_type === 'multiple_choice' ? 'selected' : ''; ?>>Multiple Choice</option>
+                    <option value="fill_in_blank" <?php echo $question_type === 'fill_in_blank' ? 'selected' : ''; ?>>Fill in the Blank</option>
                     <option value="short_answer" <?php echo $question_type === 'short_answer' ? 'selected' : ''; ?>>Short Answer</option>
                 </select>
             </div>

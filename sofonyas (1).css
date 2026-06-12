@@ -29,6 +29,12 @@ body {
             padding: 8px 10px;
             border-radius: 8px;
             display: inline-block;
+            transition: background-color 0.18s ease, transform 0.18s ease;
+        }
+        nav a.active,
+        nav a:hover {
+            background: #1d4ed8;
+            transform: translateY(-1px);
         }
         .hero-section {
             background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
@@ -110,6 +116,19 @@ body {
             margin-top: 0;
             color: #1f2937;
         }
+        .quick-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+        }
+        .quick-card {
+            background: #f8fbff;
+            border: 1px solid #dbeafe;
+            border-radius: 12px;
+            padding: 14px;
+        }
+        .quick-card h3 { margin-top: 0; margin-bottom: 8px; color: #1d4ed8; }
+        .quick-card p { color: #475569; line-height: 1.5; }
         .testimonial-grid {
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
         }
@@ -138,6 +157,7 @@ body {
         }
         .button:hover {
             background: #1d4ed8;
+            transform: translateY(-1px);
         }
         .controls {
             display: flex;

@@ -208,6 +208,7 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
 
     <h2 style="margin-bottom: 20px;">ድርጊቶች</h2>
     <div class="actions">
+        <a href="http://localhost/admin_course_builder.php" class="action-btn">🛠️ ኮርስ ብሉደር ክፈት</a>
         <a href="admin_courses.php" class="action-btn">📹 ቪዲዮዎችን ጨምር</a>
         <a href="admin_questions.php" class="action-btn">🧪Quizzes ጨምር </a>
         <a href="admin_exam_results.php" class="action-btn">📊 ሪፖርቶችን ተመልከት</a>
@@ -215,7 +216,7 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
         <a href="live_class.php" class="action-btn">📡 ላይቭ ክላስ</a>
         <a href="discussion_forum.php" class="action-btn">💬 ዲስኬሽን ፎርም</a>
         <a href="library.php" class="action-btn">📚 ላይበራሪ ዳሽቦርድ</a>
-        <a href="admin_courses.php" class="action-btn">➕ ኮርስ ጨምር</a>
+        <a href="http://localhost/admin_course_builder.php" class="action-btn">➕ ኮርስ ብሉደር / ፋብሪካ ስራ</a>
         <a href="admin_view_courses.php" class="action-btn">📚 ኮርሶች / ትምህርት ዝርዝር</a>
         <a href="admin_view_courses.php" class="action-btn">📚 ኮርሶችን አስተካክል / ሰርዝ</a>
         <a href="admin_students.php" class="action-btn">👥 ተማሪዎችን አስተዳድር</a>

@@ -10,6 +10,14 @@ if (!isset($_SESSION['admin_id'])) {
 $error = '';
 $success = '';
 
+function normalizeQuestionType($value) {
+    $type = strtolower(trim((string)($value ?? 'multiple_choice')));
+    if (in_array($type, ['multiple_choice', 'short_answer', 'fill_in_blank'], true)) {
+        return $type;
+    }
+    return 'multiple_choice';
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pdo->exec('CREATE TABLE IF NOT EXISTS questions (id INT AUTO_INCREMENT PRIMARY KEY, question_type VARCHAR(30) NOT NULL DEFAULT "multiple_choice", question_text TEXT NOT NULL, option_a VARCHAR(255) NOT NULL, option_b VARCHAR(255) NOT NULL, option_c VARCHAR(255) NOT NULL, option_d VARCHAR(255) NOT NULL, correct_answer VARCHAR(255) NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)');
     try {
@@ -18,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Ignore if the column already exists.
     }
 
-    $question_type = ($_POST['question_type'] ?? 'multiple_choice') === 'short_answer' ? 'short_answer' : 'multiple_choice';
+    $question_type = normalizeQuestionType($_POST['question_type'] ?? 'multiple_choice');
     $q = trim($_POST['question'] ?? '');
 
     if ($question_type === 'multiple_choice') {
@@ -62,7 +70,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ':blank2' => '',
                     ':blank3' => '',
                 ]);
-                $success = 'አጭር መልስ ጥያቄው በስኬት ታክሏል።';
+                $success = $question_type === 'fill_in_blank'
+                    ? 'Fill in the Blank ጥያቄው በስኬት ታክሏል።'
+                    : 'አጭር መልስ ጥያቄው በስኬት ታክሏል።';
             } catch (PDOException $e) {
                 $error = 'ስህተት: ' . $e->getMessage();
             }
@@ -108,6 +118,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label for="question_type">የጥያቄ አይነት</label>
                 <select id="question_type" name="question_type" onchange="toggleQuestionType(this.value)">
                     <option value="multiple_choice">Multiple Choice</option>
+                    <option value="fill_in_blank">Fill in the Blank</option>
                     <option value="short_answer">Short Answer</option>
                 </select>
             </div>
@@ -133,7 +144,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div id="shortAnswerFields" style="display:none;">
                 <div class="form-group">
                     <label for="answer">ትክክለኛ መልስ</label>
-                    <input id="answer" type="text" name="answer" placeholder="አጭር መልስ ይተይቡ">
+                    <input id="answer" type="text" name="answer" placeholder="ለ Fill in the Blank / Short Answer መልስ ያስገቡ">
                 </div>
             </div>
             <button type="submit" name="save">ጥያቄ ጨምር</button>

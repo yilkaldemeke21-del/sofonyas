@@ -111,8 +111,18 @@ try {
                         <tr>
                             <td><?php echo safe($q['question_text']); ?></td>
                             <td>
-                                <strong><?php echo ($q['question_type'] ?? 'multiple_choice') === 'short_answer' ? 'Short Answer' : 'Multiple Choice'; ?></strong><br>
-                                <?php if (($q['question_type'] ?? 'multiple_choice') === 'short_answer'): ?>
+                                <?php
+                                $type = $q['question_type'] ?? 'multiple_choice';
+                                if ($type === 'short_answer') {
+                                    $typeLabel = 'Short Answer';
+                                } elseif ($type === 'fill_in_blank') {
+                                    $typeLabel = 'Fill in the Blank';
+                                } else {
+                                    $typeLabel = 'Multiple Choice';
+                                }
+                                ?>
+                                <strong><?php echo safe($typeLabel); ?></strong><br>
+                                <?php if ($type === 'short_answer' || $type === 'fill_in_blank'): ?>
                                     መልስ: <?php echo safe($q['correct_answer'] ?: $q['option_a']); ?>
                                 <?php else: ?>
                                     A. <?php echo safe($q['option_a']); ?><br>

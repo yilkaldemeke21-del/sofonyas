@@ -225,7 +225,13 @@ if (empty($notifications)) {
             <h1>እንኳን በደህና መጡ, <?php echo safe($student['name']); ?></h1>
             <p>የኢሜይልዎ: <?php echo safe($student['email']); ?></p>
         </div>
-        <a class="button" href="student_logout.php">ውጣ</a>
+        <div style="display:flex; flex-wrap:wrap; gap:10px; justify-content:flex-end;">
+            <a class="button" href="sofonyas (2).html">መጀመሪያ</a>
+            <a class="button" href="tutorial.php">ኮርሶች</a>
+            <a class="button" href="discussion_forum.php">ፎርም</a>
+            <a class="button" href="library.php">ላይብራሪ</a>
+            <a class="button" href="student_logout.php">ውጣ</a>
+        </div>
     </div>
 
     <div class="stats">
@@ -263,13 +269,13 @@ if (empty($notifications)) {
     </div>
 
     <div class="card" style="margin-bottom: 24px;">
-        <h2>� Live Classes</h2>
-        <p style="margin-bottom: 12px; color: #475569;">YouTube Live, Zoom, Live Chat እና የክፍል መርሃ ግብር ወደ ቀጥታ ክፍል ለመግባት ይጠቀሙ።</p>
+        <h2>🎥 ቀጥታ ክፍሎች</h2>
+        <p style="margin-bottom: 12px; color: #475569;">YouTube Live፣ Zoom፣ Live Chat እና የክፍል መርሃ ግብር ወደ ቀጥታ ክፍል ለመግባት ይጠቀሙ።</p>
         <a class="button" href="live_class.php" style="display:inline-block;">Join Live Class</a>
     </div>
 
     <div class="card" style="margin-bottom: 24px;">
-        <h2>�📚 ትምህርት / ኮርሶች</h2>
+        <h2>📚 ትምህርት / ኮርሶች</h2>
         <p style="margin-bottom: 12px; color: #475569;">ከዚህ በኋላ የተጫኑትን ኮርሶችና የPDF ማዕከሎች እይታ ይመልከቱ።</p>
         <a class="button" href="tutorial.php" style="display:inline-block; margin-right:10px;">ወደ ትምህርት ገጽ</a>
         <a class="button" href="discussion_forum.php" style="display:inline-block; margin-right:10px;">💬 Discussion Forum</a>

@@ -103,7 +103,7 @@ foreach ($registrations as $row) {
             </tbody>
         </table>
     <?php endif; ?>
-    <p style="margin-top: 20px;"><a class="button" href="sofonyas2.html">መመለስ</a></p>
+    <p style="margin-top: 20px;"><a class="button" href="sofonyas (2).html">ወደ መጀመሪያ ገጽ ተመለስ</a></p>
 </div>
 </body>
 </html>

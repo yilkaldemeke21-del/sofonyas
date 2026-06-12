@@ -153,7 +153,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <div class="container">
     <div class="card">
-        <h1>ነው ኮርስ ጨምር</h1>
+        <h1>ኮርስ እና ትምህርት አክል</h1>
+        <p style="margin-bottom:18px;color:#475569;">እዚህ ኮርስ ትምህርት፣ ሞዱሎች፣ ፈተና እና አስተዳደር ይጨምራሉ።</p>
         
         <?php if ($error): ?>
             <div class="error"><?php echo $error; ?></div>
@@ -214,13 +215,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <div class="form-group">
-                <label for="tutorial_topic">የትዕይንት ርዕስ / Topic</label>
-                <input type="text" id="tutorial_topic" name="tutorial_topic" placeholder="ለምሳሌ፦ ክፍል 1፡ ሥላሴ መሰረት">
+                <label for="tutorial_topic">የትምህርት ርዕስ / Lesson Title</label>
+                <input type="text" id="tutorial_topic" name="tutorial_topic" placeholder="ለምሳሌ፦ ክፍል 1 - ስለ መንፈሳዊ ሕይወት መሰረት">
             </div>
 
             <div class="form-group">
-                <label for="tutorial_text">የትዕይንት / አጫጭር መመሪያ ጽሑፍ</label>
-                <textarea id="tutorial_text" name="tutorial_text" placeholder="በትክክል ለማብራራት ስለ ትምህርቱ ጽሑፍ ያስገቡ..."></textarea>
+                <label for="tutorial_text">የትምህርት እና መመሪያ ጽሑፍ</label>
+                <textarea id="tutorial_text" name="tutorial_text" placeholder="Introduction&#10;Tags&#10;Headings&#10;Paragraphs&#10;Lists&#10;Links&#10;Images&#10;Tables&#10;Forms&#10;Semantic&#10;Exercises&#10;ይህን ያስገቡ እንደ የትምህርት ማስተማሪያ መመሪያ..."></textarea>
             </div>
 
             <div class="form-group">
@@ -239,18 +240,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <div class="form-group">
-                <label for="modules">ሞጁሎች</label>
-                <textarea id="modules" name="modules" placeholder="Module 1: Introduction&#10;Module 2: HTML Basics"></textarea>
+                <label for="modules">ሞጁሎች / Course Outline</label>
+                <textarea id="modules" name="modules" placeholder="Module 1: Introduction&#10;Module 2: Tags and Headings&#10;Module 3: Paragraphs and Lists&#10;Module 4: Links, Images and Tables&#10;Module 5: Forms and Semantic Elements&#10;Module 6: Exercises and Practice"></textarea>
             </div>
 
             <div class="form-group">
                 <label for="quiz">Quiz / ጥያቄዎች</label>
-                <textarea id="quiz" name="quiz" placeholder="እያንዳንዱ ጥያቄ ወይም ማስታወሻ ያስገቡ..."></textarea>
+                <textarea id="quiz" name="quiz" placeholder="1. ተጨማሪ ምን ይባላል?&#10;2. Headings እንዴት ይጠቀማሉ?&#10;3. Semantic ቁልፍ ቃል ምን ይለዋል?&#10;4. እንደ እርስዎ የሚፈለገውን መጨረሻ ለተማሪዎች ትገልጣላችሁ..."></textarea>
             </div>
 
             <div class="form-group">
                 <label for="assignment">Assignment / ስራ</label>
-                <textarea id="assignment" name="assignment" placeholder="የስራ መግለጫ ያስገቡ..."></textarea>
+                <textarea id="assignment" name="assignment" placeholder="ተማሪዎች እንደ አንድ ገጽ መሰረት አጭር ገጽ ይፍጠሩ፤ በእሱ ላይ Tags, Headings, Paragraphs, Lists, Links, Images, Tables, Forms ይደረጋሉ።"></textarea>
             </div>
 
             <div class="form-group">

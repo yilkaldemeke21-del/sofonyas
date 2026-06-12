@@ -23,16 +23,19 @@ $courses = $stmt->fetchAll();
 </head>
 <body>
 <nav>
-  <a href="dashboard.php">Home</a>
+  <a href="sofonyas (2).html">Home</a>
+  <a href="dashboard.php">Dashboard</a>
   <a href="tutorial.php">Tutorial</a>
-  <a href="exam20.php">Exam Center</a>
+  <a href="discussion_forum.php">Forum</a>
+  <a href="library.php">Library</a>
   <a href="student_login.php">Student Login</a>
+  <a href="admin_login.php">Admin Login</a>
   <a href="contact.html">Contact</a>
 </nav>
 <div class="wrap">
   <div class="card">
     <h1>ተማሪ መማሪያ እና ኮርሶች</h1>
-    <p class="muted">እዚህ ከዳታቤዝ የተጫኑ ኮርሶችን ማየት እና የፈተና ማዕከል ለመድረስ ይችላሉ።</p>
+    <p class="muted">እዚህ ከዳታቤዝ የተጫኑ ትምህርቶችን ተመልከት፣ አጭር እና ሙሉ መግለጫዎችን እና የትምህርት እንቅስቃሴዎችን ለተማሪዎች በቀላሉ እንዲያገኙ ይረዳል።</p>
     <a class="btn" href="student_login.php">ለተማሪ ግባ</a>
     <a class="btn" href="exam20.php">Exam Center</a>
   </div>
@@ -58,12 +61,12 @@ $courses = $stmt->fetchAll();
             <?php endif; ?>
             <p><strong>ኮድ:</strong> <?php echo htmlspecialchars($course['course_code']); ?></p>
             <p><strong>ዋጋ:</strong> <?php echo number_format($course['price'], 2); ?> ብር</p>
-            <?php if (!empty($course['modules'])): ?><p><strong>Modules:</strong> <?php echo nl2br(htmlspecialchars($course['modules'])); ?></p><?php endif; ?>
+            <?php if (!empty($course['modules'])): ?><p><strong>Course Outline:</strong> <?php echo nl2br(htmlspecialchars($course['modules'])); ?></p><?php endif; ?>
             <?php if (!empty($course['quiz'])): ?><p><strong>Quiz:</strong> <?php echo nl2br(htmlspecialchars($course['quiz'])); ?></p><?php endif; ?>
             <?php if (!empty($course['assignment'])): ?><p><strong>Assignment:</strong> <?php echo nl2br(htmlspecialchars($course['assignment'])); ?></p><?php endif; ?>
             <?php if (!empty($course['certificate_requirements'])): ?><p><strong>Certificate Requirements:</strong> <?php echo nl2br(htmlspecialchars($course['certificate_requirements'])); ?></p><?php endif; ?>
             <p>
-              <a class="btn" href="student_register.php?course=<?php echo rawurlencode($course['course_name']); ?>&amount=<?php echo (float)$course['price']; ?>">ይመዝገቡ</a>
+              <a class="btn" href="student_register.php?course=<?php echo rawurlencode($course['course_name']); ?>&amount=<?php echo (float)$course['price']; ?>">ይመዝገቡ ለዚህ ትምህርት</a>
               <?php if (!empty($course['pdf_file'])): ?>
                 <a class="btn" href="<?php echo htmlspecialchars($course['pdf_file']); ?>" target="_blank">PDF እይ</a>
               <?php endif; ?>
