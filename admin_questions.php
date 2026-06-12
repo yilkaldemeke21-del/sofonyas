@@ -116,7 +116,9 @@ try {
                                 if ($type === 'short_answer') {
                                     $typeLabel = 'Short Answer';
                                 } elseif ($type === 'fill_in_blank') {
-                                    $typeLabel = 'Fill in the Blank';
+                                    $typeLabel = 'Fill in the Blank / Blank Space';
+                                } elseif ($type === 'true_false') {
+                                    $typeLabel = 'True / False';
                                 } else {
                                     $typeLabel = 'Multiple Choice';
                                 }
@@ -125,10 +127,16 @@ try {
                                 <?php if ($type === 'short_answer' || $type === 'fill_in_blank'): ?>
                                     መልስ: <?php echo safe($q['correct_answer'] ?: $q['option_a']); ?>
                                 <?php else: ?>
-                                    A. <?php echo safe($q['option_a']); ?><br>
-                                    B. <?php echo safe($q['option_b']); ?><br>
-                                    C. <?php echo safe($q['option_c']); ?><br>
-                                    D. <?php echo safe($q['option_d']); ?>
+                                    <?php if ($type === 'true_false'): ?>
+                                        True / False<br>
+                                        A. <?php echo safe($q['option_a'] ?: 'True'); ?><br>
+                                        B. <?php echo safe($q['option_b'] ?: 'False'); ?><br>
+                                    <?php else: ?>
+                                        A. <?php echo safe($q['option_a']); ?><br>
+                                        B. <?php echo safe($q['option_b']); ?><br>
+                                        C. <?php echo safe($q['option_c']); ?><br>
+                                        D. <?php echo safe($q['option_d']); ?>
+                                    <?php endif; ?>
                                 <?php endif; ?>
                             </td>
                             <td><?php echo safe($q['correct_answer'] ?: $q['option_a']); ?></td>

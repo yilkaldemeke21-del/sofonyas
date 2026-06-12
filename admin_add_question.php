@@ -12,8 +12,19 @@ $success = '';
 
 function normalizeQuestionType($value) {
     $type = strtolower(trim((string)($value ?? 'multiple_choice')));
-    if (in_array($type, ['multiple_choice', 'short_answer', 'fill_in_blank'], true)) {
-        return $type;
+    $type = str_replace([' ', '_'], '', $type);
+
+    if (in_array($type, ['multiplechoice', 'multiple_choice'], true)) {
+        return 'multiple_choice';
+    }
+    if (in_array($type, ['truefalse', 'true_false', 'boolean'], true)) {
+        return 'true_false';
+    }
+    if (in_array($type, ['fillinblank', 'fill_in_blank', 'blankspace', 'blank_space'], true)) {
+        return 'fill_in_blank';
+    }
+    if (in_array($type, ['shortanswer', 'short_answer'], true)) {
+        return 'short_answer';
     }
     return 'multiple_choice';
 }
@@ -29,30 +40,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $question_type = normalizeQuestionType($_POST['question_type'] ?? 'multiple_choice');
     $q = trim($_POST['question'] ?? '');
 
-    if ($question_type === 'multiple_choice') {
+    if ($question_type === 'multiple_choice' || $question_type === 'true_false') {
         $a = trim($_POST['a'] ?? '');
         $b = trim($_POST['b'] ?? '');
         $c = trim($_POST['c'] ?? '');
         $d = trim($_POST['d'] ?? '');
         $correct = strtoupper(trim($_POST['correct'] ?? 'A'));
 
-        if ($q === '' || $a === '' || $b === '' || $c === '' || $d === '') {
-            $error = 'እባክዎ ሁሉንም መስኮች ይሙሉ።';
+        if ($question_type === 'true_false') {
+            $a = 'True';
+            $b = 'False';
+            $c = '';
+            $d = '';
+            $correct = strtoupper(trim($_POST['correct'] ?? 'TRUE'));
+        }
+
+        if ($q === '' || $a === '' || $b === '') {
+            $error = 'እባክዎ ጥያቄን እና ምርጫዎቹን ይሙሉ።';
         } else {
-            try {
-                $stmt = $pdo->prepare('INSERT INTO questions (question_type, question_text, option_a, option_b, option_c, option_d, correct_answer) VALUES (:question_type, :q, :a, :b, :c, :d, :correct)');
-                $stmt->execute([
-                    ':question_type' => $question_type,
-                    ':q' => $q,
-                    ':a' => $a,
-                    ':b' => $b,
-                    ':c' => $c,
-                    ':d' => $d,
-                    ':correct' => $correct,
-                ]);
-                $success = 'ምርጫ ጥያቄው በስኬት ታክሏል።';
-            } catch (PDOException $e) {
-                $error = 'ስህተት: ' . $e->getMessage();
+            if ($question_type === 'multiple_choice' && ($c === '' || $d === '')) {
+                $error = 'እባክዎ ሁሉንም አራት አማራጮች ይሙሉ።';
+            } else {
+                try {
+                    $stmt = $pdo->prepare('INSERT INTO questions (question_type, question_text, option_a, option_b, option_c, option_d, correct_answer) VALUES (:question_type, :q, :a, :b, :c, :d, :correct)');
+                    $stmt->execute([
+                        ':question_type' => $question_type,
+                        ':q' => $q,
+                        ':a' => $a,
+                        ':b' => $b,
+                        ':c' => $c,
+                        ':d' => $d,
+                        ':correct' => $correct,
+                    ]);
+                    $success = $question_type === 'true_false'
+                        ? 'True/False ጥያቄው በስኬት ታክሏል።'
+                        : 'ምርጫ ጥያቄው በስኬት ታክሏል።';
+                } catch (PDOException $e) {
+                    $error = 'ስህተት: ' . $e->getMessage();
+                }
             }
         }
     } else {
@@ -118,17 +143,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label for="question_type">የጥያቄ አይነት</label>
                 <select id="question_type" name="question_type" onchange="toggleQuestionType(this.value)">
                     <option value="multiple_choice">Multiple Choice</option>
-                    <option value="fill_in_blank">Fill in the Blank</option>
+                    <option value="true_false">True / False</option>
+                    <option value="fill_in_blank">Fill in the Blank / Blank Space</option>
                     <option value="short_answer">Short Answer</option>
                 </select>
+                <p style="color:#475569; font-size:13px; margin-top:6px;">ይህ ክፍል ለ Multiple Choice, True/False, Fill in the Blank እና Short Answer ጥያቄዎችን ይደግፋል።</p>
             </div>
             <div class="form-group">
                 <label for="question">ጥያቄ</label>
                 <textarea id="question" name="question" placeholder="ጥያቄዎን ይተይቡ" required></textarea>
             </div>
             <div id="mcqFields">
-                <div class="form-group"><label for="a">A</label><input id="a" type="text" name="a" placeholder="አማራጭ 1" required></div>
-                <div class="form-group"><label for="b">B</label><input id="b" type="text" name="b" placeholder="አማራጭ 2" required></div>
+                <div class="form-group"><label for="a" id="labelA">A</label><input id="a" type="text" name="a" placeholder="አማራጭ 1" required></div>
+                <div class="form-group"><label for="b" id="labelB">B</label><input id="b" type="text" name="b" placeholder="አማራጭ 2" required></div>
                 <div class="form-group"><label for="c">C</label><input id="c" type="text" name="c" placeholder="አማራጭ 3" required></div>
                 <div class="form-group"><label for="d">D</label><input id="d" type="text" name="d" placeholder="አማራጭ 4" required></div>
                 <div class="form-group">
@@ -153,12 +180,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             function toggleQuestionType(type) {
                 const mcq = document.getElementById('mcqFields');
                 const shortAnswer = document.getElementById('shortAnswerFields');
-                if (type === 'short_answer') {
+                const labelA = document.getElementById('labelA');
+                const labelB = document.getElementById('labelB');
+                const correct = document.getElementById('correct');
+
+                if (type === 'short_answer' || type === 'fill_in_blank') {
                     mcq.style.display = 'none';
                     shortAnswer.style.display = 'block';
+                    return;
+                }
+
+                mcq.style.display = 'block';
+                shortAnswer.style.display = 'none';
+
+                if (type === 'true_false') {
+                    labelA.textContent = 'True';
+                    labelB.textContent = 'False';
+                    document.getElementById('a').value = 'True';
+                    document.getElementById('b').value = 'False';
+                    document.getElementById('c').value = '';
+                    document.getElementById('d').value = '';
+                    correct.innerHTML = '<option value="TRUE">True</option><option value="FALSE">False</option>';
                 } else {
-                    mcq.style.display = 'block';
-                    shortAnswer.style.display = 'none';
+                    labelA.textContent = 'A';
+                    labelB.textContent = 'B';
+                    correct.innerHTML = '<option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>';
                 }
             }
             toggleQuestionType(document.getElementById('question_type').value);
