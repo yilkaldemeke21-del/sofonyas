@@ -112,25 +112,25 @@ try {
                             <td>
                                 <strong><?php echo safe($course['course_name']); ?></strong>
                                 <?php if (!empty($course['short_description'])): ?>
-                                    <br><small><?php echo safe($course['short_description']); ?></small>
+                                    <br><small><?php echo $course['short_description']; ?></small>
                                 <?php endif; ?>
                                 <?php if (!empty($course['description'])): ?>
-                                    <br><small><?php echo safe($course['description']); ?></small>
+                                    <br><small><?php echo $course['description']; ?></small>
                                 <?php endif; ?>
                                 <?php if (!empty($course['category']) || !empty($course['level'])): ?>
                                     <br><strong>Category/Level:</strong> <?php echo safe($course['category'] ?? ''); ?><?php echo (!empty($course['category']) && !empty($course['level']) ? ' · ' : ''); ?><?php echo safe($course['level'] ?? ''); ?>
                                 <?php endif; ?>
                                 <?php if (!empty($course['modules'])): ?>
-                                    <br><strong>Modules:</strong> <?php echo nl2br(safe($course['modules'])); ?>
+                                    <br><span><strong>Modules:</strong> <?php echo $course['modules']; ?></span>
                                 <?php endif; ?>
                                 <?php if (!empty($course['quiz'])): ?>
-                                    <br><strong>Quiz:</strong> <?php echo nl2br(safe($course['quiz'])); ?>
+                                    <br><span><strong>Quiz:</strong> <?php echo $course['quiz']; ?></span>
                                 <?php endif; ?>
                                 <?php if (!empty($course['assignment'])): ?>
-                                    <br><strong>Assignment:</strong> <?php echo nl2br(safe($course['assignment'])); ?>
+                                    <br><span><strong>Assignment:</strong> <?php echo $course['assignment']; ?></span>
                                 <?php endif; ?>
                                 <?php if (!empty($course['certificate_requirements'])): ?>
-                                    <br><strong>Certificate Requirements:</strong> <?php echo nl2br(safe($course['certificate_requirements'])); ?>
+                                    <br><span><strong>Certificate Requirements:</strong> <?php echo $course['certificate_requirements']; ?></span>
                                 <?php endif; ?>
                                 <?php if (!empty($course['pdf_file'])): ?>
                                     <br><a href="<?php echo safe($course['pdf_file']); ?>" target="_blank">PDF እይ</a>
@@ -139,7 +139,7 @@ try {
                                     <br><strong>Topic:</strong> <?php echo safe($course['tutorial_topic']); ?>
                                 <?php endif; ?>
                                 <?php if (!empty($course['tutorial_text'])): ?>
-                                    <br><strong>Text:</strong> <?php echo safe($course['tutorial_text']); ?>
+                                    <br><span><strong>Text:</strong> <?php echo $course['tutorial_text']; ?></span>
                                 <?php endif; ?>
                                 <?php if (!empty($course['tutorial_image'])): ?>
                                     <div class="media-block">

@@ -39,6 +39,11 @@ try {
 
 ensureCourseColumns($pdo);
 
+function normalizeText($value): string
+{
+    return preg_replace("/\r\n|\r/", "\n", (string)($value ?? ''));
+}
+
 function uploadMediaFile(array $file, string $folder, array $allowedExt, array $allowedMime, string &$error): ?string
 {
     if (!isset($file['name']) || $file['name'] === '' || $file['error'] !== UPLOAD_ERR_OK) {
@@ -77,23 +82,23 @@ function uploadMediaFile(array $file, string $folder, array $allowedExt, array $
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $course_name = trim($_POST['course_name'] ?? '');
     $course_code = trim($_POST['course_code'] ?? '');
-    $short_description = trim($_POST['short_description'] ?? '');
-    $description = trim($_POST['description'] ?? '');
-    $category = trim($_POST['category'] ?? '');
-    $level = trim($_POST['level'] ?? '');
-    $thumbnail = trim($_POST['thumbnail'] ?? '');
+    $short_description = normalizeText($_POST['short_description'] ?? '');
+    $description = normalizeText($_POST['description'] ?? '');
+    $category = normalizeText($_POST['category'] ?? '');
+    $level = normalizeText($_POST['level'] ?? '');
+    $thumbnail = normalizeText($_POST['thumbnail'] ?? '');
     $price = (float)($_POST['price'] ?? 0);
-    $instructor = trim($_POST['instructor'] ?? '');
-    $tutorial_topic = trim($_POST['tutorial_topic'] ?? '');
-    $tutorial_text = trim($_POST['tutorial_text'] ?? '');
-    $tutorial_image = trim($_POST['tutorial_image'] ?? '');
-    $tutorial_audio = trim($_POST['tutorial_audio'] ?? '');
-    $tutorial_video = trim($_POST['tutorial_video'] ?? '');
-    $pdf_file = trim($_POST['pdf_file'] ?? '');
-    $modules = trim($_POST['modules'] ?? '');
-    $quiz = trim($_POST['quiz'] ?? '');
-    $assignment = trim($_POST['assignment'] ?? '');
-    $certificate_requirements = trim($_POST['certificate_requirements'] ?? '');
+    $instructor = normalizeText($_POST['instructor'] ?? '');
+    $tutorial_topic = normalizeText($_POST['tutorial_topic'] ?? '');
+    $tutorial_text = normalizeText($_POST['tutorial_text'] ?? '');
+    $tutorial_image = normalizeText($_POST['tutorial_image'] ?? '');
+    $tutorial_audio = normalizeText($_POST['tutorial_audio'] ?? '');
+    $tutorial_video = normalizeText($_POST['tutorial_video'] ?? '');
+    $pdf_file = normalizeText($_POST['pdf_file'] ?? '');
+    $modules = normalizeText($_POST['modules'] ?? '');
+    $quiz = normalizeText($_POST['quiz'] ?? '');
+    $assignment = normalizeText($_POST['assignment'] ?? '');
+    $certificate_requirements = normalizeText($_POST['certificate_requirements'] ?? '');
 
     if ($course_name === '' || $course_code === '') {
         $error = 'የኮርስ ስም እና ኮድ ማስገባት አለብዎት።';
@@ -166,6 +171,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <title>Admin Course Builder</title>
+    <script src="https://cdn.jsdelivr.net/npm/tinymce@6.8.3/tinymce.min.js" referrerpolicy="origin"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.tinymce) {
+                tinymce.init({
+                    selector: '.rich-editor',
+                    plugins: 'advlist autolink link image lists table wordcount code',
+                    toolbar: 'undo redo | blocks | bold italic | bullist numlist | link image table | removeformat',
+                    menubar: false,
+                    branding: false,
+                    promotion: false,
+                    height: 180,
+                    forced_root_block: 'p',
+                    setup: function (editor) {
+                        editor.on('change', function () {
+                            editor.save();
+                        });
+                    }
+                });
+            }
+        });
+    </script>
     <style>
         * { box-sizing: border-box; font-family: Arial, sans-serif; }
         body { margin: 0; background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 45%, #eef2ff 100%); color: #111827; }
@@ -252,7 +279,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="panel" id="module" style="padding:16px; margin-top: 14px;">
                 <h3 style="margin-top:0;">1. Add Module</h3>
                 <label for="modules">Module / Course Outline</label>
-                <textarea id="modules" name="modules" placeholder="Module 1: Introduction&#10;Module 2: Core Concepts&#10;Module 3: Practice and Review"></textarea>
+                <textarea id="modules" name="modules" class="rich-editor" placeholder="Module 1: Introduction&#10;Module 2: Core Concepts&#10;Module 3: Practice and Review"></textarea>
                 <p class="small">This is saved into the course record as the module outline.</p>
             </div>
 
@@ -261,7 +288,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <label for="tutorial_topic">Lesson Title</label>
                 <input id="tutorial_topic" name="tutorial_topic" placeholder="Lesson 1 - What is Spiritual Growth?">
                 <label for="tutorial_text">Lesson Content / Explanation</label>
-                <textarea id="tutorial_text" name="tutorial_text" placeholder="Describe the lesson topic, key points, and practical instruction here."></textarea>
+                <textarea id="tutorial_text" name="tutorial_text" class="rich-editor" placeholder="Describe the lesson topic, key points, and practical instruction here."></textarea>
                 <label for="lesson_image_file">Lesson Image (upload)</label>
                 <input id="lesson_image_file" name="lesson_image_file" type="file" accept="image/*">
                 <label for="tutorial_image">Lesson Image URL (optional)</label>
@@ -279,23 +306,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="panel" id="topic" style="padding:16px;">
                 <h3 style="margin-top:0;">3. Add Topic</h3>
                 <label for="short_description">Short Topic Summary</label>
-                <textarea id="short_description" name="short_description" placeholder="A short summary of the topic or lesson focus."></textarea>
+                <textarea id="short_description" name="short_description" class="rich-editor" placeholder="A short summary of the topic or lesson focus."></textarea>
                 <label for="description">Full Topic / Content Notes</label>
-                <textarea id="description" name="description" placeholder="Write the full paragraph or topic explanation here."></textarea>
+                <textarea id="description" name="description" class="rich-editor" placeholder="Write the full paragraph or topic explanation here."></textarea>
             </div>
 
             <div class="panel" id="content" style="padding:16px;">
                 <h3 style="margin-top:0;">4. Add Paragraph / Content</h3>
                 <label for="assignment">Content / Paragraph / Assignment Notes</label>
-                <textarea id="assignment" name="assignment" placeholder="Add lesson notes, paragraph text, assignment instructions, or learner activities here."></textarea>
+                <textarea id="assignment" name="assignment" class="rich-editor" placeholder="Add lesson notes, paragraph text, assignment instructions, or learner activities here."></textarea>
             </div>
 
             <div class="panel" id="quiz" style="padding:16px;">
                 <h3 style="margin-top:0;">5. Add Quiz</h3>
                 <label for="quiz">Quiz Questions</label>
-                <textarea id="quiz" name="quiz" placeholder="1. What is the main topic?&#10;2. Which action is most important?&#10;3. What should learners practice?"></textarea>
+                <textarea id="quiz" name="quiz" class="rich-editor" placeholder="1. What is the main topic?&#10;2. Which action is most important?&#10;3. What should learners practice?"></textarea>
                 <label for="certificate_requirements">Certificate Requirements</label>
-                <textarea id="certificate_requirements" name="certificate_requirements" placeholder="80% score&#10;Complete quiz&#10;Submit assignment"></textarea>
+                <textarea id="certificate_requirements" name="certificate_requirements" class="rich-editor" placeholder="80% score&#10;Complete quiz&#10;Submit assignment"></textarea>
             </div>
 
             <div class="panel" id="publish" style="padding:16px;">

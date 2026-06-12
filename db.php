@@ -78,5 +78,5 @@ try {
 }
 
 function safe($value) {
-    return htmlspecialchars(trim((string)$value), ENT_QUOTES, 'UTF-8');
+    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
 }

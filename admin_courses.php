@@ -126,6 +126,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <title>ኮርስ ጨምር</title>
+    <script src="https://cdn.jsdelivr.net/npm/tinymce@6.8.3/tinymce.min.js" referrerpolicy="origin"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.tinymce) {
+                tinymce.init({
+                    selector: '.rich-editor',
+                    plugins: 'advlist autolink link image lists table wordcount code',
+                    toolbar: 'undo redo | blocks | bold italic | bullist numlist | link image table | removeformat',
+                    menubar: false,
+                    branding: false,
+                    promotion: false,
+                    height: 180,
+                    forced_root_block: 'p',
+                    setup: function (editor) {
+                        editor.on('change', function () { editor.save(); });
+                    }
+                });
+            }
+        });
+    </script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #f5f7fa; color: #333; }
@@ -177,12 +197,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             <div class="form-group">
                 <label for="short_description">አጭር መግለጫ</label>
-                <textarea id="short_description" name="short_description" placeholder="ኮርሱ በአጭሩ ምን ይማራል?"></textarea>
+                <textarea id="short_description" name="short_description" class="rich-editor" placeholder="ኮርሱ በአጭሩ ምን ይማራል?"></textarea>
             </div>
 
             <div class="form-group">
                 <label for="description">ሙሉ መግለጫ</label>
-                <textarea id="description" name="description" placeholder="ስለ ኮርሱ ተጨማሪ መግለጫ..."></textarea>
+                <textarea id="description" name="description" class="rich-editor" placeholder="ስለ ኮርሱ ተጨማሪ መግለጫ..."></textarea>
             </div>
 
             <div class="form-group">
@@ -221,7 +241,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <div class="form-group">
                 <label for="tutorial_text">የትምህርት እና መመሪያ ጽሑፍ</label>
-                <textarea id="tutorial_text" name="tutorial_text" placeholder="Introduction&#10;Tags&#10;Headings&#10;Paragraphs&#10;Lists&#10;Links&#10;Images&#10;Tables&#10;Forms&#10;Semantic&#10;Exercises&#10;ይህን ያስገቡ እንደ የትምህርት ማስተማሪያ መመሪያ..."></textarea>
+                <textarea id="tutorial_text" name="tutorial_text" class="rich-editor" placeholder="Introduction&#10;Tags&#10;Headings&#10;Paragraphs&#10;Lists&#10;Links&#10;Images&#10;Tables&#10;Forms&#10;Semantic&#10;Exercises&#10;ይህን ያስገቡ እንደ የትምህርት ማስተማሪያ መመሪያ..."></textarea>
             </div>
 
             <div class="form-group">
@@ -241,22 +261,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <div class="form-group">
                 <label for="modules">ሞጁሎች / Course Outline</label>
-                <textarea id="modules" name="modules" placeholder="Module 1: Introduction&#10;Module 2: Tags and Headings&#10;Module 3: Paragraphs and Lists&#10;Module 4: Links, Images and Tables&#10;Module 5: Forms and Semantic Elements&#10;Module 6: Exercises and Practice"></textarea>
+                <textarea id="modules" name="modules" class="rich-editor" placeholder="Module 1: Introduction&#10;Module 2: Tags and Headings&#10;Module 3: Paragraphs and Lists&#10;Module 4: Links, Images and Tables&#10;Module 5: Forms and Semantic Elements&#10;Module 6: Exercises and Practice"></textarea>
             </div>
 
             <div class="form-group">
                 <label for="quiz">Quiz / ጥያቄዎች</label>
-                <textarea id="quiz" name="quiz" placeholder="1. ተጨማሪ ምን ይባላል?&#10;2. Headings እንዴት ይጠቀማሉ?&#10;3. Semantic ቁልፍ ቃል ምን ይለዋል?&#10;4. እንደ እርስዎ የሚፈለገውን መጨረሻ ለተማሪዎች ትገልጣላችሁ..."></textarea>
+                <textarea id="quiz" name="quiz" class="rich-editor" placeholder="1. ተጨማሪ ምን ይባላል?&#10;2. Headings እንዴት ይጠቀማሉ?&#10;3. Semantic ቁልፍ ቃል ምን ይለዋል?&#10;4. እንደ እርስዎ የሚፈለገውን መጨረሻ ለተማሪዎች ትገልጣላችሁ..."></textarea>
             </div>
 
             <div class="form-group">
                 <label for="assignment">Assignment / ስራ</label>
-                <textarea id="assignment" name="assignment" placeholder="ተማሪዎች እንደ አንድ ገጽ መሰረት አጭር ገጽ ይፍጠሩ፤ በእሱ ላይ Tags, Headings, Paragraphs, Lists, Links, Images, Tables, Forms ይደረጋሉ።"></textarea>
+                <textarea id="assignment" name="assignment" class="rich-editor" placeholder="ተማሪዎች እንደ አንድ ገጽ መሰረት አጭር ገጽ ይፍጠሩ፤ በእሱ ላይ Tags, Headings, Paragraphs, Lists, Links, Images, Tables, Forms ይደረጋሉ።"></textarea>
             </div>
 
             <div class="form-group">
                 <label for="certificate_requirements">Certificate Requirements</label>
-                <textarea id="certificate_requirements" name="certificate_requirements" placeholder="80% ውጤት&#10;Quiz ማለፍ&#10;Assignment ማጠናቀቅ"></textarea>
+                <textarea id="certificate_requirements" name="certificate_requirements" class="rich-editor" placeholder="80% ውጤት&#10;Quiz ማለፍ&#10;Assignment ማጠናቀቅ"></textarea>
             </div>
 
             <div class="form-group">

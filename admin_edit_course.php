@@ -142,6 +142,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <title>ኮርስ ማስተካከል</title>
+    <script src="https://cdn.jsdelivr.net/npm/tinymce@6.8.3/tinymce.min.js" referrerpolicy="origin"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.tinymce) {
+                tinymce.init({
+                    selector: '.rich-editor',
+                    plugins: 'advlist autolink link image lists table wordcount code',
+                    toolbar: 'undo redo | blocks | bold italic | bullist numlist | link image table | removeformat',
+                    menubar: false,
+                    branding: false,
+                    promotion: false,
+                    height: 180,
+                    forced_root_block: 'p',
+                    setup: function (editor) {
+                        editor.on('change', function () { editor.save(); });
+                    }
+                });
+            }
+        });
+    </script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background: #f5f7fa; color: #333; }
@@ -192,7 +212,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             <div class="form-group">
                 <label for="description">መግለጫ</label>
-                <textarea id="description" name="description"><?php echo safe($course['description']); ?></textarea>
+                <textarea id="description" name="description" class="rich-editor"><?php echo safe($course['description']); ?></textarea>
             </div>
             
             <div class="form-group">
@@ -212,7 +232,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <div class="form-group">
                 <label for="tutorial_text">የትዕይንት / አጫጭር መመሪያ ጽሑፍ</label>
-                <textarea id="tutorial_text" name="tutorial_text"><?php echo safe($course['tutorial_text'] ?? ''); ?></textarea>
+                <textarea id="tutorial_text" name="tutorial_text" class="rich-editor"><?php echo safe($course['tutorial_text'] ?? ''); ?></textarea>
             </div>
 
             <div class="form-group">
