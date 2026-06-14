@@ -170,8 +170,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
             <div id="shortAnswerFields" style="display:none;">
                 <div class="form-group">
-                    <label for="answer">ትክክለኛ መልስ</label>
-                    <input id="answer" type="text" name="answer" placeholder="ለ Fill in the Blank / Short Answer መልስ ያስገቡ">
+                    <label for="answer">ትክክለኛ መልስ / Correct Answer</label>
+                    <input id="answer" type="text" name="answer" placeholder="ለ Short Answer / Fill in the Blank መልስ ያስገቡ">
+                    <p style="color:#475569; font-size:13px; margin-top:6px;">ይህ ቦታ ለ Short Answer እና Fill in the Blank ጥያቄዎች ያገለግላል።</p>
                 </div>
             </div>
             <button type="submit" name="save">ጥያቄ ጨምር</button>
@@ -183,30 +184,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 const labelA = document.getElementById('labelA');
                 const labelB = document.getElementById('labelB');
                 const correct = document.getElementById('correct');
+                const a = document.getElementById('a');
+                const b = document.getElementById('b');
+                const c = document.getElementById('c');
+                const d = document.getElementById('d');
+                const answer = document.getElementById('answer');
 
-                if (type === 'short_answer' || type === 'fill_in_blank') {
+                const isTextType = type === 'short_answer' || type === 'fill_in_blank';
+
+                if (isTextType) {
                     mcq.style.display = 'none';
                     shortAnswer.style.display = 'block';
+                    a.removeAttribute('required');
+                    b.removeAttribute('required');
+                    c.removeAttribute('required');
+                    d.removeAttribute('required');
+                    answer.setAttribute('required', 'required');
                     return;
                 }
 
                 mcq.style.display = 'block';
                 shortAnswer.style.display = 'none';
+                a.setAttribute('required', 'required');
+                b.setAttribute('required', 'required');
+                c.setAttribute('required', 'required');
+                d.setAttribute('required', 'required');
+                answer.removeAttribute('required');
 
                 if (type === 'true_false') {
                     labelA.textContent = 'True';
                     labelB.textContent = 'False';
-                    document.getElementById('a').value = 'True';
-                    document.getElementById('b').value = 'False';
-                    document.getElementById('c').value = '';
-                    document.getElementById('d').value = '';
+                    a.value = 'True';
+                    b.value = 'False';
+                    c.value = '';
+                    d.value = '';
                     correct.innerHTML = '<option value="TRUE">True</option><option value="FALSE">False</option>';
                 } else {
                     labelA.textContent = 'A';
                     labelB.textContent = 'B';
+                    a.value = '';
+                    b.value = '';
+                    c.value = '';
+                    d.value = '';
                     correct.innerHTML = '<option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>';
                 }
             }
+
             toggleQuestionType(document.getElementById('question_type').value);
         </script>
     </div>

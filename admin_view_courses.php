@@ -48,43 +48,273 @@ try {
     <meta charset="UTF-8">
     <title>ኮርሶችን ተመልከት</title>
     <style>
+        :root {
+            --primary: #5b7cfa;
+            --primary-dark: #4c67de;
+            --accent: #8b5cf6;
+            --success: #1f9d61;
+            --danger: #e24d5b;
+            --text: #15304a;
+            --muted: #5f7085;
+            --line: #e5ebf4;
+            --panel: rgba(255, 255, 255, 0.92);
+            --shadow: 0 18px 45px rgba(15, 23, 42, 0.12);
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; background: #f5f7fa; color: #333; }
-        .navbar { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
-        .navbar a { color: white; text-decoration: none; margin-left: 20px; padding: 8px 15px; background: rgba(255,255,255,0.1); border-radius: 5px; }
-        .navbar a:hover { background: rgba(255,255,255,0.2); }
-        .container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
-        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
-        h1 { margin-bottom: 20px; }
-        .message { padding: 12px; border-radius: 5px; margin-bottom: 20px; background: #d4f1d8; color: #1d6a2b; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background: #f1f5ff; font-weight: bold; }
-        .action-btn { display: inline-block; padding: 6px 12px; margin: 2px; border-radius: 5px; text-decoration: none; font-size: 12px; cursor: pointer; }
-        .edit-btn { background: #667eea; color: white; }
-        .delete-btn { background: #e74c3c; color: white; }
-        .edit-btn:hover { background: #764ba2; }
-        .delete-btn:hover { background: #c0392b; }
-        .add-btn { background: #667eea; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; }
-        .add-btn:hover { background: #764ba2; }
-        .media-block { margin-top: 8px; }
-        .media-preview { display: inline-block; margin-top: 6px; max-width: 100%; border-radius: 6px; border: 1px solid #e5e7eb; }
-        .media-link { display: inline-block; margin-top: 4px; color: #667eea; text-decoration: none; }
+
+        body {
+            font-family: Arial, sans-serif;
+            background:
+                radial-gradient(circle at top, #eef4ff 0%, #f6f8fc 35%, #edf2f7 100%);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .page-shell { min-height: 100vh; }
+
+        .navbar {
+            background: linear-gradient(135deg, #1f2937 0%, #334155 45%, #5b7cfa 100%);
+            color: white;
+            padding: 18px 24px;
+            box-shadow: 0 10px 30px rgba(30, 41, 59, 0.25);
+        }
+
+        .navbar-inner {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 18px;
+            flex-wrap: wrap;
+        }
+
+        .brand-wrap h2 {
+            font-size: 1.35rem;
+            margin-bottom: 4px;
+        }
+
+        .brand-wrap p {
+            color: #dbe4ff;
+            font-size: 0.95rem;
+        }
+
+        .nav-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+        .nav-btn, .ghost-btn, .primary-btn, .action-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            border-radius: 999px;
+            font-weight: 700;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+        }
+
+        .nav-btn, .ghost-btn, .primary-btn {
+            padding: 10px 14px;
+            font-size: 0.95rem;
+        }
+
+        .nav-btn, .primary-btn {
+            background: rgba(255, 255, 255, 0.16);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.18);
+        }
+
+        .ghost-btn {
+            background: white;
+            color: #334155;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+        }
+
+        .nav-btn:hover, .ghost-btn:hover, .primary-btn:hover { transform: translateY(-1px); }
+        .nav-btn:hover { background: rgba(255,255,255,0.22); }
+        .ghost-btn:hover { box-shadow: 0 10px 20px rgba(148,163,184,0.18); }
+        .primary-btn:hover { background: rgba(255,255,255,0.22); }
+
+        .container { max-width: 1400px; margin: 24px auto 40px; padding: 0 20px; }
+
+        .hero-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.98), rgba(245,247,255,0.96));
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            padding: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: end;
+            gap: 18px;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+        }
+
+        .eyebrow {
+            display: inline-block;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            font-size: 0.72rem;
+            color: var(--primary-dark);
+            background: #edf2ff;
+            border-radius: 999px;
+            padding: 6px 10px;
+            margin-bottom: 8px;
+        }
+
+        .hero-card h1 { font-size: 1.6rem; margin-bottom: 6px; color: #0f172a; }
+        .hero-card p { color: var(--muted); line-height: 1.5; }
+
+        .badge-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+        .badge {
+            background: #eef4ff;
+            color: #3652a0;
+            border: 1px solid #dee7ff;
+            border-radius: 999px;
+            padding: 7px 10px;
+            font-size: 0.88rem;
+            font-weight: 700;
+        }
+
+        .card {
+            background: var(--panel);
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            padding: 18px;
+            backdrop-filter: blur(12px);
+        }
+
+        .message {
+            padding: 12px 14px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            background: #eafaf2;
+            color: #166534;
+            border: 1px solid #c8eed8;
+            font-weight: 600;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 32px 18px;
+            color: var(--muted);
+            border: 1px dashed var(--line);
+            border-radius: 18px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(248,250,255,0.98));
+        }
+
+        .empty-state a { color: var(--primary-dark); text-decoration: none; font-weight: 700; }
+        .empty-state a:hover { text-decoration: underline; }
+
+        .table-shell { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 980px; }
+
+        th, td {
+            padding: 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--line);
+            vertical-align: top;
+        }
+
+        th {
+            background: linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%);
+            color: #334155;
+            font-weight: 800;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        tbody tr:hover { background: rgba(245,247,255,0.8); }
+
+        .course-name {
+            color: #172554;
+            font-size: 1rem;
+            line-height: 1.35;
+        }
+
+        .course-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            border-radius: 999px;
+            padding: 5px 8px;
+            font-size: 0.82rem;
+            color: #334155;
+        }
+
+        .muted { color: var(--muted); font-size: 0.92rem; }
+
+        .action-group { display: flex; flex-wrap: wrap; gap: 8px; }
+        .action-btn {
+            padding: 8px 10px;
+            font-size: 0.82rem;
+            color: white;
+            border: none;
+            box-shadow: 0 6px 16px rgba(15,23,42,0.08);
+        }
+        .action-btn:hover { transform: translateY(-1px); }
+
+        .edit-btn { background: linear-gradient(135deg, #5b7cfa, #7c3aed); }
+        .delete-btn { background: linear-gradient(135deg, #ef4444, #dc2626); }
+
+        .media-block { margin-top: 10px; }
+        .media-label { display: inline-block; color: #0f172a; font-weight: 700; margin-bottom: 6px; }
+        .media-preview { display: inline-block; margin-top: 6px; max-width: 100%; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 10px 20px rgba(15,23,42,0.08); }
+        .media-link { display: inline-block; margin-top: 6px; color: var(--primary-dark); text-decoration: none; font-weight: 700; }
         .media-link:hover { text-decoration: underline; }
-        .media-frame { width: 100%; max-width: 320px; height: 180px; border: 0; border-radius: 6px; }
+        .media-frame { width: 100%; max-width: 340px; height: 190px; border: 0; border-radius: 12px; box-shadow: 0 10px 20px rgba(15,23,42,0.08); }
+
+        @media (max-width: 1024px) {
+            .hero-card { align-items: flex-start; }
+        }
+
+        @media (max-width: 768px) {
+            .navbar { padding: 14px 14px 18px; }
+            .container { padding: 0 12px; }
+            .hero-card { padding: 16px; border-radius: 18px; }
+            .nav-actions { width: 100%; }
+            .nav-btn, .ghost-btn, .primary-btn { width: 100%; }
+            .card { padding: 14px; border-radius: 18px; }
+            table { min-width: 900px; }
+        }
     </style>
 </head>
 <body>
-<div class="navbar">
-    <h2>ኮርሶችን ተመልከት</h2>
-    <div>
-        <a href="admin_courses.php" class="add-btn">➕ ኮርስ ጨምር</a>
-        <a href="admin_dashboard.php">ወደ ዳሽቦርድ ተመለስ</a>
+<div class="page-shell">
+    <div class="navbar">
+        <div class="navbar-inner">
+            <div class="brand-wrap">
+                <h2>ኮርሶችን ተመልከት</h2>
+                <p>የኮርስ ምዝገባዎችን፣ ማስተማር ቁሳቁሶችን እና ድርጊቶቹን በአስተያየት የሚታዩ መልክ እንዲሆኑ ለተገኙ አስተዳዳሪዎች የተዘጋጀ።</p>
+            </div>
+            <div class="nav-actions">
+                <a href="admin_courses.php" class="nav-btn">➕ ኮርስ ጨምር</a>
+                <a href="admin_dashboard.php" class="ghost-btn">← ወደ ዳሽቦርድ</a>
+            </div>
+        </div>
     </div>
-</div>
 
-<div class="container">
-    <div class="card">
+    <div class="container">
+        <section class="hero-card">
+            <div>
+                <span class="eyebrow">Admin Overview</span>
+                <h1>Course management dashboard</h1>
+                <p>Here you can review each course, its teaching materials, and quickly update or remove entries.</p>
+                <div class="badge-row">
+                    <span class="badge">📚 Courses</span>
+                    <span class="badge">🧩 Materials</span>
+                    <span class="badge">🛠️ Edit / Delete</span>
+                </div>
+            </div>
+            <a href="admin_courses.php" class="primary-btn">+ Add a new course</a>
+        </section>
+
+        <div class="card">
         <?php if ($message): ?>
             <div class="message"><?php echo $message; ?></div>
         <?php endif; ?>
@@ -93,8 +323,11 @@ try {
         <?php endif; ?>
         
         <?php if (empty($courses)): ?>
-            <p style="text-align: center; padding: 30px;">ምንም ኮርስ የለም። <a href="admin_courses.php">አሁን ጨምር</a></p>
+            <div class="empty-state">
+                <p>ምንም ኮርስ የለም። <a href="admin_courses.php">አሁን ጨምር</a></p>
+            </div>
         <?php else: ?>
+            <div class="table-shell">
             <table>
                 <thead>
                     <tr>
@@ -110,36 +343,39 @@ try {
                     <?php foreach ($courses as $course): ?>
                         <tr>
                             <td>
-                                <strong><?php echo safe($course['course_name']); ?></strong>
+                                <strong class="course-name"><?php echo safe($course['course_name']); ?></strong>
                                 <?php if (!empty($course['short_description'])): ?>
-                                    <br><small><?php echo $course['short_description']; ?></small>
+                                    <br><span class="muted"><?php echo safe($course['short_description']); ?></span>
                                 <?php endif; ?>
                                 <?php if (!empty($course['description'])): ?>
-                                    <br><small><?php echo $course['description']; ?></small>
+                                    <br><span class="muted rich-content"><?php echo renderRichText($course['description']); ?></span>
                                 <?php endif; ?>
                                 <?php if (!empty($course['category']) || !empty($course['level'])): ?>
-                                    <br><strong>Category/Level:</strong> <?php echo safe($course['category'] ?? ''); ?><?php echo (!empty($course['category']) && !empty($course['level']) ? ' · ' : ''); ?><?php echo safe($course['level'] ?? ''); ?>
+                                    <div class="course-meta">
+                                        <?php if (!empty($course['category'])): ?><span class="chip">📚 <?php echo safe($course['category']); ?></span><?php endif; ?>
+                                        <?php if (!empty($course['level'])): ?><span class="chip">📈 <?php echo safe($course['level']); ?></span><?php endif; ?>
+                                    </div>
                                 <?php endif; ?>
                                 <?php if (!empty($course['modules'])): ?>
-                                    <br><span><strong>Modules:</strong> <?php echo $course['modules']; ?></span>
+                                    <br><span class="muted rich-content"><strong>Modules:</strong> <?php echo renderRichText($course['modules']); ?></span>
                                 <?php endif; ?>
                                 <?php if (!empty($course['quiz'])): ?>
-                                    <br><span><strong>Quiz:</strong> <?php echo $course['quiz']; ?></span>
+                                    <br><span class="muted rich-content"><strong>Quiz:</strong> <?php echo renderRichText($course['quiz']); ?></span>
                                 <?php endif; ?>
                                 <?php if (!empty($course['assignment'])): ?>
-                                    <br><span><strong>Assignment:</strong> <?php echo $course['assignment']; ?></span>
+                                    <br><span class="muted rich-content"><strong>Assignment:</strong> <?php echo renderRichText($course['assignment']); ?></span>
                                 <?php endif; ?>
                                 <?php if (!empty($course['certificate_requirements'])): ?>
-                                    <br><span><strong>Certificate Requirements:</strong> <?php echo $course['certificate_requirements']; ?></span>
+                                    <br><span class="muted rich-content"><strong>Certificate Requirements:</strong> <?php echo renderRichText($course['certificate_requirements']); ?></span>
                                 <?php endif; ?>
                                 <?php if (!empty($course['pdf_file'])): ?>
-                                    <br><a href="<?php echo safe($course['pdf_file']); ?>" target="_blank">PDF እይ</a>
+                                    <br><a class="media-link" href="<?php echo safe($course['pdf_file']); ?>" target="_blank">📄 PDF እይ</a>
                                 <?php endif; ?>
                                 <?php if (!empty($course['tutorial_topic'])): ?>
-                                    <br><strong>Topic:</strong> <?php echo safe($course['tutorial_topic']); ?>
+                                    <br><span class="muted"><strong>Topic:</strong> <?php echo safe($course['tutorial_topic']); ?></span>
                                 <?php endif; ?>
                                 <?php if (!empty($course['tutorial_text'])): ?>
-                                    <br><span><strong>Text:</strong> <?php echo $course['tutorial_text']; ?></span>
+                                    <br><span class="muted rich-content"><strong>Text:</strong> <?php echo renderRichText($course['tutorial_text']); ?></span>
                                 <?php endif; ?>
                                 <?php if (!empty($course['tutorial_image'])): ?>
                                     <div class="media-block">
@@ -175,19 +411,23 @@ try {
                                     </div>
                                 <?php endif; ?>
                             </td>
-                            <td><?php echo safe($course['course_code']); ?></td>
-                            <td><?php echo number_format($course['price'], 2); ?></td>
+                            <td><span class="chip">#<?php echo safe($course['course_code']); ?></span></td>
+                            <td><strong><?php echo number_format((float)$course['price'], 2); ?> ብር</strong></td>
                             <td><?php echo safe($course['instructor'] ?? '-'); ?></td>
                             <td><?php echo date('M d, Y', strtotime($course['created_at'])); ?></td>
                             <td>
-                                <a href="admin_edit_course.php?id=<?php echo $course['id']; ?>" class="action-btn edit-btn">ማስተካከል</a>
-                                <a href="?delete=<?php echo $course['id']; ?>" class="action-btn delete-btn" onclick="return confirm('እርግጠኛ ነህ?');">ሰር</a>
+                                <div class="action-group">
+                                    <a href="admin_edit_course.php?id=<?php echo $course['id']; ?>" class="action-btn edit-btn">✏️ ማስተካከል</a>
+                                    <a href="?delete=<?php echo $course['id']; ?>" class="action-btn delete-btn" onclick="return confirm('እርግጠኛ ነህ?');">🗑️ ሰር</a>
+                                </div>
                             </td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
+            </div>
         <?php endif; ?>
+        </div>
     </div>
 </div>
 

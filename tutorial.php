@@ -12,6 +12,10 @@ $courses = $stmt->fetchAll();
   <title>ተማሪ መማሪያ / ኮርሶች</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 0; background: #f4f7fb; color: #1f2937; }
+    .rich-content h1, .rich-content h2, .rich-content h3 { font-size: 1.05rem; line-height: 1.35; margin: 0.35em 0; }
+    .rich-content ul, .rich-content ol { padding-left: 18px; margin: 8px 0 10px; }
+    .rich-content li { margin-bottom: 6px; }
+    .rich-content p { margin: 0 0 8px; }
     nav { background: #111827; padding: 12px 18px; }
     nav a { color: #fff; text-decoration: none; margin-right: 14px; font-weight: 700; }
     .wrap { max-width: 1100px; margin: 0 auto; padding: 24px; }
@@ -53,18 +57,18 @@ $courses = $stmt->fetchAll();
               <img src="<?php echo htmlspecialchars($course['thumbnail']); ?>" alt="<?php echo htmlspecialchars($course['course_name']); ?>" style="width:100%; max-height:180px; object-fit:cover; border-radius:8px; margin-bottom:10px;">
             <?php endif; ?>
             <?php if (!empty($course['short_description'])): ?>
-              <div class="muted" style="margin-bottom:8px;"><strong>አጭር መግለጫ:</strong> <?php echo $course['short_description']; ?></div>
+              <div class="muted rich-content" style="margin-bottom:8px;"><strong>አጭር መግለጫ:</strong> <?php echo renderRichText($course['short_description']); ?></div>
             <?php endif; ?>
-            <div class="muted" style="margin-bottom:8px;"><?php echo !empty($course['description']) ? $course['description'] : 'የኮርስ መግለጫ የለም'; ?></div>
+            <div class="muted rich-content" style="margin-bottom:8px;"><?php echo !empty($course['description']) ? renderRichText($course['description']) : 'የኮርስ መግለጫ የለም'; ?></div>
             <?php if (!empty($course['category']) || !empty($course['level'])): ?>
               <p><strong>ምድብ / ደረጃ:</strong> <?php echo htmlspecialchars($course['category'] ?: ''); ?><?php echo (!empty($course['category']) && !empty($course['level']) ? ' · ' : ''); ?><?php echo htmlspecialchars($course['level'] ?: ''); ?></p>
             <?php endif; ?>
             <p><strong>ኮድ:</strong> <?php echo htmlspecialchars($course['course_code']); ?></p>
             <p><strong>ዋጋ:</strong> <?php echo number_format($course['price'], 2); ?> ብር</p>
-            <?php if (!empty($course['modules'])): ?><div style="margin-bottom:10px;"><strong>Course Outline:</strong> <?php echo $course['modules']; ?></div><?php endif; ?>
-            <?php if (!empty($course['quiz'])): ?><div style="margin-bottom:10px;"><strong>Quiz:</strong> <?php echo $course['quiz']; ?></div><?php endif; ?>
-            <?php if (!empty($course['assignment'])): ?><div style="margin-bottom:10px;"><strong>Assignment:</strong> <?php echo $course['assignment']; ?></div><?php endif; ?>
-            <?php if (!empty($course['certificate_requirements'])): ?><div style="margin-bottom:10px;"><strong>Certificate Requirements:</strong> <?php echo $course['certificate_requirements']; ?></div><?php endif; ?>
+            <?php if (!empty($course['modules'])): ?><div class="rich-content" style="margin-bottom:10px;"><strong>Course Outline:</strong> <?php echo renderRichText($course['modules']); ?></div><?php endif; ?>
+            <?php if (!empty($course['quiz'])): ?><div class="rich-content" style="margin-bottom:10px;"><strong>Quiz:</strong> <?php echo renderRichText($course['quiz']); ?></div><?php endif; ?>
+            <?php if (!empty($course['assignment'])): ?><div class="rich-content" style="margin-bottom:10px;"><strong>Assignment:</strong> <?php echo renderRichText($course['assignment']); ?></div><?php endif; ?>
+            <?php if (!empty($course['certificate_requirements'])): ?><div class="rich-content" style="margin-bottom:10px;"><strong>Certificate Requirements:</strong> <?php echo renderRichText($course['certificate_requirements']); ?></div><?php endif; ?>
             <p>
               <a class="btn" href="student_register.php?course=<?php echo rawurlencode($course['course_name']); ?>&amount=<?php echo (float)$course['price']; ?>">ይመዝገቡ ለዚህ ትምህርት</a>
               <?php if (!empty($course['pdf_file'])): ?>

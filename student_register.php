@@ -106,22 +106,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <title>የተማሪ ምዝገባ</title>
     <style>
-        body { font-family: Arial, sans-serif; background: #eff5ff; margin: 0; padding: 0; }
-        .wrapper { max-width: 540px; margin: 40px auto; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); }
-        h1 { margin-bottom: 20px; color: #1d3557; }
-        label { display: block; margin: 12px 0 6px; font-weight: bold; }
-        input { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; }
-        .button { display: inline-block; margin-top: 18px; padding: 12px 18px; background: #4f46e5; color: white; border: none; border-radius: 8px; cursor: pointer; }
-        .button:hover { background: #4338ca; }
-        .message { margin-bottom: 20px; padding: 14px; border-radius: 8px; }
+        :root { --brand: #2563eb; --brand-2: #7c3aed; --muted: #475569; }
+        * { box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background:
+            radial-gradient(circle at top, rgba(191,219,254,0.35), transparent 18%),
+            linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%); margin: 0; padding: 0; }
+        .wrapper { max-width: 700px; margin: 40px auto; padding: 24px; background: rgba(255,255,255,0.96); border: 1px solid rgba(148,163,184,0.2); border-radius: 20px; box-shadow: 0 18px 40px rgba(15,23,42,0.12); backdrop-filter: blur(6px); }
+        .hero { background: linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 100%); color: #fff; border-radius: 16px; padding: 18px; margin-bottom: 18px; }
+        .hero h1 { margin: 0 0 6px; color: #fff; font-size: 22px; }
+        .hero p { margin: 0; color: #e0e7ff; font-size: 14px; line-height: 1.5; }
+        .chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 999px; background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.2); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; }
+        .chip span { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 0 0 rgba(74,222,128,0.35); animation: pulse 1.8s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(74,222,128,0.35); } 70% { box-shadow: 0 0 0 10px rgba(74,222,128,0); } 100% { box-shadow: 0 0 0 0 rgba(74,222,128,0); } }
+        label { display: block; margin: 12px 0 6px; font-weight: 700; color: #334155; }
+        input { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14px; transition: border-color 0.18s ease, box-shadow 0.18s ease; }
+        input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 4px rgba(37,99,235,0.12); }
+        .button { display: inline-block; width: 100%; margin-top: 18px; padding: 12px 18px; background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 700; box-shadow: 0 12px 18px rgba(37,99,235,0.22); transition: transform 0.18s ease, box-shadow 0.18s ease; }
+        .button:hover { background: linear-gradient(135deg, #1d4ed8 0%, #4338ca 100%); transform: translateY(-1px); box-shadow: 0 14px 24px rgba(37,99,235,0.28); }
+        .message { margin-bottom: 20px; padding: 14px; border-radius: 10px; }
         .error { background: #fee2e2; color: #991b1b; }
         .success { background: #e6fffa; color: #065f46; }
-        .small-link { margin-top: 18px; display: block; color: #334155; text-decoration: none; }
+        .small-link { margin-top: 14px; display: block; color: #334155; text-decoration: none; font-size: 14px; }
+        .tip-box { margin-top: 16px; padding: 12px; border-radius: 10px; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a; font-size: 13px; }
+        .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        @media (max-width: 640px) { .row { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
 <div class="wrapper">
-    <h1>የተማሪ ምዝገባ</h1>
+    <div class="hero">
+        <div class="chip"><span></span> live student sign-up</div>
+        <h1>የተማሪ መመዝገብ እንዲመስል አዲስ ቀላል እና በመስመር ላይ መለያ መፍጠር</h1>
+        <p>ኮርስ መመዝገብ፣ የክፍያ መጠን ማስገባት እና በአንድ ጊዜ ግብአት መስጠት ይቻላል። ይህ ገጽ እርስዎን በቀላሉ ወደ ለማግኘት እንዲያመቻች በይበልጥ እንዲሰራ ተዘጋጅቷል።</p>
+    </div>
+    <h2 style="margin: 0 0 12px; color: #111827; font-size: 18px;">አዲስ ተማሪ ይመዝገቡ</h2>
     <?php if (!empty($errors)): ?>
         <div class="message error">
             <ul>
@@ -132,30 +150,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     <?php endif; ?>
     <form method="post">
-        <label for="name">ስም</label>
-        <input id="name" name="name" value="<?php echo safe($name); ?>" required>
-
-        <label for="email">ኢሜይል</label>
-        <input id="email" type="email" name="email" value="<?php echo safe($email); ?>" required>
+        <div class="row">
+            <div>
+                <label for="name">ስም</label>
+                <input id="name" name="name" value="<?php echo safe($name); ?>" required placeholder="ሙሉ ስም ያስገቡ">
+            </div>
+            <div>
+                <label for="email">ኢሜይል</label>
+                <input id="email" type="email" name="email" value="<?php echo safe($email); ?>" required placeholder="example@email.com">
+            </div>
+        </div>
 
         <label for="student_id">የተማሪ መለያ (አማራጭ)</label>
         <input id="student_id" name="student_id" value="<?php echo safe($studentId); ?>" placeholder="ባዶ ቢተው በራስ-ሰር ይፈጥራል">
 
-        <label for="password">የይለፍ ቃል</label>
-        <input id="password" type="password" name="password" minlength="6" autocomplete="new-password" required>
+        <div class="row">
+            <div>
+                <label for="password">የይለፍ ቃል</label>
+                <input id="password" type="password" name="password" minlength="6" autocomplete="new-password" required>
+            </div>
+            <div>
+                <label for="confirm_password">የይለፍ ቃል እንደገና</label>
+                <input id="confirm_password" type="password" name="confirm_password" minlength="6" autocomplete="new-password" required>
+            </div>
+        </div>
 
-        <label for="confirm_password">የይለፍ ቃል እንደገና</label>
-        <input id="confirm_password" type="password" name="confirm_password" minlength="6" autocomplete="new-password" required>
+        <div class="row">
+            <div>
+                <label for="course">ኮርስ</label>
+                <input id="course" name="course" value="<?php echo safe($course); ?>" required placeholder="ኮርስ ስም ያስገቡ">
+            </div>
+            <div>
+                <label for="amount">ክፍያ መጠን (ብር)</label>
+                <input id="amount" type="number" step="0.01" name="amount" value="<?php echo safe($amount ?: '0'); ?>" required>
+            </div>
+        </div>
 
-        <label for="course">ኮርስ</label>
-        <input id="course" name="course" value="<?php echo safe($course); ?>" required>
-
-        <label for="amount">ክፍያ መጠን (ብር)</label>
-        <input id="amount" type="number" step="0.01" name="amount" value="<?php echo safe($amount ?: '0'); ?>" required>
-
-        <button class="button" type="submit">ምዝገብ</button>
+        <button class="button" type="submit">መመዝገብ ጨርስ</button>
     </form>
-    <p style="margin-top: 14px; color: #475569; font-size: 14px;">የተማሪ መለያ ባዶ ከተተው በራስ-ሰር ይፈጥራል፣ የይለፍ ቃል ቢያንስ 6 ቁምፊ መሆን አለበት።</p>
+    <div class="tip-box">የተማሪ መለያ ባዶ ከተተው በራስ-ሰር ይፈጥራል። የይለፍ ቃል ቢያንስ 6 ቁምፊ መሆን አለበት። ከመመዝገብዎ በኋላ በድር በኩል ወደ ዳሽቦርድ ትመለሳላችሁ።</div>
     <a class="small-link" href="student_login.php">ከዚህ በፊት እንደ ተማሪ ይገቡ</a>
 </div>
 </body>

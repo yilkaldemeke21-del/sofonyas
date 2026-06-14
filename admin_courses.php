@@ -32,25 +32,52 @@ try {
 
 ensureCourseColumns($pdo);
 
+function generateUniqueCourseCode(PDO $pdo, string $baseCode): string
+{
+    $baseCode = trim((string)$baseCode);
+    if ($baseCode === '') {
+        $baseCode = 'COURSE-' . date('YmdHis');
+    }
+
+    $candidate = strtoupper(preg_replace('/[^A-Z0-9_-]+/i', '-', $baseCode));
+    $candidate = trim((string)$candidate, '-');
+    if ($candidate === '') {
+        $candidate = 'COURSE-' . date('YmdHis');
+    }
+
+    $suffix = 1;
+    while (true) {
+        $stmt = $pdo->prepare('SELECT id FROM courses WHERE course_code = :course_code LIMIT 1');
+        $stmt->execute([':course_code' => $candidate]);
+
+        if (!$stmt->fetch()) {
+            return $candidate;
+        }
+
+        $candidate = $candidate . '-' . $suffix;
+        $suffix++;
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $course_name = safe($_POST['course_name'] ?? '');
-    $course_code = safe($_POST['course_code'] ?? '');
-    $short_description = safe($_POST['short_description'] ?? '');
-    $description = safe($_POST['description'] ?? '');
-    $category = safe($_POST['category'] ?? '');
-    $level = safe($_POST['level'] ?? '');
-    $thumbnail = safe($_POST['thumbnail'] ?? '');
+    $course_name = cleanText($_POST['course_name'] ?? '');
+    $course_code = strtoupper(trim((string)($_POST['course_code'] ?? '')));
+    $short_description = sanitizeRichText($_POST['short_description'] ?? '');
+    $description = sanitizeRichText($_POST['description'] ?? '');
+    $category = cleanText($_POST['category'] ?? '');
+    $level = cleanText($_POST['level'] ?? '');
+    $thumbnail = cleanText($_POST['thumbnail'] ?? '');
     $price = (float)($_POST['price'] ?? 0);
-    $instructor = safe($_POST['instructor'] ?? '');
-    $tutorial_topic = safe($_POST['tutorial_topic'] ?? '');
-    $tutorial_text = safe($_POST['tutorial_text'] ?? '');
-    $tutorial_image = safe($_POST['tutorial_image'] ?? '');
-    $tutorial_audio = safe($_POST['tutorial_audio'] ?? '');
-    $tutorial_video = safe($_POST['tutorial_video'] ?? '');
-    $modules = safe($_POST['modules'] ?? '');
-    $quiz = safe($_POST['quiz'] ?? '');
-    $assignment = safe($_POST['assignment'] ?? '');
-    $certificate_requirements = safe($_POST['certificate_requirements'] ?? '');
+    $instructor = cleanText($_POST['instructor'] ?? '');
+    $tutorial_topic = cleanText($_POST['tutorial_topic'] ?? '');
+    $tutorial_text = sanitizeRichText($_POST['tutorial_text'] ?? '');
+    $tutorial_image = cleanText($_POST['tutorial_image'] ?? '');
+    $tutorial_audio = cleanText($_POST['tutorial_audio'] ?? '');
+    $tutorial_video = cleanText($_POST['tutorial_video'] ?? '');
+    $modules = sanitizeRichText($_POST['modules'] ?? '');
+    $quiz = sanitizeRichText($_POST['quiz'] ?? '');
+    $assignment = sanitizeRichText($_POST['assignment'] ?? '');
+    $certificate_requirements = sanitizeRichText($_POST['certificate_requirements'] ?? '');
     $pdf_file = null;
     $uploadDir = __DIR__ . '/uploads/course_pdfs';
 
@@ -86,6 +113,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (!$error && $course_name && $course_code) {
+        $existingCode = $pdo->prepare('SELECT id FROM courses WHERE course_code = :course_code LIMIT 1');
+        $existingCode->execute([':course_code' => $course_code]);
+        if ($existingCode->fetch()) {
+            $course_code = generateUniqueCourseCode($pdo, $course_code);
+            $success = 'የኮርስ ኮድ ቀድሞ ነበር፣ በራስ-ሰር አዲስ ኮድ ተመርጧል: ' . $course_code;
+        }
+
         try {
             $stmt = $pdo->prepare(
                 'INSERT INTO courses (course_name, course_code, short_description, description, category, level, thumbnail, price, instructor, pdf_file, tutorial_topic, tutorial_text, tutorial_image, tutorial_audio, tutorial_video, modules, quiz, assignment, certificate_requirements) 

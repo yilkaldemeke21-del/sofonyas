@@ -77,6 +77,23 @@ try {
     error_log('Course schema validation failed: ' . $e->getMessage());
 }
 
+function cleanText($value): string {
+    return trim((string)($value ?? ''));
+}
+
+function sanitizeRichText($value): string {
+    $html = (string)($value ?? '');
+    $html = html_entity_decode($html, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+    $allowedTags = '<p><br><strong><b><em><i><u><ul><ol><li><h1><h2><h3><h4><h5><h6><blockquote><pre><code><a><img><table><thead><tbody><tr><th><td><span><div>'; 
+
+    return strip_tags($html, $allowedTags);
+}
+
+function renderRichText($value): string {
+    return sanitizeRichText($value);
+}
+
 function safe($value) {
     return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
 }
