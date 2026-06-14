@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS `admin_users` (
   `username` VARCHAR(100) NOT NULL UNIQUE,
   `password_hash` VARCHAR(255) NOT NULL,
   `email` VARCHAR(255) NOT NULL,
+  `role` VARCHAR(30) NOT NULL DEFAULT 'Admin',
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -51,6 +52,7 @@ CREATE TABLE IF NOT EXISTS `students` (
   `email` VARCHAR(255) NOT NULL UNIQUE,
   `student_id` VARCHAR(100) NOT NULL UNIQUE,
   `password_hash` VARCHAR(255) NOT NULL,
+  `role` VARCHAR(30) NOT NULL DEFAULT 'Student',
   `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -94,4 +96,4 @@ INSERT IGNORE INTO `registrations` (`id`, `name`, `email`, `student_id`, `course
   NOW()
 );
 
-INSERT IGNORE INTO `admin_users` (`username`, `password_hash`, `email`) VALUES ('sofonyas', '$2y$10$46zeuBUB4D6qkdAp9B7OG.ekP7SB3IljRJUHezvp3pfOEVWlTahxC', 'yilkaldemeke21@gmail.com');
+INSERT IGNORE INTO `admin_users` (`username`, `password_hash`, `email`, `role`) VALUES ('sofonyas', '$2y$10$46zeuBUB4D6qkdAp9B7OG.ekP7SB3IljRJUHezvp3pfOEVWlTahxC', 'yilkaldemeke21@gmail.com', 'Admin');

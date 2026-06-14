@@ -77,6 +77,75 @@ try {
     error_log('Course schema validation failed: ' . $e->getMessage());
 }
 
+function ensureUserRoleColumns(PDO $pdo): void
+{
+    $tables = [
+        'admin_users' => [
+            'role' => "ALTER TABLE admin_users ADD COLUMN role VARCHAR(30) NOT NULL DEFAULT 'Admin'"
+        ],
+        'students' => [
+            'role' => "ALTER TABLE students ADD COLUMN role VARCHAR(30) NOT NULL DEFAULT 'Student'"
+        ],
+    ];
+
+    foreach ($tables as $tableName => $columns) {
+        $existingColumns = [];
+        $columnStmt = $pdo->query("SELECT COLUMN_NAME FROM information_schema.columns WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '$tableName'");
+
+        foreach ($columnStmt->fetchAll(PDO::FETCH_COLUMN) as $columnName) {
+            $existingColumns[$columnName] = true;
+        }
+
+        foreach ($columns as $columnName => $sql) {
+            if (!isset($existingColumns[$columnName])) {
+                try {
+                    $pdo->exec($sql);
+                } catch (PDOException $e) {
+                    error_log('User role schema migration warning for ' . $tableName . '.' . $columnName . ': ' . $e->getMessage());
+                }
+            }
+        }
+    }
+
+    $pdo->exec("UPDATE admin_users SET role = 'Admin' WHERE role IS NULL OR role = ''");
+    $pdo->exec("UPDATE students SET role = 'Student' WHERE role IS NULL OR role = ''");
+}
+
+try {
+    ensureUserRoleColumns($pdo);
+} catch (Throwable $e) {
+    error_log('User role schema validation failed: ' . $e->getMessage());
+}
+
+function ensureCourseStructureTables(PDO $pdo): void
+{
+    $pdo->exec('CREATE TABLE IF NOT EXISTS course_modules (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        course_id INT NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        sort_order INT NOT NULL DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_course_modules_course (course_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+
+    $pdo->exec('CREATE TABLE IF NOT EXISTS course_lessons (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        course_id INT NOT NULL,
+        module_id INT DEFAULT NULL,
+        title VARCHAR(255) NOT NULL,
+        sort_order INT NOT NULL DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_course_lessons_course (course_id),
+        INDEX idx_course_lessons_module (module_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+}
+
+try {
+    ensureCourseStructureTables($pdo);
+} catch (Throwable $e) {
+    error_log('Course structure schema validation failed: ' . $e->getMessage());
+}
+
 function cleanText($value): string {
     return trim((string)($value ?? ''));
 }

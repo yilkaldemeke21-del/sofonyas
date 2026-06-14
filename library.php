@@ -8,6 +8,43 @@ $registrationCount = (int)$pdo->query('SELECT COUNT(*) FROM registrations')->fet
 $paidCount = (int)$pdo->query('SELECT COUNT(*) FROM registrations WHERE payment_status = "paid"')->fetchColumn();
 $revenue = (float)$pdo->query('SELECT COALESCE(SUM(amount),0) FROM registrations WHERE payment_status = "paid"')->fetchColumn();
 
+$search = trim($_GET['q'] ?? '');
+$searchLike = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $search) . '%';
+
+$searchCourses = [];
+$searchLessons = [];
+$searchPdfs = [];
+
+if ($search !== '') {
+    $stmt = $pdo->prepare('SELECT * FROM courses WHERE course_name LIKE :term1 OR course_code LIKE :term2 OR short_description LIKE :term3 OR description LIKE :term4 OR tutorial_topic LIKE :term5 OR instructor LIKE :term6 ORDER BY created_at DESC LIMIT 100');
+    $stmt->execute([
+        ':term1' => $searchLike,
+        ':term2' => $searchLike,
+        ':term3' => $searchLike,
+        ':term4' => $searchLike,
+        ':term5' => $searchLike,
+        ':term6' => $searchLike,
+    ]);
+    $searchCourses = $stmt->fetchAll();
+
+    $stmt = $pdo->prepare('SELECT cl.*, c.course_name FROM course_lessons cl JOIN courses c ON c.id = cl.course_id WHERE cl.title LIKE :term1 OR c.course_name LIKE :term2 OR c.description LIKE :term3 ORDER BY c.course_name, cl.sort_order LIMIT 100');
+    $stmt->execute([
+        ':term1' => $searchLike,
+        ':term2' => $searchLike,
+        ':term3' => $searchLike,
+    ]);
+    $searchLessons = $stmt->fetchAll();
+
+    $stmt = $pdo->prepare('SELECT * FROM courses WHERE pdf_file IS NOT NULL AND pdf_file <> "" AND (course_name LIKE :term1 OR description LIKE :term2 OR pdf_file LIKE :term3 OR tutorial_topic LIKE :term4) ORDER BY created_at DESC LIMIT 100');
+    $stmt->execute([
+        ':term1' => $searchLike,
+        ':term2' => $searchLike,
+        ':term3' => $searchLike,
+        ':term4' => $searchLike,
+    ]);
+    $searchPdfs = $stmt->fetchAll();
+}
+
 $recentCourses = $pdo->query('SELECT * FROM courses ORDER BY created_at DESC LIMIT 6')->fetchAll();
 $recentRegistrations = $pdo->query('SELECT * FROM registrations ORDER BY created_at DESC LIMIT 8')->fetchAll();
 
@@ -71,6 +108,11 @@ if (isset($_SESSION['admin_id'])) {
   <div class="actions">
     <a class="btn primary" href="tutorial.php">📖 ትምህርት / ኮርሶች</a>
     <a class="btn" href="register.php">📝 ኮርስ መመዝገብ</a>
+    <form method="get" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-left:auto;">
+      <input type="search" name="q" value="<?php echo safe($search); ?>" placeholder="Search courses, lessons, PDFs" style="min-width:280px; padding:10px 12px; border:1px solid #cbd5e1; border-radius:10px; font-size:14px;">
+      <button type="submit" class="btn primary" style="border:none; cursor:pointer;">Search</button>
+      <?php if ($search !== ''): ?><a class="btn" href="library.php">Clear</a><?php endif; ?>
+    </form>
     <?php if (isset($_SESSION['admin_id'])): ?>
       <a class="btn" href="admin_courses.php">➕ ኮርስ ጨምር</a>
       <a class="btn" href="admin_view_courses.php">🛠️ ኮርሶችን አስተካክል</a>
@@ -84,6 +126,54 @@ if (isset($_SESSION['admin_id'])) {
     <div class="card"><h2>ክፍያ የተከፈለ</h2><div class="value"><?php echo $paidCount; ?></div></div>
     <div class="card"><h2>ጠቅላላ ገቢ (ብር)</h2><div class="value"><?php echo number_format($revenue, 2); ?></div></div>
   </div>
+
+  <?php if ($search !== ''): ?>
+  <div class="card" style="margin-bottom:18px;">
+    <h2 style="margin-bottom:8px;">Search Results for “<?php echo safe($search); ?>”</h2>
+    <p class="muted">Courses, lessons, and PDFs are matched from the current LMS content.</p>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h2>📘 Courses</h2>
+      <?php if (empty($searchCourses)): ?>
+        <p class="muted">No course matched your keyword.</p>
+      <?php else: ?>
+        <ul style="padding-left:18px; margin:0; color:#334155;">
+          <?php foreach ($searchCourses as $course): ?>
+            <li style="margin-bottom:10px;"><strong><?php echo safe($course['course_name']); ?></strong> — <?php echo safe($course['course_code']); ?><br><small class="muted"><?php echo safe($course['short_description'] ?: $course['description'] ?: 'No description available'); ?></small></li>
+          <?php endforeach; ?>
+        </ul>
+      <?php endif; ?>
+    </div>
+
+    <div class="card">
+      <h2>📗 Lessons</h2>
+      <?php if (empty($searchLessons)): ?>
+        <p class="muted">No lesson matched your keyword.</p>
+      <?php else: ?>
+        <ul style="padding-left:18px; margin:0; color:#334155;">
+          <?php foreach ($searchLessons as $lesson): ?>
+            <li style="margin-bottom:10px;"><strong><?php echo safe($lesson['title']); ?></strong><br><small class="muted">Course: <?php echo safe($lesson['course_name']); ?></small></li>
+          <?php endforeach; ?>
+        </ul>
+      <?php endif; ?>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:18px;">
+    <h2>📄 PDFs</h2>
+    <?php if (empty($searchPdfs)): ?>
+      <p class="muted">No PDF matched your keyword.</p>
+    <?php else: ?>
+      <ul style="padding-left:18px; margin:0; color:#334155;">
+        <?php foreach ($searchPdfs as $pdf): ?>
+          <li style="margin-bottom:10px;"><strong><?php echo safe($pdf['course_name']); ?></strong><br><a href="<?php echo safe($pdf['pdf_file']); ?>" target="_blank" rel="noopener">Open PDF</a> · <?php echo safe($pdf['instructor'] ?: 'Instructor'); ?></li>
+        <?php endforeach; ?>
+      </ul>
+    <?php endif; ?>
+  </div>
+  <?php endif; ?>
 
   <div class="grid">
     <div class="card">

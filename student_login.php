@@ -25,6 +25,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['student_id'] = $student['student_id'];
             $_SESSION['student_email'] = $student['email'];
             $_SESSION['student_name'] = $student['name'];
+            $_SESSION['user_role'] = isset($student['role']) && $student['role'] !== '' ? $student['role'] : 'Student';
+            $_SESSION['is_student'] = true;
+
+            try {
+                $pdo->exec('CREATE TABLE IF NOT EXISTS student_attendance (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    student_id VARCHAR(100) NOT NULL,
+                    student_name VARCHAR(255) NOT NULL,
+                    login_date DATE NOT NULL,
+                    login_time DATETIME NOT NULL,
+                    ip_address VARCHAR(45) DEFAULT NULL,
+                    user_agent TEXT DEFAULT NULL,
+                    status VARCHAR(30) NOT NULL DEFAULT "Present",
+                    UNIQUE KEY uq_student_attendance (student_id, login_date)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+
+                $stmtAttendance = $pdo->prepare('INSERT INTO student_attendance (student_id, student_name, login_date, login_time, ip_address, user_agent, status)
+                    VALUES (:student_id, :student_name, CURDATE(), NOW(), :ip_address, :user_agent, "Present")
+                    ON DUPLICATE KEY UPDATE login_time = NOW(), ip_address = VALUES(ip_address), user_agent = VALUES(user_agent), status = "Present"');
+                $stmtAttendance->execute([
+                    ':student_id' => $student['student_id'],
+                    ':student_name' => $student['name'],
+                    ':ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'Unknown',
+                    ':user_agent' => substr($_SERVER['HTTP_USER_AGENT'] ?? 'Unknown', 0, 255),
+                ]);
+            } catch (PDOException $e) {
+                error_log('Attendance record failed: ' . $e->getMessage());
+            }
+
             header('Location: student_dashboard.php');
             exit;
         }
@@ -78,11 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="tip-box">
         መረጃ: ከመመዝገብዎ በኋላ የተፈጠረውን የተማሪ መለያ ወይም ኢሜይል በመጠቀም ይግቡ። የይለፍ ቃል የመመዝገቡትን ቃል ይጠቀሙ።
     </div>
-    <div class="demo-box">
-        <strong>Demo Student</strong>
-        የተማሪ መለያ: <code>sofi2127</code><br>
-        ይለፍ ቃል: <code>student123</code>
-    </div>
+    
     <a class="small-link" href="student_register.php">አዲስ ተማሪ መመዝገብ ይፈልጋሉ?</a>
 </div>
 </body>

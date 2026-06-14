@@ -2,6 +2,44 @@
 session_start();
 require_once __DIR__ . '/db.php';
 
+function uploadCourseVideo(array $file, string &$error): ?string
+{
+    if (!isset($file['name']) || $file['name'] === '' || $file['error'] !== UPLOAD_ERR_OK) {
+        return null;
+    }
+
+    $allowedExt = ['mp4', 'mov', 'avi', 'webm', 'mkv'];
+    $allowedMime = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm', 'video/x-matroska'];
+    $fileExt = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+
+    if (!in_array($fileExt, $allowedExt, true)) {
+        $error = 'እባክዎ ቪድዮ ፋይል ብቻ ይምረጡ።';
+        return null;
+    }
+
+    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $mimeType = $finfo->file($file['tmp_name']);
+    if (!in_array($mimeType, $allowedMime, true) && !in_array(strtok($mimeType, '/'), ['video'], true)) {
+        $error = 'ተመርጧል ፋይል ቪድዮ አይደለም።';
+        return null;
+    }
+
+    $uploadDir = __DIR__ . '/uploads/course_media/video';
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0755, true);
+    }
+
+    $filename = time() . '_' . bin2hex(random_bytes(5)) . '.' . $fileExt;
+    $destination = $uploadDir . '/' . $filename;
+
+    if (!move_uploaded_file($file['tmp_name'], $destination)) {
+        $error = 'ቪድዮ ፋይሉን ማንቀሳቀስ አልቻለም።';
+        return null;
+    }
+
+    return 'uploads/course_media/video/' . $filename;
+}
+
 if (!isset($_SESSION['admin_id'])) {
     header('Location: admin_login.php');
     exit;
@@ -59,6 +97,51 @@ function generateUniqueCourseCode(PDO $pdo, string $baseCode): string
     }
 }
 
+function saveStructuredModulesLessons(PDO $pdo, int $courseId, string $outline): void
+{
+    $pdo->prepare('DELETE FROM course_modules WHERE course_id = :course_id')->execute([':course_id' => $courseId]);
+    $pdo->prepare('DELETE FROM course_lessons WHERE course_id = :course_id')->execute([':course_id' => $courseId]);
+
+    $lines = preg_split('/\r\n|\r|\n/', $outline) ?: [];
+    $moduleId = null;
+    $moduleOrder = 0;
+    $lessonOrder = 0;
+    $fallbackModuleName = 'General Module';
+
+    $insertModule = $pdo->prepare('INSERT INTO course_modules (course_id, name, sort_order) VALUES (:course_id, :name, :sort_order)');
+    $insertLesson = $pdo->prepare('INSERT INTO course_lessons (course_id, module_id, title, sort_order) VALUES (:course_id, :module_id, :title, :sort_order)');
+
+    foreach ($lines as $rawLine) {
+        $line = trim(strip_tags($rawLine));
+        if ($line === '') {
+            continue;
+        }
+
+        if (preg_match('/^(?:module\s*[:\-]\s*|module\s+)(.+)$/i', $line, $matches) || preg_match('/^\d+[\.)]\s*(?:module\s*)?(.+)$/i', $line, $matches)) {
+            $moduleName = trim($matches[1]);
+            if ($moduleName === '') {
+                $moduleName = 'Module ' . ($moduleOrder + 1);
+            }
+            $insertModule->execute([':course_id' => $courseId, ':name' => $moduleName, ':sort_order' => ++$moduleOrder]);
+            $moduleId = (int)$pdo->lastInsertId();
+            $lessonOrder = 0;
+            continue;
+        }
+
+        if (preg_match('/^(?:[-*•]\s*)?(?:lesson\s*[:\-]\s*|lesson\s+)(.+)$/i', $line, $matches) || preg_match('/^\d+[\.)]\s*(?!module\s*)(.+)$/i', $line, $matches)) {
+            if ($moduleId === null) {
+                $insertModule->execute([':course_id' => $courseId, ':name' => $fallbackModuleName, ':sort_order' => ++$moduleOrder]);
+                $moduleId = (int)$pdo->lastInsertId();
+            }
+            $title = trim($matches[1]);
+            if ($title === '') {
+                $title = 'Lesson ' . ($lessonOrder + 1);
+            }
+            $insertLesson->execute([':course_id' => $courseId, ':module_id' => $moduleId, ':title' => $title, ':sort_order' => ++$lessonOrder]);
+        }
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $course_name = cleanText($_POST['course_name'] ?? '');
     $course_code = strtoupper(trim((string)($_POST['course_code'] ?? '')));
@@ -74,6 +157,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $tutorial_image = cleanText($_POST['tutorial_image'] ?? '');
     $tutorial_audio = cleanText($_POST['tutorial_audio'] ?? '');
     $tutorial_video = cleanText($_POST['tutorial_video'] ?? '');
+    $uploadedVideo = uploadCourseVideo($_FILES['lesson_video_file'] ?? null, $error);
+    if ($uploadedVideo !== null) {
+        $tutorial_video = $uploadedVideo;
+    }
     $modules = sanitizeRichText($_POST['modules'] ?? '');
     $quiz = sanitizeRichText($_POST['quiz'] ?? '');
     $assignment = sanitizeRichText($_POST['assignment'] ?? '');
@@ -146,6 +233,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':assignment' => $assignment,
                 ':certificate_requirements' => $certificate_requirements,
             ]);
+            $courseId = (int)$pdo->lastInsertId();
+            if (trim($modules) !== '') {
+                saveStructuredModulesLessons($pdo, $courseId, strip_tags($modules));
+            }
             $success = 'ኮርስ በስኬት ታክሏል።';
         } catch (Exception $e) {
             $error = 'ስህተት: ' . $e->getMessage();
@@ -289,13 +380,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <div class="form-group">
-                <label for="tutorial_video">የቪድዮ / Video Link (URL / YouTube)</label>
+                <label for="lesson_video_file">የቪድዮ ፋይል ይጫኑ (Upload Video)</label>
+                <input type="file" id="lesson_video_file" name="lesson_video_file" accept="video/*">
+            </div>
+
+            <div class="form-group">
+                <label for="tutorial_video">የቪድዮ / Video Link (URL / YouTube) - አማራጭ</label>
                 <input type="url" id="tutorial_video" name="tutorial_video" placeholder="https://.../video.mp4 ወይም YouTube link">
             </div>
 
             <div class="form-group">
-                <label for="modules">ሞጁሎች / Course Outline</label>
-                <textarea id="modules" name="modules" class="rich-editor" placeholder="Module 1: Introduction&#10;Module 2: Tags and Headings&#10;Module 3: Paragraphs and Lists&#10;Module 4: Links, Images and Tables&#10;Module 5: Forms and Semantic Elements&#10;Module 6: Exercises and Practice"></textarea>
+                <label for="modules">ሞጁሎች / Lessons እና እንደ ደረጃ ዝርዝር</label>
+                <textarea id="modules" name="modules" rows="6" placeholder="Module 1&#10;- Lesson 1&#10;- Lesson 2&#10;Module 2&#10;- Lesson 3"></textarea>
+                <p style="color:#475569;font-size:13px;margin-top:6px;">ይህን ቦታ በዚህ መልክ ያስገቡ: Module 1 / - Lesson 1 / - Lesson 2 / Module 2 / - Lesson 3</p>
             </div>
 
             <div class="form-group">

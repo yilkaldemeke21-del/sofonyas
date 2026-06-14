@@ -20,9 +20,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $admin = $stmt->fetch();
 
         if ($admin && password_verify($password, $admin['password_hash'])) {
+            $role = isset($admin['role']) && $admin['role'] !== '' ? $admin['role'] : 'Admin';
             $_SESSION['admin_id'] = $admin['id'];
             $_SESSION['admin_username'] = $admin['username'];
-            header('Location: admin_dashboard.php');
+            $_SESSION['user_role'] = $role;
+            $_SESSION['is_admin'] = ($role === 'Admin');
+            $_SESSION['is_instructor'] = ($role === 'Instructor');
+
+            if ($role === 'Instructor') {
+                $instructorRoute = file_exists(__DIR__ . '/instructor_dashboard.php') ? 'instructor_dashboard.php' : 'instractor_dashboard.php';
+                header('Location: ' . $instructorRoute);
+            } else {
+                header('Location: admin_dashboard.php');
+            }
             exit;
         }
 
