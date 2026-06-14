@@ -54,7 +54,9 @@ foreach ($lessonStmt->fetchAll() as $lesson) {
 <html lang="am">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ተማሪ መማሪያ / ኮርሶች</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     body { font-family: Arial, sans-serif; margin: 0; background: #f4f7fb; color: #1f2937; }
     .rich-content h1, .rich-content h2, .rich-content h3, .rich-content h4 { font-size: 1.02rem; line-height: 1.35; margin: 0.35em 0; }
@@ -79,6 +81,8 @@ foreach ($lessonStmt->fetchAll() as $lesson) {
     .pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; background: #eff6ff; color: #1d4ed8; font-size: 12px; font-weight: 700; }
     .progress-track { width: 100%; height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin-top: 8px; }
     .progress-fill { height: 100%; background: linear-gradient(90deg,#2563eb,#38bdf8); border-radius: 999px; width: 0%; }
+    @media (max-width: 980px) { nav { padding: 10px 12px; } nav a { display: inline-block; margin: 4px 10px 4px 0; } .wrap { padding: 14px; } .grid { grid-template-columns: 1fr; } }
+    @media (max-width: 576px) { .btn { display: block; width: 100%; margin: 6px 0; text-align: center; } .card { padding: 14px; } }
   </style>
 </head>
 <body>
@@ -215,7 +219,7 @@ foreach ($lessonStmt->fetchAll() as $lesson) {
                 <button type="submit" class="btn" style="border: none; cursor: pointer;">ትምህርት አስቀምጥ</button>
               </form>
               <?php if (!empty($course['pdf_file'])): ?>
-                <a class="btn" href="<?php echo htmlspecialchars($course['pdf_file']); ?>" target="_blank">PDF እይ</a>
+                <a class="btn" href="<?php echo htmlspecialchars(publicMediaUrl($course['pdf_file'])); ?>" target="_blank">PDF እይ</a>
               <?php endif; ?>
             </p>
           </div>

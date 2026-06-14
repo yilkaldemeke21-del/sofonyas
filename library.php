@@ -63,7 +63,9 @@ if (isset($_SESSION['admin_id'])) {
 <html lang="am">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Library Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         :root { color-scheme: light; }
         * { box-sizing: border-box; }
@@ -89,7 +91,9 @@ if (isset($_SESSION['admin_id'])) {
         .badge.paid { background: #dcfce7; color: #166534; }
         .badge.unpaid { background: #fee2e2; color: #b91c1c; }
         .muted { color: #475569; }
-        @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
+        @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } .topbar { flex-direction: column; align-items: flex-start; } }
+        @media (max-width: 768px) { .page { padding: 12px; } .stats { grid-template-columns: 1fr 1fr; } .actions { flex-direction: column; align-items: stretch; } .actions form { width: 100%; } .actions input { min-width: 0; width: 100%; } }
+        @media (max-width: 576px) { .stats { grid-template-columns: 1fr; } .btn { width: 100%; text-align: center; } }
     </style>
 </head>
 <body>
@@ -168,7 +172,7 @@ if (isset($_SESSION['admin_id'])) {
     <?php else: ?>
       <ul style="padding-left:18px; margin:0; color:#334155;">
         <?php foreach ($searchPdfs as $pdf): ?>
-          <li style="margin-bottom:10px;"><strong><?php echo safe($pdf['course_name']); ?></strong><br><a href="<?php echo safe($pdf['pdf_file']); ?>" target="_blank" rel="noopener">Open PDF</a> · <?php echo safe($pdf['instructor'] ?: 'Instructor'); ?></li>
+          <li style="margin-bottom:10px;"><strong><?php echo safe($pdf['course_name']); ?></strong><br><a href="<?php echo safe(publicMediaUrl($pdf['pdf_file'])); ?>" target="_blank" rel="noopener">Open PDF</a> · <?php echo safe($pdf['instructor'] ?: 'Instructor'); ?></li>
         <?php endforeach; ?>
       </ul>
     <?php endif; ?>

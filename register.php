@@ -3,75 +3,81 @@ session_start();
 require_once __DIR__ . '/db.php';
 
 $errors = [];
+$csrfToken = csrfToken();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name = trim($_POST['name'] ?? '');
-    $email = strtolower(trim($_POST['email'] ?? ''));
-    $studentId = trim($_POST['student_id'] ?? '');
-    $password = $_POST['password'] ?? '';
-    $course = trim($_POST['course'] ?? 'ነገረ ሃይማኖት');
-    $amount = trim($_POST['amount'] ?? '0');
+    if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
+        $errors[] = 'ደኅንነት ተሰርዟል። እባክዎ ገጹን እንደገና ይጫኑ።';
+    } else {
+        $name = trim($_POST['name'] ?? '');
+        $email = strtolower(trim($_POST['email'] ?? ''));
+        $studentId = trim($_POST['student_id'] ?? '');
+        $password = $_POST['password'] ?? '';
+        $course = trim($_POST['course'] ?? 'ነገረ ሃይማኖት');
+        $amount = trim($_POST['amount'] ?? '0');
 
-    if ($name === '') {
-        $errors[] = 'ስም ያስገቡ።';
-    }
-    if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $errors[] = 'እባክዎ ትክክለኛ ኢሜይል ያስገቡ።';
-    }
-    if ($studentId === '') {
-        $errors[] = 'የተማሪ መለያ ቁጥር ያስገቡ።';
-    }
-    if ($password === '') {
-        $errors[] = 'የይለፍ ቃል ያስገቡ።';
-    }
-    if (!is_numeric($amount) || (float)$amount < 0) {
-        $errors[] = 'እባክዎ ትክክለኛ የክፍያ መጠን ያስገቡ።';
-    }
-
-    if (empty($errors)) {
-        $stmt = $pdo->prepare('SELECT id FROM students WHERE email = :email OR student_id = :student_id');
-        $stmt->execute([':email' => $email, ':student_id' => $studentId]);
-        if ($stmt->fetch()) {
-            $errors[] = 'ይህ ኢሜይል ወይም የተማሪ መለያ ቁጥር አስቀድሞ ተመዝግቧል።';
+        if ($name === '') {
+            $errors[] = 'ስም ያስገቡ።';
         }
-    }
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $errors[] = 'እባክዎ ትክክለኛ ኢሜይል ያስገቡ።';
+        }
+        if ($studentId === '') {
+            $errors[] = 'የተማሪ መለያ ቁጥር ያስገቡ።';
+        }
+        if ($password === '') {
+            $errors[] = 'የይለፍ ቃል ያስገቡ።';
+        }
+        if (!is_numeric($amount) || (float)$amount < 0) {
+            $errors[] = 'እባክዎ ትክክለኛ የክፍያ መጠን ያስገቡ።';
+        }
 
-    if (empty($errors)) {
-        try {
-            $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+        if (empty($errors)) {
+            $stmt = $pdo->prepare('SELECT id FROM students WHERE email = :email OR student_id = :student_id');
+            $stmt->execute([':email' => $email, ':student_id' => $studentId]);
+            if ($stmt->fetch()) {
+                $errors[] = 'ይህ ኢሜይል ወይም የተማሪ መለያ ቁጥር አስቀድሞ ተመዝግቧል።';
+            }
+        }
 
-            $stmt = $pdo->prepare('INSERT INTO students (name, email, student_id, password_hash) VALUES (:name, :email, :student_id, :password_hash)');
-            $stmt->execute([
-                ':name' => $name,
-                ':email' => $email,
-                ':student_id' => $studentId,
-                ':password_hash' => $passwordHash,
-            ]);
+        if (empty($errors)) {
+            try {
+                $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
-            $recordId = uniqid('reg_', true);
-            $stmt = $pdo->prepare(
-                'INSERT INTO registrations (`id`, `name`, `email`, `student_id`, `course`, `amount`, `payment_status`, `created_at`) '
-                . 'VALUES (:id, :name, :email, :student_id, :course, :amount, :payment_status, :created_at)'
-            );
-            $stmt->execute([
-                ':id' => $recordId,
-                ':name' => $name,
-                ':email' => $email,
-                ':student_id' => $studentId,
-                ':course' => $course,
-                ':amount' => $amount,
-                ':payment_status' => 'unpaid',
-                ':created_at' => date('Y-m-d H:i:s'),
-            ]);
+                $stmt = $pdo->prepare('INSERT INTO students (name, email, student_id, password_hash) VALUES (:name, :email, :student_id, :password_hash)');
+                $stmt->execute([
+                    ':name' => $name,
+                    ':email' => $email,
+                    ':student_id' => $studentId,
+                    ':password_hash' => $passwordHash,
+                ]);
 
-            $_SESSION['student_id'] = $studentId;
-            $_SESSION['student_email'] = $email;
-            $_SESSION['student_name'] = $name;
+                $recordId = uniqid('reg_', true);
+                $stmt = $pdo->prepare(
+                    'INSERT INTO registrations (`id`, `name`, `email`, `student_id`, `course`, `amount`, `payment_status`, `created_at`) '
+                    . 'VALUES (:id, :name, :email, :student_id, :course, :amount, :payment_status, :created_at)'
+                );
+                $stmt->execute([
+                    ':id' => $recordId,
+                    ':name' => $name,
+                    ':email' => $email,
+                    ':student_id' => $studentId,
+                    ':course' => $course,
+                    ':amount' => $amount,
+                    ':payment_status' => 'unpaid',
+                    ':created_at' => date('Y-m-d H:i:s'),
+                ]);
 
-            header('Location: student_dashboard.php');
-            exit;
-        } catch (PDOException $e) {
-            $errors[] = 'ምዝገባው አልተሳካም። እባክዎ እንደገና ይሞክሩ።';
+                session_regenerate_id(true);
+                $_SESSION['student_id'] = $studentId;
+                $_SESSION['student_email'] = $email;
+                $_SESSION['student_name'] = $name;
+
+                header('Location: student_dashboard.php');
+                exit;
+            } catch (PDOException $e) {
+                $errors[] = 'ምዝገባው አልተሳካም። እባክዎ እንደገና ይሞክሩ።';
+            }
         }
     }
 }

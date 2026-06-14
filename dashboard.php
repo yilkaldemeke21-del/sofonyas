@@ -31,7 +31,9 @@ foreach ($registrations as $row) {
 <html lang="am">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ኦንላይን ዳሽቦርድ</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { font-family: Arial, sans-serif; background: #eef2fb; color: #222; padding: 20px; }
         .container { max-width: 1000px; margin: auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 2px 14px rgba(0,0,0,0.08); }
@@ -49,6 +51,8 @@ foreach ($registrations as $row) {
         .top-actions a { background: #2563eb; color: #fff; padding: 10px 12px; border-radius: 8px; text-decoration: none; font-weight: 700; }
         .top-actions a.secondary { background: #7c3aed; }
         .top-actions a.ghost { background: #0f766e; }
+        @media (max-width: 768px) { body { padding: 10px; } .container { padding: 14px; } .stats { flex-direction: column; } table { display: block; overflow-x: auto; white-space: nowrap; } }
+        @media (max-width: 576px) { .top-actions a { width: 100%; text-align: center; } }
     </style>
 </head>
 <body>

@@ -124,8 +124,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $tutorial_video = normalizeText($_POST['tutorial_video'] ?? '');
     $pdf_file = normalizeText($_POST['pdf_file'] ?? '');
     $modules = normalizeText($_POST['modules'] ?? '');
+    $builderModules = normalizeText($_POST['builder_modules'] ?? '');
+    if ($builderModules !== '') {
+        $modules = $builderModules;
+    }
+
     $quiz = normalizeText($_POST['quiz'] ?? '');
+    $builderQuiz = normalizeText($_POST['builder_quiz'] ?? '');
+    if ($builderQuiz !== '') {
+        $quiz = $builderQuiz;
+    }
+
     $assignment = normalizeText($_POST['assignment'] ?? '');
+    $builderAssignment = normalizeText($_POST['builder_assignment'] ?? '');
+    if ($builderAssignment !== '') {
+        $assignment = $builderAssignment;
+    }
+
     $certificate_requirements = normalizeText($_POST['certificate_requirements'] ?? '');
 
     if ($course_name === '' || $course_code === '') {
@@ -208,6 +223,208 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <script src="https://cdn.jsdelivr.net/npm/tinymce@6.8.3/tinymce.min.js" referrerpolicy="origin"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            function escapeHtml(value) {
+                return String(value)
+                    .replaceAll('&', '&amp;')
+                    .replaceAll('<', '&lt;')
+                    .replaceAll('>', '&gt;')
+                    .replaceAll('"', '&quot;')
+                    .replaceAll("'", '&#39;');
+            }
+
+            function renderLessonBuilderMarkup() {
+                const wrapper = document.getElementById('lessonBuilderList');
+                if (!wrapper) return;
+
+                const cards = Array.from(wrapper.querySelectorAll('.builder-card'));
+                const modules = cards.map((card) => {
+                    const moduleTitle = card.querySelector('.module-title').value.trim();
+                    const lessonRows = Array.from(card.querySelectorAll('.lesson-row'));
+                    const lessons = lessonRows.map((row) => {
+                        const title = row.querySelector('.lesson-title').value.trim();
+                        return title ? '<li>' + escapeHtml(title) + '</li>' : '';
+                    }).filter(Boolean);
+
+                    return {
+                        title: moduleTitle || 'Untitled Module',
+                        lessons: lessons
+                    };
+                }).filter((item) => item.title || item.lessons.length);
+
+                const markup = modules.map((module) => {
+                    const lessonsMarkup = module.lessons.length ? '<ul>' + module.lessons.join('') + '</ul>' : '<p class="small">No lessons added yet.</p>';
+                    return '<section class="builder-output-card"><h4>' + escapeHtml(module.title) + '</h4>' + lessonsMarkup + '</section>';
+                }).join('');
+
+                document.getElementById('builder_modules').value = markup;
+            }
+
+            function renderQuizBuilderMarkup() {
+                const wrapper = document.getElementById('quizBuilderList');
+                if (!wrapper) return;
+
+                const questionCards = Array.from(wrapper.querySelectorAll('.quiz-card'));
+                const items = questionCards.map((card, index) => {
+                    const title = card.querySelector('.quiz-question').value.trim() || 'Question ' + (index + 1);
+                    const optionA = card.querySelector('.quiz-a').value.trim();
+                    const optionB = card.querySelector('.quiz-b').value.trim();
+                    const optionC = card.querySelector('.quiz-c').value.trim();
+                    const optionD = card.querySelector('.quiz-d').value.trim();
+                    const answer = card.querySelector('.quiz-answer').value.trim();
+                    const note = card.querySelector('.quiz-note').value.trim();
+                    const options = [optionA, optionB, optionC, optionD].filter(Boolean);
+                    const optionsMarkup = options.map((option) => '<li>' + escapeHtml(option) + '</li>').join('');
+                    const answerMarkup = answer ? '<p><strong>Answer:</strong> ' + escapeHtml(answer) + '</p>' : '';
+                    const noteMarkup = note ? '<p class="small">' + escapeHtml(note) + '</p>' : '';
+                    return '<article class="builder-output-card"><h4>' + escapeHtml(title) + '</h4><ol>' + optionsMarkup + '</ol>' + answerMarkup + noteMarkup + '</article>';
+                }).filter(Boolean);
+
+                document.getElementById('builder_quiz').value = items.length ? items.join('') : '';
+            }
+
+            function renderAssignmentBuilderMarkup() {
+                const wrapper = document.getElementById('assignmentBuilderList');
+                if (!wrapper) return;
+
+                const cards = Array.from(wrapper.querySelectorAll('.assignment-card'));
+                const items = cards.map((card) => {
+                    const title = card.querySelector('.assignment-title').value.trim() || 'Assignment';
+                    const description = card.querySelector('.assignment-description').value.trim();
+                    const dueDate = card.querySelector('.assignment-due').value.trim();
+                    const points = card.querySelector('.assignment-points').value.trim();
+                    const meta = [dueDate ? 'Due: ' + dueDate : '', points ? 'Points: ' + points : ''].filter(Boolean).join(' • ');
+                    return '<article class="builder-output-card"><h4>' + escapeHtml(title) + '</h4><p>' + escapeHtml(description || 'Assignment instructions will appear here.') + '</p>' + (meta ? '<p class="small">' + escapeHtml(meta) + '</p>' : '') + '</article>';
+                }).filter(Boolean);
+
+                document.getElementById('builder_assignment').value = items.length ? items.join('') : '';
+            }
+
+            function addLessonCard() {
+                const wrapper = document.getElementById('lessonBuilderList');
+                const card = document.createElement('article');
+                card.className = 'builder-card';
+                card.draggable = true;
+                card.innerHTML = '<div class="builder-card-header"><strong>Module</strong><button type="button" class="ghost-btn remove-card">Remove</button></div><label class="small">Module Title</label><input class="module-title" type="text" placeholder="Module title"><label class="small">Lesson Items</label><div class="lesson-list"></div><button type="button" class="ghost-btn add-lesson">+ Add Lesson</button>';
+                wrapper.appendChild(card);
+                addLessonRow(card.querySelector('.lesson-list'));
+                bindBuilderEvents(card);
+                renderLessonBuilderMarkup();
+            }
+
+            function addLessonRow(container) {
+                const row = document.createElement('div');
+                row.className = 'lesson-row';
+                row.draggable = true;
+                row.innerHTML = '<input type="text" class="lesson-title" placeholder="Lesson title or topic"><button type="button" class="ghost-btn remove-row">Remove</button>';
+                container.appendChild(row);
+                bindBuilderEvents(row);
+                renderLessonBuilderMarkup();
+            }
+
+            function addQuizCard() {
+                const wrapper = document.getElementById('quizBuilderList');
+                const card = document.createElement('article');
+                card.className = 'quiz-card';
+                card.innerHTML = '<div class="builder-card-header"><strong>Question</strong><button type="button" class="ghost-btn remove-card">Remove</button></div><input type="text" class="quiz-question" placeholder="Question title"><input type="text" class="quiz-a" placeholder="Option A"><input type="text" class="quiz-b" placeholder="Option B"><input type="text" class="quiz-c" placeholder="Option C"><input type="text" class="quiz-d" placeholder="Option D"><input type="text" class="quiz-answer" placeholder="Correct answer"><textarea class="quiz-note" placeholder="Hint or explanation"></textarea>';
+                wrapper.appendChild(card);
+                bindBuilderEvents(card);
+                renderQuizBuilderMarkup();
+            }
+
+            function addAssignmentCard() {
+                const wrapper = document.getElementById('assignmentBuilderList');
+                const card = document.createElement('article');
+                card.className = 'assignment-card';
+                card.innerHTML = '<div class="builder-card-header"><strong>Assignment</strong><button type="button" class="ghost-btn remove-card">Remove</button></div><input type="text" class="assignment-title" placeholder="Assignment title"><textarea class="assignment-description" placeholder="Assignment instructions, objectives, and rubric"></textarea><input type="text" class="assignment-due" placeholder="Due date"><input type="text" class="assignment-points" placeholder="Points or weight"></textarea>';
+                wrapper.appendChild(card);
+                bindBuilderEvents(card);
+                renderAssignmentBuilderMarkup();
+            }
+
+            let draggedLessonCard = null;
+
+            function bindBuilderEvents(node) {
+                if (!node) return;
+
+                node.querySelectorAll('.remove-card').forEach(function (button) {
+                    button.addEventListener('click', function () {
+                        node.remove();
+                        renderLessonBuilderMarkup();
+                        renderQuizBuilderMarkup();
+                        renderAssignmentBuilderMarkup();
+                    });
+                });
+
+                node.querySelectorAll('.remove-row').forEach(function (button) {
+                    button.addEventListener('click', function () {
+                        button.closest('.lesson-row').remove();
+                        renderLessonBuilderMarkup();
+                    });
+                });
+
+                node.querySelectorAll('.add-lesson').forEach(function (button) {
+                    button.addEventListener('click', function () {
+                        addLessonRow(button.closest('.builder-card').querySelector('.lesson-list'));
+                    });
+                });
+
+                node.querySelectorAll('input, textarea').forEach(function (field) {
+                    field.addEventListener('input', function () {
+                        renderLessonBuilderMarkup();
+                        renderQuizBuilderMarkup();
+                        renderAssignmentBuilderMarkup();
+                    });
+                });
+
+                if (node.classList.contains('builder-card')) {
+                    node.addEventListener('dragstart', function (event) {
+                        draggedLessonCard = node;
+                        event.dataTransfer.effectAllowed = 'move';
+                        event.dataTransfer.setData('text/plain', 'lesson-card');
+                        node.classList.add('dragging');
+                    });
+                    node.addEventListener('dragend', function () {
+                        draggedLessonCard = null;
+                        node.classList.remove('dragging');
+                    });
+                    node.addEventListener('dragover', function (event) {
+                        if (draggedLessonCard && draggedLessonCard !== node) {
+                            event.preventDefault();
+                            event.dataTransfer.dropEffect = 'move';
+                        }
+                    });
+                    node.addEventListener('drop', function (event) {
+                        event.preventDefault();
+                        if (!draggedLessonCard || draggedLessonCard === node) return;
+                        const list = node.parentElement;
+                        if (!list) return;
+                        const draggedIndex = Array.from(list.children).indexOf(draggedLessonCard);
+                        const targetIndex = Array.from(list.children).indexOf(node);
+                        if (draggedIndex < targetIndex) {
+                            list.insertBefore(draggedLessonCard, node.nextSibling);
+                        } else {
+                            list.insertBefore(draggedLessonCard, node);
+                        }
+                        draggedLessonCard = null;
+                        renderLessonBuilderMarkup();
+                    });
+                }
+            }
+
+            document.getElementById('addLessonModuleBtn')?.addEventListener('click', addLessonCard);
+            document.getElementById('addQuizItemBtn')?.addEventListener('click', addQuizCard);
+            document.getElementById('addAssignmentItemBtn')?.addEventListener('click', addAssignmentCard);
+
+            document.querySelector('form')?.addEventListener('submit', function () {
+                renderLessonBuilderMarkup();
+                renderQuizBuilderMarkup();
+                renderAssignmentBuilderMarkup();
+            });
+
+            addLessonCard();
+            addQuizCard();
+            addAssignmentCard();
+
             function initRichEditors() {
                 if (window.tinymce) {
                     tinymce.init({
@@ -262,6 +479,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .publish-btn { background: linear-gradient(135deg, #16a34a, #15803d); box-shadow: 0 12px 24px rgba(22,163,74,0.22); border-radius: 12px; padding: 12px 16px; }
         .publish-btn:hover { opacity: 0.98; transform: translateY(-1px); }
         .toolbar-note { color: #1e3a8a; font-size: 13px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 8px 10px; margin-bottom: 10px; }
+        .builder-stack { display: grid; gap: 12px; }
+        .builder-card, .quiz-card, .assignment-card { border: 1px solid #bfdbfe; background: linear-gradient(135deg, #f8fbff, #fff); border-radius: 14px; padding: 12px; box-shadow: 0 8px 18px rgba(148,163,184,0.12); }
+        .builder-card-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .ghost-btn { border: 1px solid #cbd5e1; background: #fff; color: #334155; border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 12px; font-weight: 700; }
+        .lesson-row { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+        .lesson-row input, .quiz-card input, .quiz-card textarea, .assignment-card input, .assignment-card textarea { width: 100%; border: 1px solid #cbd5e1; border-radius: 10px; padding: 8px 10px; font-size: 13px; margin-bottom: 6px; }
+        .builder-output-card { border: 1px solid #dbeafe; background: #f8fbff; border-radius: 12px; padding: 10px; margin-top: 8px; }
+        .builder-output-card h4 { margin: 0 0 6px; font-size: 15px; color: #1e3a8a; }
+        .builder-output-card ul, .builder-output-card ol { margin: 0 0 6px 16px; padding-left: 0; }
+        .dragging { opacity: 0.5; }
         .rich-editor h1, .rich-editor h2 { font-size: 1.02rem; line-height: 1.35; margin: 0.35em 0; }
         .rich-editor ul, .rich-editor ol { padding-left: 18px; margin: 8px 0 10px; }
         .rich-editor li { margin-bottom: 6px; }
@@ -354,12 +581,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <div class="panel" id="module" style="padding:16px; margin-top: 14px;">
-                <h3 style="margin-top:0;">1. Add Module</h3>
-                <div class="field-block">
-                    <label for="modules">Module / Course Outline</label>
-                    <textarea id="modules" name="modules" class="rich-editor" placeholder="Module 1: Introduction&#10;Module 2: Core Concepts&#10;Module 3: Practice and Review"></textarea>
+                <h3 style="margin-top:0;">1. Drag & Drop Lesson Builder</h3>
+                <p class="small">Build lesson modules visually, reorder them by dragging, and save the result as the course outline.</p>
+                <div class="builder-stack" id="lessonBuilderList"></div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                    <button type="button" id="addLessonModuleBtn" class="ghost-btn" style="background:#eff6ff; border-color:#bfdbfe;">+ Add Module</button>
+                    <span class="small">Tip: Drag lesson cards to reorder the learning flow before you publish.</span>
                 </div>
-                <p class="small">This is saved into the course record as the module outline.</p>
+                <textarea id="builder_modules" name="builder_modules" hidden></textarea>
+                <div class="field-block" style="margin-top:12px;">
+                    <label for="modules">Optional Rich Text Outline</label>
+                    <textarea id="modules" name="modules" class="rich-editor" placeholder="Alternative outline text if you prefer the classic editor format."></textarea>
+                </div>
+                <p class="small">The builder output is saved automatically when you publish.</p>
             </div>
 
             <div class="panel" id="lesson" style="padding:16px;">
@@ -411,17 +645,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <div class="panel" id="content" style="padding:16px;">
-                <h3 style="margin-top:0;">4. Add Paragraph / Content</h3>
-                <div class="field-block">
-                    <label for="assignment">Content / Paragraph / Assignment Notes</label>
+                <h3 style="margin-top:0;">4. Assignment Builder</h3>
+                <p class="small">Create assignment tasks and rubric notes in a structured format that can be published directly to the course.</p>
+                <div class="builder-stack" id="assignmentBuilderList"></div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                    <button type="button" id="addAssignmentItemBtn" class="ghost-btn" style="background:#eff6ff; border-color:#bfdbfe;">+ Add Assignment</button>
+                </div>
+                <textarea id="builder_assignment" name="builder_assignment" hidden></textarea>
+                <div class="field-block" style="margin-top:12px;">
+                    <label for="assignment">Optional Rich Text Assignment Notes</label>
                     <textarea id="assignment" name="assignment" class="rich-editor" placeholder="Add lesson notes, paragraph text, assignment instructions, or learner activities here."></textarea>
                 </div>
             </div>
 
             <div class="panel" id="quiz" style="padding:16px;">
-                <h3 style="margin-top:0;">5. Add Quiz</h3>
-                <div class="field-block">
-                    <label for="quiz">Quiz Questions</label>
+                <h3 style="margin-top:0;">5. Quiz Builder</h3>
+                <p class="small">Add quiz questions with options, answers, and hints. The structured quiz is saved automatically when you publish.</p>
+                <div class="builder-stack" id="quizBuilderList"></div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                    <button type="button" id="addQuizItemBtn" class="ghost-btn" style="background:#eff6ff; border-color:#bfdbfe;">+ Add Question</button>
+                </div>
+                <textarea id="builder_quiz" name="builder_quiz" hidden></textarea>
+                <div class="field-block" style="margin-top:12px;">
+                    <label for="quiz">Optional Rich Text Quiz Questions</label>
                     <textarea id="quiz" name="quiz" class="rich-editor" placeholder="1. What is the main topic?&#10;2. Which action is most important?&#10;3. What should learners practice?"></textarea>
                 </div>
                 <div class="field-block">

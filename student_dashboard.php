@@ -300,7 +300,9 @@ if (empty($notifications)) {
 <html lang="am">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>የተማሪ ዳሽቦርድ</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         :root { --brand: #2563eb; --brand-2: #7c3aed; --success: #16a34a; --ink: #0f172a; --muted: #475569; }
         * { box-sizing: border-box; }
@@ -334,7 +336,10 @@ if (empty($notifications)) {
         .rich-content h1, .rich-content h2, .rich-content h3 { font-size: 1.02rem; line-height: 1.35; margin: 0.35em 0; }
         .rich-content ul, .rich-content ol { padding-left: 18px; margin: 8px 0 10px; }
         .rich-content li { margin-bottom: 6px; }
-        .rich-content p { margin: 0 0 8px; }
+        .rich-content p { margin: 0 0 8px; line-height: 1.5; }
+        .rich-content strong, .rich-content b { font-weight: 800; }
+        .rich-content em, .rich-content i { font-style: italic; }
+        .rich-content u { text-decoration: underline; }
         .progress-track { width: 100%; height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin: 8px 0; }
         .progress-fill { height: 100%; background: linear-gradient(90deg,#2563eb,#38bdf8); border-radius: 999px; }
         .pill { display: inline-flex; align-items: center; padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
@@ -352,6 +357,9 @@ if (empty($notifications)) {
         .section-sub { color: #475569; margin-bottom: 12px; }
         .profile-box { display:flex; gap:16px; align-items:center; }
         .avatar { width: 64px; height: 64px; border-radius: 50%; display:grid; place-items:center; background: linear-gradient(135deg,#2563eb,#7c3aed); color:white; font-size: 24px; font-weight: 800; }
+        @media (max-width: 991px) { .header { flex-direction: column; } .quick-actions { justify-content: flex-start; } }
+        @media (max-width: 768px) { body { padding: 10px; } .container { padding: 14px; border-radius: 18px; } .stats, .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+        @media (max-width: 576px) { .header h1 { font-size: 24px; } .button { width: 100%; } .quick-actions { width: 100%; } .quick-actions a { flex: 1 1 auto; text-align: center; } }
     </style>
 </head>
 <body>
@@ -390,7 +398,7 @@ if (empty($notifications)) {
                 <?php foreach ($available_courses as $course): ?>
                     <div class="course-card">
                         <?php if (!empty($course['thumbnail'])): ?>
-                            <img src="<?php echo safe($course['thumbnail']); ?>" alt="<?php echo safe($course['course_name']); ?>">
+                            <img src="<?php echo safe(publicMediaUrl($course['thumbnail'])); ?>" alt="<?php echo safe($course['course_name']); ?>">
                         <?php else: ?>
                             <img src="https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=900&q=80" alt="Course preview">
                         <?php endif; ?>
@@ -419,11 +427,11 @@ if (empty($notifications)) {
                     <div class="course-card" style="margin-bottom: 12px;">
                         <img src="https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=900&q=80" alt="Course preview">
                         <h3><?php echo safe($row['course']); ?></h3>
-                        <p class="muted">Instructor: <?php echo safe($student['name']); ?></p>
+                        <p class="muted">ኢንስትራክተር: <?php echo safe($student['name']); ?></p>
                         <div class="progress-track"><div class="progress-fill" style="width: <?php echo min(100, 45 + (int)$row['id'] % 30); ?>%;"></div></div>
                         <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
                             <span class="pill info">Progress <?php echo min(100, 45 + (int)$row['id'] % 30); ?>%</span>
-                            <a class="button" href="tutorial.php">Continue Learning</a>
+                            <a class="button" href="tutorial.php">ትምህርት ቀጥል</a>
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -437,7 +445,7 @@ if (empty($notifications)) {
                 <h3>የሚቀጥለዉ ኮርስ</h3>
                 <p class="muted">ነገረ ሃይማኖት፣ነገረ ቅዱሳን፣ሐዋርያዊ ተልዕኮ፣አገልግሎት እና መንፈሳዊ ሕይወት.</p>
                 <div class="progress-track"><div class="progress-fill" style="width: <?php echo $progress_percentage; ?>%;"></div></div>
-                <a class="button" href="tutorial.php" style="margin-top:8px;">Resume</a>
+                <a class="button" href="tutorial.php" style="margin-top:8px;">ካቆምክበት ቀጥል</a>
             </div>
         </div>
     </div>
@@ -445,14 +453,14 @@ if (empty($notifications)) {
     <div class="grid-3">
         <div class="card">
             <h2 class="section-title">📈 የትምህርት ፕሮግረስ</h2>
-            <p class="muted">Course Completion %</p>
+            <p class="muted">ኮርስ ፍጻሜ%</p>
             <div class="progress-track"><div class="progress-fill" style="width: <?php echo $progress_percentage; ?>%;"></div></div>
-            <p class="muted">Module Completion %: <?php echo min(100, $progress_percentage + 5); ?>%</p>
-            <p class="muted">Lesson Completion %: <?php echo min(100, $progress_percentage + 10); ?>%</p>
+            <p class="muted">ሞጁል ፍጻሜ %: <?php echo min(100, $progress_percentage + 5); ?>%</p>
+            <p class="muted"ሌሰን ፍጻሜ %: <?php echo min(100, $progress_percentage + 10); ?>%</p>
         </div>
         <div class="card">
             <h2 class="section-title">📝የፈተና ዉጤት</h2>
-            <p class="section-sub">Score, status, and latest quiz info</p>
+            <p class="section-sub">ነጥብ፣ሁኔታ እና ያለፈው የፈተና ዉጤት መረጃ</p>
             <?php foreach ($quiz_results as $quiz): ?>
                 <div class="mini-card" style="margin-bottom: 10px;">
                     <h3><?php echo safe($quiz['quiz_name']); ?></h3>
@@ -482,7 +490,7 @@ if (empty($notifications)) {
     <div class="grid-2">
         <div class="card">
             <h2 class="section-title">📌 አሳይመንት</h2>
-            <p class="section-sub">Pending, submitted, and graded tasks</p>
+            <p class="section-sub">በጅምር ላይ ያለ፣የገባ፣እና የተሰጠዉ የስራ ተግባር(graded tasks)</p>
             <div class="grid-3">
                 <div class="mini-card"><h3>Pending</h3><p style="font-size:24px; font-weight:800; color:#1d4ed8;">1</p></div>
                 <div class="mini-card"><h3>Submitted</h3><p style="font-size:24px; font-weight:800; color:#1d4ed8;">2</p></div>
@@ -491,17 +499,17 @@ if (empty($notifications)) {
             <?php foreach ($assignments as $item): ?>
                 <div class="mini-card" style="margin-top: 10px;">
                     <h3><?php echo safe($item['title']); ?></h3>
-                    <p class="muted"><?php echo safe($item['description']); ?></p>
+                    <div class="muted rich-content"><?php echo renderRichText($item['description'] ?? ''); ?></div>
                     <p class="muted">Status: <?php echo safe($item['status']); ?> | Due: <?php echo date('M d, Y', strtotime($item['due_date'])); ?></p>
                 </div>
             <?php endforeach; ?>
         </div>
         <div class="card">
-            <h2 class="section-title">📢 Announcements</h2>
-            <p class="section-sub">Admin or instructor messages</p>
+            <h2 class="section-title">📢 መግለጫ ማስታወቂያ</h2>
+            <p class="section-sub">የአድሚኑ ወይም የኢንስትራክተሩ መልእክት</p>
             <ul style="padding-left:18px; color:#334155; margin:0;">
                 <?php foreach ($student_events as $event): ?>
-                    <li style="margin-bottom:8px;"><strong><?php echo safe($event['event_title']); ?></strong> — <?php echo safe($event['event_description']); ?></li>
+                    <li style="margin-bottom:8px;"><strong><?php echo safe($event['event_title']); ?></strong> — <span class="rich-content"><?php echo renderRichText($event['event_description'] ?? ''); ?></span></li>
                 <?php endforeach; ?>
             </ul>
         </div>
@@ -509,11 +517,11 @@ if (empty($notifications)) {
 
     <div class="grid-2">
         <div class="card">
-            <h2 class="section-title">🔔 Notifications</h2>
+            <h2 class="section-title">🔔 ማንቂያ ማስታወቂያ</h2>
             <p class="section-sub">አዲስ ኮርስ, ኩይዝ, አሳይመንት እና ሠርተፊኬት ማንቂያ</p>
             <ul style="padding-left:18px; color:#334155; margin:0;">
                 <?php foreach ($notifications as $note): ?>
-                    <li style="margin-bottom:8px;"><?php echo safe($note['message']); ?> <small style="color:#64748b;">(<?php echo date('Y-m-d H:i', strtotime($note['created_at'])); ?>)</small></li>
+                    <li style="margin-bottom:8px;"><span class="rich-content"><?php echo renderRichText($note['message'] ?? ''); ?></span> <small style="color:#64748b;">(<?php echo date('Y-m-d H:i', strtotime($note['created_at'])); ?>)</small></li>
                 <?php endforeach; ?>
             </ul>
         </div>
@@ -528,7 +536,7 @@ if (empty($notifications)) {
                     </div>
                 <?php endforeach; ?>
             <?php else: ?>
-                <p class="muted">No scheduled exam reminders yet.</p>
+                <p class="muted">ምንም የፈተና መርሃ ግብር የለም</p>
             <?php endif; ?>
         </div>
     </div>
@@ -565,7 +573,7 @@ if (empty($notifications)) {
             <p class="section-sub">እባክዎ ከዚህ የሚለቀቁ ትምህርቶችን በአግባቡ ይያዙ</p>
             <?php foreach ($student_notes as $note): ?>
                 <div class="mini-card" style="margin-bottom:10px;">
-                    <p class="muted"><?php echo safe($note['note_text']); ?></p>
+                    <div class="muted rich-content"><?php echo renderRichText($note['note_text'] ?? ''); ?></div>
                 </div>
             <?php endforeach; ?>
         </div>
@@ -579,14 +587,14 @@ if (empty($notifications)) {
                 <div class="mini-card">
                     <h3><?php echo safe($item['lesson_title']); ?></h3>
                     <p class="muted">Course: <?php echo safe($item['course_name']); ?></p>
-                    <p class="muted">Instructor: <?php echo safe($item['instructor'] ?? 'Staff'); ?></p>
+                    <p class="muted">ኢንስትራክተር: <?php echo safe($item['instructor'] ?? 'Staff'); ?></p>
                     <a class="button" href="tutorial.php">ሌሰን ክፈት</a>
                 </div>
             <?php endforeach; ?>
             <?php foreach ($saved_courses as $item): ?>
                 <div class="mini-card">
                     <h3><?php echo safe($item['course_name']); ?></h3>
-                    <p class="muted">Instructor: <?php echo safe($item['instructor'] ?? 'Staff'); ?></p>
+                    <p class="muted">ኢንስትራክተር: <?php echo safe($item['instructor'] ?? 'Staff'); ?></p>
                     <a class="button" href="tutorial.php">ኮርስ ተመልከት</a>
                 </div>
             <?php endforeach; ?>

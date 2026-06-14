@@ -9,8 +9,12 @@ if (isset($_SESSION['student_id'])) {
 
 $error = '';
 $email = '';
+$csrfToken = csrfToken();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
+        $error = 'ደህንነት ተሰርዟል። እባክዎ ገጹን እንደገና ይጫኑ።';
+    } else {
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
 
@@ -22,6 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $student = $stmt->fetch();
 
         if ($student && password_verify($password, $student['password_hash'])) {
+            session_regenerate_id(true);
             $_SESSION['student_id'] = $student['student_id'];
             $_SESSION['student_email'] = $student['email'];
             $_SESSION['student_name'] = $student['name'];
@@ -60,6 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $error = 'ኢሜይል ወይም የይለፍ ቃል ትክክል አይደለም።';
     }
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -96,6 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="message error"><?php echo safe($error); ?></div>
     <?php endif; ?>
     <form method="post">
+        <input type="hidden" name="csrf_token" value="<?php echo safe($csrfToken); ?>">
         <label for="email">ኢሜይል ወይም የተማሪ መለያ</label>
         <input id="email" type="text" name="email" value="<?php echo safe($email); ?>" required>
 

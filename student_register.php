@@ -3,6 +3,7 @@ session_start();
 require_once __DIR__ . '/db.php';
 
 $errors = [];
+$csrfToken = csrfToken();
 $name = '';
 $email = '';
 $studentId = '';
@@ -15,87 +16,92 @@ if ($course === '' && isset($_GET['course'])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name = trim($_POST['name'] ?? '');
-    $email = strtolower(trim($_POST['email'] ?? ''));
-    $studentId = trim($_POST['student_id'] ?? '');
-    $password = $_POST['password'] ?? '';
-    $confirmPassword = $_POST['confirm_password'] ?? '';
-    $course = trim($_POST['course'] ?? '');
-    $amount = trim($_POST['amount'] ?? '0');
+    if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
+        $errors[] = 'ደህንነት ተሰርዟል። እባክዎ ገጹን እንደገና ይጫኑ።';
+    } else {
+        $name = trim($_POST['name'] ?? '');
+        $email = strtolower(trim($_POST['email'] ?? ''));
+        $studentId = trim($_POST['student_id'] ?? '');
+        $password = $_POST['password'] ?? '';
+        $confirmPassword = $_POST['confirm_password'] ?? '';
+        $course = trim($_POST['course'] ?? '');
+        $amount = trim($_POST['amount'] ?? '0');
 
-    if ($name === '') {
-        $errors[] = 'ስም ያስገቡ።';
-    }
-    if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $errors[] = 'እባክዎ ትክክለኛ ኢሜይል ያስገቡ።';
-    }
-    if ($password === '') {
-        $errors[] = 'የይለፍ ቃል ያስገቡ።';
-    } elseif (strlen($password) < 6) {
-        $errors[] = 'የይለፍ ቃል ብዛት ቢያንስ 6 መሆን አለበት።';
-    }
-    if ($password !== $confirmPassword) {
-        $errors[] = 'የይለፍ ቃላት አይመሳሰሉም።';
-    }
-    if ($course === '') {
-        $errors[] = 'ኮርሱን ያስገቡ።';
-    }
-    if (!is_numeric($amount) || $amount < 0) {
-        $errors[] = 'እባክዎ ትክክለኛ የክፍያ መጠን ያስገቡ።';
-    }
-
-    if (empty($errors)) {
-        $stmt = $pdo->prepare('SELECT id FROM students WHERE email =:email OR student_id = :student_id');
-        $stmt->execute([':email' => $email, ':student_id' => $studentId]);
-        if ($stmt->fetch()) {
-            $errors[] = 'እባክዎ ያስገቡት ኢሜይል ወይም የተማሪ መለያ ቁጥር አስምር ነው።';
+        if ($name === '') {
+            $errors[] = 'ስም ያስገቡ።';
         }
-    }
-
-    if (empty($errors)) {
-        if ($studentId === '') {
-            $base = strtoupper(substr(preg_replace('/[^A-Z0-9]/', '', str_replace([' ', '@', '.'], '', $email)), 0, 6));
-            $base = $base !== '' ? $base : 'STU';
-
-            do {
-                $studentId = $base . str_pad((string) random_int(100, 999), 3, '0', STR_PAD_LEFT);
-                $check = $pdo->prepare('SELECT id FROM students WHERE student_id = :student_id LIMIT 1');
-                $check->execute([':student_id' => $studentId]);
-            } while ($check->fetch());
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $errors[] = 'እባክዎ ትክክለኛ ኢሜይል ያስገቡ።';
+        }
+        if ($password === '') {
+            $errors[] = 'የይለፍ ቃል ያስገቡ።';
+        } elseif (strlen($password) < 6) {
+            $errors[] = 'የይለፍ ቃል ብዛት ቢያንስ 6 መሆን አለበት።';
+        }
+        if ($password !== $confirmPassword) {
+            $errors[] = 'የይለፍ ቃላት አይመሳሰሉም።';
+        }
+        if ($course === '') {
+            $errors[] = 'ኮርሱን ያስገቡ።';
+        }
+        if (!is_numeric($amount) || $amount < 0) {
+            $errors[] = 'እባክዎ ትክክለኛ የክፍያ መጠን ያስገቡ።';
         }
 
-        try {
-            $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+        if (empty($errors)) {
+            $stmt = $pdo->prepare('SELECT id FROM students WHERE email =:email OR student_id = :student_id');
+            $stmt->execute([':email' => $email, ':student_id' => $studentId]);
+            if ($stmt->fetch()) {
+                $errors[] = 'እባክዎ ያስገቡት ኢሜይል ወይም የተማሪ መለያ ቁጥር አስምር ነው።';
+            }
+        }
 
-            $stmt = $pdo->prepare('INSERT INTO students (name, email, student_id, password_hash) VALUES (:name, :email, :student_id, :password_hash)');
-            $stmt->execute([
-                ':name' => $name,
-                ':email' => $email,
-                ':student_id' => $studentId,
-                ':password_hash' => $passwordHash,
-            ]);
+        if (empty($errors)) {
+            if ($studentId === '') {
+                $base = strtoupper(substr(preg_replace('/[^A-Z0-9]/', '', str_replace([' ', '@', '.'], '', $email)), 0, 6));
+                $base = $base !== '' ? $base : 'STU';
 
-            $registrationId = uniqid('reg_', true);
-            $stmt = $pdo->prepare('INSERT INTO registrations (`id`, `name`, `email`, `student_id`, `course`, `amount`, `payment_status`, `created_at`) VALUES (:id, :name, :email, :student_id, :course, :amount, :payment_status, :created_at)');
-            $stmt->execute([
-                ':id' => $registrationId,
-                ':name' => $name,
-                ':email' => $email,
-                ':student_id' => $studentId,
-                ':course' => $course,
-                ':amount' => $amount,
-                ':payment_status' => 'unpaid',
-                ':created_at' => date('Y-m-d H:i:s'),
-            ]);
+                do {
+                    $studentId = $base . str_pad((string) random_int(100, 999), 3, '0', STR_PAD_LEFT);
+                    $check = $pdo->prepare('SELECT id FROM students WHERE student_id = :student_id LIMIT 1');
+                    $check->execute([':student_id' => $studentId]);
+                } while ($check->fetch());
+            }
 
-            $_SESSION['student_id'] = $studentId;
-            $_SESSION['student_email'] = $email;
-            $_SESSION['student_name'] = $name;
+            try {
+                $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
-            header('Location: student_dashboard.php');
-            exit;
-        } catch (PDOException $e) {
-            $errors[] = 'ተማሪውን መመዝገብ አልተሳካም። ኢሜይል ወይም የተማሪ መለያ ቁጥር አስምር ሊሆን ይችላል።';
+                $stmt = $pdo->prepare('INSERT INTO students (name, email, student_id, password_hash) VALUES (:name, :email, :student_id, :password_hash)');
+                $stmt->execute([
+                    ':name' => $name,
+                    ':email' => $email,
+                    ':student_id' => $studentId,
+                    ':password_hash' => $passwordHash,
+                ]);
+
+                $registrationId = uniqid('reg_', true);
+                $stmt = $pdo->prepare('INSERT INTO registrations (`id`, `name`, `email`, `student_id`, `course`, `amount`, `payment_status`, `created_at`) VALUES (:id, :name, :email, :student_id, :course, :amount, :payment_status, :created_at)');
+                $stmt->execute([
+                    ':id' => $registrationId,
+                    ':name' => $name,
+                    ':email' => $email,
+                    ':student_id' => $studentId,
+                    ':course' => $course,
+                    ':amount' => $amount,
+                    ':payment_status' => 'unpaid',
+                    ':created_at' => date('Y-m-d H:i:s'),
+                ]);
+
+                session_regenerate_id(true);
+                $_SESSION['student_id'] = $studentId;
+                $_SESSION['student_email'] = $email;
+                $_SESSION['student_name'] = $name;
+
+                header('Location: student_dashboard.php');
+                exit;
+            } catch (PDOException $e) {
+                $errors[] = 'ተማሪውን መመዝገብ አልተሳካም። ኢሜይል ወይም የተማሪ መለያ ቁጥር አስምር ሊሆን ይችላል።';
+            }
         }
     }
 }
@@ -150,6 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
     <?php endif; ?>
     <form method="post">
+        <input type="hidden" name="csrf_token" value="<?php echo safe($csrfToken); ?>">
         <div class="row">
             <div>
                 <label for="name">ስም</label>
