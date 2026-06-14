@@ -140,10 +140,34 @@ function ensureCourseStructureTables(PDO $pdo): void
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 }
 
+function ensureLessonBookmarkTables(PDO $pdo): void
+{
+    $pdo->exec('CREATE TABLE IF NOT EXISTS lesson_bookmarks (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id VARCHAR(100) NOT NULL,
+        lesson_id INT NOT NULL,
+        course_id INT NOT NULL,
+        lesson_title VARCHAR(255) NOT NULL,
+        course_name VARCHAR(255) NOT NULL,
+        instructor VARCHAR(255) DEFAULT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uniq_student_lesson (student_id, lesson_id),
+        INDEX idx_lesson_bookmarks_student (student_id),
+        INDEX idx_lesson_bookmarks_lesson (lesson_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+}
+
 try {
     ensureCourseStructureTables($pdo);
 } catch (Throwable $e) {
     error_log('Course structure schema validation failed: ' . $e->getMessage());
+}
+
+try {
+    ensureLessonBookmarkTables($pdo);
+} catch (Throwable $e) {
+    error_log('Lesson bookmark schema validation failed: ' . $e->getMessage());
 }
 
 function cleanText($value): string {

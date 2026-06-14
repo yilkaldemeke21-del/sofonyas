@@ -2,6 +2,38 @@
 session_start();
 require_once __DIR__ . '/db.php';
 
+$message = '';
+if (isset($_POST['save_lesson']) && isset($_SESSION['student_id'])) {
+    $lessonId = (int)($_POST['lesson_id'] ?? 0);
+    $courseId = (int)($_POST['course_id'] ?? 0);
+    $lessonTitle = trim((string)($_POST['lesson_title'] ?? ''));
+    $courseName = trim((string)($_POST['course_name'] ?? ''));
+    $instructor = trim((string)($_POST['instructor'] ?? ''));
+
+    if ($lessonId > 0 && $courseId > 0 && $lessonTitle !== '' && $courseName !== '') {
+        $stmt = $pdo->prepare('SELECT id FROM lesson_bookmarks WHERE student_id = :student_id AND lesson_id = :lesson_id LIMIT 1');
+        $stmt->execute([':student_id' => $_SESSION['student_id'], ':lesson_id' => $lessonId]);
+        if ($stmt->fetch()) {
+            $message = 'This lesson is already saved.';
+        } else {
+            $stmt = $pdo->prepare('INSERT INTO lesson_bookmarks (student_id, lesson_id, course_id, lesson_title, course_name, instructor) VALUES (:student_id, :lesson_id, :course_id, :lesson_title, :course_name, :instructor)');
+            $stmt->execute([
+                ':student_id' => $_SESSION['student_id'],
+                ':lesson_id' => $lessonId,
+                ':course_id' => $courseId,
+                ':lesson_title' => $lessonTitle,
+                ':course_name' => $courseName,
+                ':instructor' => $instructor,
+            ]);
+            $message = 'Lesson saved to your dashboard.';
+        }
+    } else {
+        $message = 'Invalid lesson details.';
+    }
+} elseif (isset($_POST['save_lesson']) && !isset($_SESSION['student_id'])) {
+    $message = 'Please login as a student before saving a lesson.';
+}
+
 $stmt = $pdo->query('SELECT * FROM courses ORDER BY created_at DESC LIMIT 12');
 $courses = $stmt->fetchAll();
 
@@ -64,8 +96,14 @@ foreach ($lessonStmt->fetchAll() as $lesson) {
   <div class="card">
     <h1>ተማሪ መማሪያ እና ኮርሶች</h1>
     <p class="muted">እዚህ ከዳታቤዝ የተጫኑ ትምህርቶችን ተመልከት፣ አጭር እና ሙሉ መግለጫዎችን እና የትምህርት እንቅስቃሴዎችን ለተማሪዎች በቀላሉ እንዲያገኙ ይረዳል።</p>
-    <a class="btn" href="student_login.php">ለተማሪ ግባ</a>
-    <a class="btn" href="exam20.php">Exam Center</a>
+    <?php if ($message !== ''): ?>
+      <p class="pill" style="background:#ecfdf5;color:#166534;border:1px solid #a7f3d0; margin-top:10px;"><?php echo safe($message); ?></p>
+    <?php endif; ?>
+    <p style="margin-top:12px;">
+      <a class="btn" href="student_login.php">ለተማሪ ግባ</a>
+      <a class="btn" href="student_dashboard.php">ዳሽቦርድ</a>
+      <a class="btn" href="exam20.php">የፈተና ማዕከል</a>
+    </p>
   </div>
 
   <div class="card" id="courses">
@@ -122,6 +160,15 @@ foreach ($lessonStmt->fetchAll() as $lesson) {
                         <?php if ($moduleLessons): ?>
                           <?php foreach ($moduleLessons as $lesson): ?>
                             <span class="lesson-chip">📘 <?php echo htmlspecialchars($lesson['title']); ?></span>
+                            <form method="post" style="display:inline-block; margin-left: 4px;">
+                              <input type="hidden" name="save_lesson" value="1">
+                              <input type="hidden" name="lesson_id" value="<?php echo (int)$lesson['id']; ?>">
+                              <input type="hidden" name="course_id" value="<?php echo (int)$course['id']; ?>">
+                              <input type="hidden" name="lesson_title" value="<?php echo safe($lesson['title']); ?>">
+                              <input type="hidden" name="course_name" value="<?php echo safe($course['course_name']); ?>">
+                              <input type="hidden" name="instructor" value="<?php echo safe($course['instructor'] ?? ''); ?>">
+                              <button type="submit" class="btn" style="padding:6px 10px; font-size:12px; border:none; cursor:pointer;">Save</button>
+                            </form>
                           <?php endforeach; ?>
                         <?php else: ?>
                           <span class="muted">No lessons added yet.</span>
@@ -136,6 +183,15 @@ foreach ($lessonStmt->fetchAll() as $lesson) {
                       <div>
                         <?php foreach ($orphanLessons as $lesson): ?>
                           <span class="lesson-chip">📗 <?php echo htmlspecialchars($lesson['title']); ?></span>
+                          <form method="post" style="display:inline-block; margin-left: 4px;">
+                            <input type="hidden" name="save_lesson" value="1">
+                            <input type="hidden" name="lesson_id" value="<?php echo (int)$lesson['id']; ?>">
+                            <input type="hidden" name="course_id" value="<?php echo (int)$course['id']; ?>">
+                            <input type="hidden" name="lesson_title" value="<?php echo safe($lesson['title']); ?>">
+                            <input type="hidden" name="course_name" value="<?php echo safe($course['course_name']); ?>">
+                            <input type="hidden" name="instructor" value="<?php echo safe($course['instructor'] ?? ''); ?>">
+                            <button type="submit" class="btn" style="padding:6px 10px; font-size:12px; border:none; cursor:pointer;">Save</button>
+                          </form>
                         <?php endforeach; ?>
                       </div>
                     </div>
@@ -149,6 +205,15 @@ foreach ($lessonStmt->fetchAll() as $lesson) {
             <?php if (!empty($course['certificate_requirements'])): ?><div class="rich-content" style="margin-bottom:10px;"><strong>Certificate Requirements:</strong> <?php echo renderRichText($course['certificate_requirements']); ?></div><?php endif; ?>
             <p>
               <a class="btn" href="student_register.php?course=<?php echo rawurlencode($course['course_name']); ?>&amount=<?php echo (float)$course['price']; ?>">ይመዝገቡ ለዚህ ትምህርት</a>
+              <form method="post" style="display:inline-block; margin-left: 4px;">
+                <input type="hidden" name="save_lesson" value="1">
+                <input type="hidden" name="lesson_id" value="<?php echo (int)$course['id']; ?>">
+                <input type="hidden" name="course_id" value="<?php echo (int)$course['id']; ?>">
+                <input type="hidden" name="lesson_title" value="<?php echo safe($course['course_name']); ?>">
+                <input type="hidden" name="course_name" value="<?php echo safe($course['course_name']); ?>">
+                <input type="hidden" name="instructor" value="<?php echo safe($course['instructor'] ?? ''); ?>">
+                <button type="submit" class="btn" style="border: none; cursor: pointer;">ትምህርት አስቀምጥ</button>
+              </form>
               <?php if (!empty($course['pdf_file'])): ?>
                 <a class="btn" href="<?php echo htmlspecialchars($course['pdf_file']); ?>" target="_blank">PDF እይ</a>
               <?php endif; ?>

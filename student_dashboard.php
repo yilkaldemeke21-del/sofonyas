@@ -138,6 +138,10 @@ $stmt = $pdo->prepare('SELECT * FROM saved_courses WHERE student_id = :student_i
 $stmt->execute([':student_id' => $studentId]);
 $saved_courses = $stmt->fetchAll();
 
+$stmt = $pdo->prepare('SELECT lb.*, c.course_name, c.instructor FROM lesson_bookmarks lb JOIN courses c ON c.id = lb.course_id WHERE lb.student_id = :student_id ORDER BY lb.created_at DESC LIMIT 8');
+$stmt->execute([':student_id' => $studentId]);
+$saved_lessons = $stmt->fetchAll();
+
 $avg_quiz_score = 0;
 $stmt = $pdo->prepare('SELECT AVG(score) as avg_score FROM quiz_results WHERE student_id = :student_id');
 $stmt->execute([':student_id' => $studentId]);
@@ -568,9 +572,17 @@ if (empty($notifications)) {
     </div>
 
     <div class="card">
-        <h2 class="section-title">⭐ Wishlist / የተቀመጡ ኮርሶች</h2>
-        <p class="section-sub">እባክዎ ትምህርቶችን እንደገና ይከልሱ ደጋግመዉ ያጥኑ</p>
+        <h2 class="section-title">⭐ የተቀመጡ ኮርሶች</h2>
+        <p class="section-sub">የተቀመጡ ትምህርቶችን እና የተወደዱ ኮርሶችን እዚህ ይመልከቱ።</p>
         <div class="grid-3">
+            <?php foreach ($saved_lessons as $item): ?>
+                <div class="mini-card">
+                    <h3><?php echo safe($item['lesson_title']); ?></h3>
+                    <p class="muted">Course: <?php echo safe($item['course_name']); ?></p>
+                    <p class="muted">Instructor: <?php echo safe($item['instructor'] ?? 'Staff'); ?></p>
+                    <a class="button" href="tutorial.php">ሌሰን ክፈት</a>
+                </div>
+            <?php endforeach; ?>
             <?php foreach ($saved_courses as $item): ?>
                 <div class="mini-card">
                     <h3><?php echo safe($item['course_name']); ?></h3>
@@ -578,6 +590,12 @@ if (empty($notifications)) {
                     <a class="button" href="tutorial.php">ኮርስ ተመልከት</a>
                 </div>
             <?php endforeach; ?>
+            <?php if (empty($saved_lessons) && empty($saved_courses)): ?>
+                <div class="mini-card">
+                    <h3>ምንም ሴቭ የተደረገ ዝርዝር የለም</h3>
+                    <p class="muted">ከዚህ ሴቭ ተደርገው የተቀመጡ የትምህርት ክፍሎችን የገጽ ማስታወሽ በተን ተጠቀም.</p>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 
