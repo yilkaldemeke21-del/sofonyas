@@ -313,7 +313,7 @@ if (empty($notifications)) {
         .container { max-width: 1320px; margin: auto; background: rgba(255,255,255,0.92); border: 1px solid rgba(148,163,184,0.18); border-radius: 24px; box-shadow: 0 18px 45px rgba(15,23,42,0.12); padding: 24px; backdrop-filter: blur(8px); }
         .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 18px; }
         .header h1 { font-size: 28px; color: #111827; margin: 0 0 6px; }
-        .header p { color: var(--muted); margin: 0; }
+        .header p { color: var(--muted); margin: 0; font-size: 15px; line-height: 1.55; }
         .live-pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 999px; background: linear-gradient(135deg, rgba(37,99,235,0.12), rgba(124,58,237,0.12)); color: #1e3a8a; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; }
         .live-pill span.dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 0 rgba(34,197,94,0.35); animation: pulse 1.8s infinite; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(34,197,94,0.35); } 70% { box-shadow: 0 0 0 10px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); } }
@@ -321,19 +321,23 @@ if (empty($notifications)) {
         .button:hover { transform: translateY(-1px); box-shadow: 0 14px 24px rgba(37,99,235,0.28); }
         .button.secondary { background: linear-gradient(135deg,#111827,#1f2937); }
         .quick-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
+        .account-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 12px; }
+        .account-actions .button { min-width: 150px; }
         .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
         .card { padding: 18px; border-radius: 18px; background: linear-gradient(145deg,#ffffff,#f8fbff); border: 1px solid #e5e7eb; box-shadow: 0 8px 18px rgba(148,163,184,0.12); transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; }
         .card:hover { transform: translateY(-2px); border-color: rgba(37,99,235,0.35); box-shadow: 0 14px 28px rgba(37,99,235,0.14); }
         .card h2 { margin: 0 0 8px; font-size: 15px; color: #475569; font-weight: 700; }
-        .card p { font-size: 28px; font-weight: 800; margin: 0; color: #1d4ed8; }
+        .card p { font-size: 17px; font-weight: 800; margin: 0; color: #1d4ed8; }
+        .section-title { font-size: 20px; color: #ca1484; margin: 0 0 6px; font-weight: 800; }
+        .section-sub { color: #475569; margin-bottom: 12px; font-size: 14px; line-height: 1.55; }
         .grid-2, .grid-3 { display: grid; gap: 18px; margin-bottom: 24px; }
         .grid-2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
         .grid-3 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
         .course-card, .mini-card { background: linear-gradient(135deg,#ffffff,#f8fbff); border: 1px solid #e5e7eb; border-radius: 14px; padding: 14px; }
-        .course-card img { width: 100%; border-radius: 10px; height: 110px; object-fit: cover; background: linear-gradient(135deg,#dbeafe,#c4b5fd); }
-        .course-card h3, .mini-card h3 { font-size: 16px; color: #111827; margin: 10px 0 6px; }
-        .muted { color: #475569; font-size: 13px; }
-        .rich-content h1, .rich-content h2, .rich-content h3 { font-size: 1.02rem; line-height: 1.35; margin: 0.35em 0; }
+        .course-card img { width: 100%; border-radius: 50px; height: 410px; object-fit: cover; background: linear-gradient(135deg,#dbeafe,#c4b5fd); }
+        .course-card h3, .mini-card h3 { font-size: 20px; color: #1b4d98; margin: 10px 0 6px; font-weight: 800; line-height: 1.35; }
+        .muted { color: #475569; font-size: 16px; line-height: 1.35; font-weight: 500; }
+        .rich-content h1, .rich-content h2, .rich-content h3 { font-size: 16px; line-height: 1.35; margin: 0.35em 0; }
         .rich-content ul, .rich-content ol { padding-left: 18px; margin: 8px 0 10px; }
         .rich-content li { margin-bottom: 6px; }
         .rich-content p { margin: 0 0 8px; line-height: 1.5; }
@@ -341,7 +345,7 @@ if (empty($notifications)) {
         .rich-content em, .rich-content i { font-style: italic; }
         .rich-content u { text-decoration: underline; }
         .progress-track { width: 100%; height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin: 8px 0; }
-        .progress-fill { height: 100%; background: linear-gradient(90deg,#2563eb,#38bdf8); border-radius: 999px; }
+        .progress-fill { font-size: 16px; height: 100%; background: linear-gradient(90deg,#2563eb,#38bdf8); border-radius: 999px; }
         .pill { display: inline-flex; align-items: center; padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
         .pill.success { background: #dcfce7; color: #166534; }
         .pill.warning { background: #fef3c7; color: #b45309; }
@@ -353,13 +357,13 @@ if (empty($notifications)) {
         .paid { background: #dcfce7; color: #166534; }
         .unpaid { background: #fee2e2; color: #b91c1c; }
         .action-link { color: #2563eb; text-decoration: none; font-weight: 700; }
-        .section-title { font-size: 20px; color: #111827; margin: 0 0 6px; }
-        .section-sub { color: #475569; margin-bottom: 12px; }
+        .instructor-line {font-size: 16px; font-weight: 600; color: #6b16cb; }
+        .info-note { font-size: 14px; line-height: 1.5; color: #334155; }
         .profile-box { display:flex; gap:16px; align-items:center; }
         .avatar { width: 64px; height: 64px; border-radius: 50%; display:grid; place-items:center; background: linear-gradient(135deg,#2563eb,#7c3aed); color:white; font-size: 24px; font-weight: 800; }
         @media (max-width: 991px) { .header { flex-direction: column; } .quick-actions { justify-content: flex-start; } }
         @media (max-width: 768px) { body { padding: 10px; } .container { padding: 14px; border-radius: 18px; } .stats, .grid-2, .grid-3 { grid-template-columns: 1fr; } }
-        @media (max-width: 576px) { .header h1 { font-size: 24px; } .button { width: 100%; } .quick-actions { width: 100%; } .quick-actions a { flex: 1 1 auto; text-align: center; } }
+        @media (max-width: 576px) { .header h1 { font-size: 24px; } .button { width: 100%; } .quick-actions { width: 100%; } .quick-actions a { flex: 1 1 auto; text-align: center; } .account-actions { flex-direction: column; align-items: stretch; } .account-actions .button { width: 100%; min-width: 0; } }
     </style>
 </head>
 <body>
@@ -400,14 +404,13 @@ if (empty($notifications)) {
                         <?php if (!empty($course['thumbnail'])): ?>
                             <img src="<?php echo safe(publicMediaUrl($course['thumbnail'])); ?>" alt="<?php echo safe($course['course_name']); ?>">
                         <?php else: ?>
-                            <img src="https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=900&q=80" alt="Course preview">
+                            <img src="IMG_20241202_031425_251.jpg" alt="Course preview">
                         <?php endif; ?>
                         <h3><?php echo safe($course['course_name']); ?></h3>
                         <div class="muted rich-content" style="margin-bottom:8px;"><?php echo renderRichText($course['short_description'] ?? ''); ?></div>
                         <div class="muted rich-content" style="margin-bottom:8px;"><?php echo renderRichText($course['description'] ?? ''); ?></div>
-                        <p class="muted">ኢንስትራክተር: <?php echo safe($course['instructor'] ?? 'Admin Instructor'); ?></p>
-                        <p class="muted">ዋጋ: <?php echo number_format((float)($course['price'] ?? 0), 2); ?> ብር</p>
-                        <p class="muted"></p> ዋጋ: <?php echo number_format((float)($course['price'] ?? 0), 2); ?> ብር</p>
+                        <p class="muted"><span class="instructor-line">ኢንስትራክተር:</span> <?php echo safe($course['instructor'] ?? 'Admin Instructor'); ?></p>
+                        <p class="muted"><span class="instructor-line">ዋጋ:</span> <?php echo number_format((float)($course['price'] ?? 0), 2); ?> ብር</p>
                         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
                             <a class="button" href="student_register.php?course=<?php echo rawurlencode($course['course_name']); ?>&amount=<?php echo (float)($course['price'] ?? 0); ?>">Enroll Now</a>
                             <a class="button secondary" href="tutorial.php#courses">View Details</a>
@@ -558,9 +561,11 @@ if (empty($notifications)) {
         </div>
         <div class="card">
             <h2 class="section-title">⚙️ አካውንት ማስተካከያ</h2>
-            <p class="section-sub">ፓስዋርድ መቀየር፣ፕሮፋይል መቀየር እና ፎቶ መጨመር</p>
-            <a class="button secondary" href="student_register.php" style="margin-right:8px;">ፕሮፋይል ቀይር</a>
-            <a class="button" href="student_logout.php">ዉጣ</a>
+            <p class="section-sub">ፓስዋርድ መቀየር፣ ፕሮፋይል መቀየር እና ፎቶ መጨመር</p>
+            <div class="account-actions" style="margin-top: 12px;">
+                <a class="button secondary" href="student_register.php">ፕሮፋይል ቀይር</a>
+                <a class="button" href="student_logout.php">ዉጣ</a>
+            </div>
         </div>
     </div>
 
@@ -589,14 +594,14 @@ if (empty($notifications)) {
                 <div class="mini-card">
                     <h3><?php echo safe($item['lesson_title']); ?></h3>
                     <p class="muted">ኢንስትራክተር: <?php echo safe($item['instructor'] ?? 'Staff'); ?></p>
-                    <a class="button" href="tutorial.php">ሌሰን ክፈት</a>
+                    <a class="button" href="tutorial.php" style="margin-top: 12px;">ሌሰን ክፈት</a>
                 </div>
             <?php endforeach; ?>
             <?php foreach ($saved_courses as $item): ?>
                 <div class="mini-card">
                     <h3><?php echo safe($item['course_name']); ?></h3>
                     <p class="muted">ኢንስትራክተር: <?php echo safe($item['instructor'] ?? 'Staff'); ?></p>
-                    <a class="button" href="tutorial.php">ኮርስ ተመልከት</a>
+                    <a class="button" href="tutorial.php" style="margin-top: 12px;">ኮርስ ተመልከት</a>
                 </div>
             <?php endforeach; ?>
             <?php if (empty($saved_lessons) && empty($saved_courses)): ?>
