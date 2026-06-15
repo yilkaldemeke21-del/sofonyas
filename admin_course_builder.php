@@ -663,7 +663,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <p class="small">Add quiz questions with options, answers, and hints. The structured quiz is saved automatically when you publish.</p>
                 <div class="builder-stack" id="quizBuilderList"></div>
                 <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
-                    <button type="button" id="addQuizItemBtn" class="ghost-btn" style="background:#eff6ff; border-color:#bfdbfe;">+ Add Question</button>
+                    <button type="button" id="addQuizItemBtn" class="ghost-btn" style="background:#eff6ff; border-color:#bfdbfe;">+ ጥያቄ ጨምር</button>
                 </div>
                 <textarea id="builder_quiz" name="builder_quiz" hidden></textarea>
                 <div class="field-block" style="margin-top:12px;">
@@ -677,13 +677,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <div class="panel" id="publish" style="padding:16px;">
-                <h3 style="margin-top:0;">6. Publish</h3>
+                <h3 style="margin-top:0;">6.አረጋግጥ</h3>
                 <div class="publish-box">
                     <div>
                         <strong>Ready to save this course?</strong>
-                        <p class="small" style="margin: 4px 0 0;">When you click Publish, the course and all module, lesson, quiz, and assignment details are saved to the database.</p>
+                        <p class="small" style="margin: 4px 0 0;">እርስዎ ኮርስ አትም የሚለዉን ሲጫኑ ሁሉም ሞጂሎች፣ኮርሶች፣ሌሰኖች እና አሳይመንት ማብራሪያወች ዳታቤዙ ላይ ይቀመጣሉ</p>
                     </div>
-                    <button class="publish-btn" type="submit">Publish Course</button>
+                    <button class="publish-btn" type="submit">ኮርስ አትም</button>
                 </div>
             </div>
         </form>

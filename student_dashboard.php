@@ -152,7 +152,7 @@ if (!empty($avg_row['avg_score'])) {
 
 if (empty($quiz_results)) {
     $quiz_results = [
-        ['quiz_name' => 'Demo Quiz', 'score' => 86, 'total_questions' => 100, 'status' => 'Passed', 'created_at' => date('Y-m-d H:i:s')],
+        ['quiz_name' => 'ኩይዝ ማያሳ', 'score' => 86, 'አጠቃላይ ጥያቄ' => 100, 'status' => 'አልፈሃል', 'created_at' => date('Y-m-d H:i:s')],
     ];
 }
 
@@ -170,8 +170,8 @@ if (empty($student_notes)) {
 
 if (empty($saved_courses)) {
     $saved_courses = [
-        ['course_name' => 'Advanced PHP Basics', 'instructor' => 'Admin Instructor'],
-        ['course_name' => 'UI/UX Essentials', 'instructor' => 'Design Team'],
+        ['course_name' => 'ነገረ ሃይማኖት', 'instructor' => 'ዲ/ን ሶፎንያስ ደመቀ'],
+        ['course_name' => 'ሐዋርያዊ ተልዕኮ', 'instructor' => 'ዲ/ን ሶፎንያስ ደመቀ'],
     ];
 }
 
@@ -366,7 +366,7 @@ if (empty($notifications)) {
 <div class="container">
     <div class="header">
         <div>
-            <div class="live-pill"><span class="dot"></span> Live learning • <span id="liveClock">--:--</span></div>
+            <div class="live-pill"><span class="dot"></span> የላይቭ ትምህርት• <span id="liveClock">--:--</span></div>
             <h1>እንኳን በደህና መጡ, <?php echo safe($student['name']); ?></h1>
             <p>የኢሜይልዎ: <?php echo safe($student['email']); ?> • በአሁኑ ጊዜ ኮርሶችዎን ቀጥለው እና እድገትዎን ተመልከቱ።</p>
         </div>
@@ -382,14 +382,14 @@ if (empty($notifications)) {
     <div class="stats">
         <div class="card"><h2>ጠቅላላ የተመዘገቡ Courses</h2><p><?php echo $summary['total']; ?></p></div>
         <div class="card"><h2>የተጠናቀቁ Courses</h2><p><?php echo $completed_courses; ?></p></div>
-        <div class="card"><h2>በመማር ላይ ያሉ Courses</h2><p><?php echo $in_progress_courses; ?></p></div>
-        <div class="card"><h2>የተገኙ Certificates</h2><p><?php echo $certificates; ?></p></div>
+        <div class="card"><h2>በመማር ላይ ያሉ ኮርሶች </h2><p><?php echo $in_progress_courses; ?></p></div>
+        <div class="card"><h2>የተገኙ ሰርተፊኬት</h2><p><?php echo $certificates; ?></p></div>
         <div class="card"><h2>የQuiz አማካይ ውጤት</h2><p><?php echo $avg_quiz_score; ?>%</p></div>
-        <div class="card"><h2>የLearning Progress (%)</h2><p><?php echo $progress_percentage; ?>%</p></div>
+        <div class="card"><h2>የትምህርት የእድገት ማሽሽያ (%)</h2><p><?php echo $progress_percentage; ?>%</p></div>
     </div>
 
     <div class="card" style="margin-bottom: 24px;">
-        <h2 class="section-title">🧩 Enroll Courses</h2>
+        <h2 class="section-title">🧩 Enroll ኮርስ</h2>
         <p class="section-sub">እዚህ ኮርስ ፎቶ፣ ስም፣ አጭር መግለጫ እና ሙሉ አንቀጽ መግለጫ ከዳታቤዝ ጋር ይታያል። በአንድ ጠቅታ እንዲመዘገቡ እንደሚችሉ ይምረጡ።</p>
         <div class="grid-3">
             <?php if (empty($available_courses)): ?>
@@ -403,9 +403,11 @@ if (empty($notifications)) {
                             <img src="https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=900&q=80" alt="Course preview">
                         <?php endif; ?>
                         <h3><?php echo safe($course['course_name']); ?></h3>
-                        <div class="muted rich-content" style="margin-bottom:8px;"><strong>Short Description:</strong> <?php echo renderRichText($course['short_description'] ?? ''); ?></div>
-                        <div class="muted rich-content" style="margin-bottom:8px;"><strong>Course Details:</strong> <?php echo renderRichText($course['description'] ?? ''); ?></div>
-                        <p class="muted">Instructor: <?php echo safe($course['instructor'] ?? 'Admin Instructor'); ?> • Price: <?php echo number_format((float)($course['price'] ?? 0), 2); ?> ብር</p>
+                        <div class="muted rich-content" style="margin-bottom:8px;"><?php echo renderRichText($course['short_description'] ?? ''); ?></div>
+                        <div class="muted rich-content" style="margin-bottom:8px;"><?php echo renderRichText($course['description'] ?? ''); ?></div>
+                        <p class="muted">ኢንስትራክተር: <?php echo safe($course['instructor'] ?? 'Admin Instructor'); ?></p>
+                        <p class="muted">ዋጋ: <?php echo number_format((float)($course['price'] ?? 0), 2); ?> ብር</p>
+                        <p class="muted"></p> ዋጋ: <?php echo number_format((float)($course['price'] ?? 0), 2); ?> ብር</p>
                         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
                             <a class="button" href="student_register.php?course=<?php echo rawurlencode($course['course_name']); ?>&amount=<?php echo (float)($course['price'] ?? 0); ?>">Enroll Now</a>
                             <a class="button secondary" href="tutorial.php#courses">View Details</a>
@@ -456,7 +458,7 @@ if (empty($notifications)) {
             <p class="muted">ኮርስ ፍጻሜ%</p>
             <div class="progress-track"><div class="progress-fill" style="width: <?php echo $progress_percentage; ?>%;"></div></div>
             <p class="muted">ሞጁል ፍጻሜ %: <?php echo min(100, $progress_percentage + 5); ?>%</p>
-            <p class="muted"ሌሰን ፍጻሜ %: <?php echo min(100, $progress_percentage + 10); ?>%</p>
+            <p class="muted">ሌሰን ፍጻሜ %: <?php echo min(100, $progress_percentage + 10); ?>%</p>
         </div>
         <div class="card">
             <h2 class="section-title">📝የፈተና ዉጤት</h2>
@@ -479,7 +481,7 @@ if (empty($notifications)) {
                 <?php foreach ($student_certificates as $cert): ?>
                     <div class="mini-card" style="margin-bottom: 10px;">
                         <h3><?php echo safe($cert['exam_type']); ?></h3>
-                        <p class="muted">Score: <?php echo (int)$cert['score']; ?> / <?php echo (int)$cert['total_questions']; ?></p>
+                        <p class="muted">ነጥብ: <?php echo (int)$cert['score']; ?> / <?php echo (int)$cert['total_questions']; ?></p>
                         <a class="button" href="admin_certificate.php?download=<?php echo (int)$cert['id']; ?>">Download PDF</a>
                     </div>
                 <?php endforeach; ?>
@@ -518,7 +520,7 @@ if (empty($notifications)) {
     <div class="grid-2">
         <div class="card">
             <h2 class="section-title">🔔 ማንቂያ ማስታወቂያ</h2>
-            <p class="section-sub">አዲስ ኮርስ, ኩይዝ, አሳይመንት እና ሠርተፊኬት ማንቂያ</p>
+            <p class="section-sub">አዲስ ኮርስ፣ኩይዝ፣አሳይመንት እና ሠርተፊኬት ማንቂያ</p>
             <ul style="padding-left:18px; color:#334155; margin:0;">
                 <?php foreach ($notifications as $note): ?>
                     <li style="margin-bottom:8px;"><span class="rich-content"><?php echo renderRichText($note['message'] ?? ''); ?></span> <small style="color:#64748b;">(<?php echo date('Y-m-d H:i', strtotime($note['created_at'])); ?>)</small></li>
@@ -527,7 +529,7 @@ if (empty($notifications)) {
         </div>
         <div class="card">
             <h2 class="section-title">📅 Calendar</h2>
-            <p class="section-sub">የፈተና ቀን, መመሪያዎች, and ላይቭ ክላስ ስኬጁል</p>
+            <p class="section-sub">የፈተና ቀን፣መመሪያዎች እና ላይቭ ክላስ ስኬጁል</p>
             <?php if (!empty($student_exam_reminders)): ?>
                 <?php foreach ($student_exam_reminders as $reminder): ?>
                     <div class="mini-card" style="margin-bottom:10px;">
@@ -548,15 +550,15 @@ if (empty($notifications)) {
                 <div class="avatar"><?php echo strtoupper(substr(safe($student['name']),0,1)); ?></div>
                 <div>
                     <p style="margin:0; font-weight:800; color:#111827;"><?php echo safe($student['name']); ?></p>
-                    <p class="muted">እሜይል: <?php echo safe($student['email']); ?></p>
+                    <p class="muted">ኢሜይል: <?php echo safe($student['email']); ?></p>
                     <p class="muted">ስ.ቁጥር: <?php echo safe($student['phone'] ?? 'N/A'); ?></p>
-                    <p class="muted">ሀገር: <?php echo safe($student['country'] ?? 'ኢትዮጽያ'); ?></p>
+                    <p class="muted">ሀገር: <?php echo safe($student['country'] ?? 'ኢትዮጵያ'); ?></p>
                 </div>
             </div>
         </div>
         <div class="card">
             <h2 class="section-title">⚙️ አካውንት ማስተካከያ</h2>
-            <p class="section-sub">ፓስዋርድ መቀየር, ፕሮፋይል መቀየር እና ፎቶ መጨመር</p>
+            <p class="section-sub">ፓስዋርድ መቀየር፣ፕሮፋይል መቀየር እና ፎቶ መጨመር</p>
             <a class="button secondary" href="student_register.php" style="margin-right:8px;">ፕሮፋይል ቀይር</a>
             <a class="button" href="student_logout.php">ዉጣ</a>
         </div>
@@ -565,11 +567,11 @@ if (empty($notifications)) {
     <div class="grid-2">
         <div class="card">
             <h2 class="section-title">💬 መወያያ ፎርም</h2>
-            <p class="section-sub">ተማሪዎች ማንኛውንም ጥያቄ መጥየቅ, ሀሳባቸውን መግለጥ እና ከዉይይቱ ንቁ ተሳትፎ ማድረግ ይችላሉ።</p>
+            <p class="section-sub">ተማሪዎች ማንኛውንም ጥያቄ መጥየቅ፣ሀሳባቸውን መግለጥ እና ከዉይይቱ ንቁ ተሳትፎ ማድረግ ይችላሉ።</p>
             <a class="button" href="discussion_forum.php">መወያያ ፎርሙን ክፈት</a>
         </div>
         <div class="card">
-            <h2 class="section-title">🗒️ Notes Section</h2>
+            <h2 class="section-title">🗒️ ማስታወሻ ክፍል</h2>
             <p class="section-sub">እባክዎ ከዚህ የሚለቀቁ ትምህርቶችን በአግባቡ ይያዙ</p>
             <?php foreach ($student_notes as $note): ?>
                 <div class="mini-card" style="margin-bottom:10px;">
@@ -586,7 +588,6 @@ if (empty($notifications)) {
             <?php foreach ($saved_lessons as $item): ?>
                 <div class="mini-card">
                     <h3><?php echo safe($item['lesson_title']); ?></h3>
-                    <p class="muted">Course: <?php echo safe($item['course_name']); ?></p>
                     <p class="muted">ኢንስትራክተር: <?php echo safe($item['instructor'] ?? 'Staff'); ?></p>
                     <a class="button" href="tutorial.php">ሌሰን ክፈት</a>
                 </div>
@@ -609,7 +610,7 @@ if (empty($notifications)) {
 
     <div class="card" style="margin-top: 24px;">
         <h2 class="section-title">📚 የተመዘገቡ ኮርሶች</h2>
-        <p class="section-sub">የኮርስ ዝርዝር, ዋጋ, የክፍያ ሁኔታ እና ቀጣይ እርምጃ</p>
+        <p class="section-sub">የኮርስ ዝርዝር፣ዋጋ፣የክፍያ ሁኔታ እና ቀጣይ እርምጃ</p>
         <?php if (empty($registrations)): ?>
             <p>እስካሁን ምንም ተመዝጋቢ ኮርስ አልተመዘገበም።</p>
         <?php else: ?>

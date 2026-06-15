@@ -10,6 +10,17 @@ if (!isset($_SESSION['admin_id'])) {
 $message = '';
 $error = '';
 
+function questionOptionLabel($value) {
+    $map = [
+        'A' => 'ሀ',
+        'B' => 'ለ',
+        'C' => 'ሐ',
+        'D' => 'መ',
+    ];
+
+    return $map[(string)$value] ?? (string)$value;
+}
+
 try {
     $pdo->exec('CREATE TABLE IF NOT EXISTS questions (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -44,7 +55,7 @@ if (isset($_GET['delete'])) {
 }
 
 try {
-    $stmt = $pdo->query('SELECT * FROM questions ORDER BY created_at DESC');
+    $stmt = $pdo->query('SELECT * FROM questions ORDER BY id ASC');
     $questions = $stmt->fetchAll();
 } catch (PDOException $e) {
     $questions = [];
@@ -129,17 +140,17 @@ try {
                                 <?php else: ?>
                                     <?php if ($type === 'true_false'): ?>
                                         True / False<br>
-                                        A. <?php echo safe($q['option_a'] ?: 'True'); ?><br>
-                                        B. <?php echo safe($q['option_b'] ?: 'False'); ?><br>
+                                        ሀ. <?php echo safe($q['option_a'] ?: 'True'); ?><br>
+                                        ለ. <?php echo safe($q['option_b'] ?: 'False'); ?><br>
                                     <?php else: ?>
-                                        A. <?php echo safe($q['option_a']); ?><br>
-                                        B. <?php echo safe($q['option_b']); ?><br>
-                                        C. <?php echo safe($q['option_c']); ?><br>
-                                        D. <?php echo safe($q['option_d']); ?>
+                                        ሀ. <?php echo safe($q['option_a']); ?><br>
+                                        ለ. <?php echo safe($q['option_b']); ?><br>
+                                        ሐ. <?php echo safe($q['option_c']); ?><br>
+                                        መ. <?php echo safe($q['option_d']); ?>
                                     <?php endif; ?>
                                 <?php endif; ?>
                             </td>
-                            <td><?php echo safe($q['correct_answer'] ?: $q['option_a']); ?></td>
+                            <td><?php echo safe(questionOptionLabel($q['correct_answer'] ?? '') ?: ($q['correct_answer'] ?: $q['option_a'])); ?></td>
                             <td>
                                 <a class="action-btn edit-btn" href="admin_edit_question.php?id=<?php echo (int)$q['id']; ?>">ማስተካከል</a>
                                 <a class="action-btn delete-btn" href="admin_questions.php?delete=<?php echo (int)$q['id']; ?>" onclick="return confirm('ይህን ጥያቄ ሰርዝ?');">ሰርዝ</a>

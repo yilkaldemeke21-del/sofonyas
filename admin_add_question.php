@@ -7,6 +7,12 @@ if (!isset($_SESSION['admin_id'])) {
     exit;
 }
 
+$adminRole = $_SESSION['admin_role'] ?? 'admin';
+if (!in_array($adminRole, ['admin', 'super_admin'], true)) {
+    http_response_code(403);
+    exit('ይህን ገጽ ለመጠቀም የአስተዳዳሪ ፈቃድ ያስፈልጋል።');
+}
+
 $error = '';
 $success = '';
 
@@ -73,8 +79,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ':correct' => $correct,
                     ]);
                     $success = $question_type === 'true_false'
-                        ? 'True/False ጥያቄው በስኬት ታክሏል።'
-                        : 'ምርጫ ጥያቄው በስኬት ታክሏል።';
+                        ? 'True/False ጥያቄው በስኬት ታክሏል። አሁን እንደገና ማየት ይቻላል።'
+                        : 'ምርጫ ጥያቄው በስኬት ታክሏል። ይህ ጥያቄ አሁን በስርዓቱ ውስጥ ይገኛል።';
                 } catch (PDOException $e) {
                     $error = 'ስህተት: ' . $e->getMessage();
                 }
@@ -86,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'እባክዎ ጥያቄና ትክክለኛ መልስ ይሙሉ።';
         } else {
             try {
-                $stmt = $pdo->prepare('INSERT INTO questions (question_type, question_text, option_a, option_b, option_c, option_d, correct_answer) VALUES (:question_type, :q, :answer, :blank1, :blank2, :blank3, :answer)');
+                $stmt = $pdo->prepare('INSERT INTO questions (question_type, question_text, option_a, option_b, option_c, option_d, correct_answer) VALUES (:question_type, :q, :answer, :blank1, :blank2, :blank3, :correct_answer)');
                 $stmt->execute([
                     ':question_type' => $question_type,
                     ':q' => $q,
@@ -94,10 +100,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ':blank1' => '',
                     ':blank2' => '',
                     ':blank3' => '',
+                    ':correct_answer' => $answer,
                 ]);
                 $success = $question_type === 'fill_in_blank'
-                    ? 'Fill in the Blank ጥያቄው በስኬት ታክሏል።'
-                    : 'አጭር መልስ ጥያቄው በስኬት ታክሏል።';
+                    ? 'Fill in the Blank ጥያቄው በስኬት ታክሏል። አሁን በቅድሚያ የተከማቹት ጥያቄዎች ውስጥ ይታያል።'
+                    : 'አጭር መልስ ጥያቄው በስኬት ታክሏል። አሁን በጥያቄ ዝርዝር ላይ ይታያል።';
             } catch (PDOException $e) {
                 $error = 'ስህተት: ' . $e->getMessage();
             }
@@ -147,35 +154,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <option value="fill_in_blank">Fill in the Blank / Blank Space</option>
                     <option value="short_answer">Short Answer</option>
                 </select>
-                <p style="color:#475569; font-size:13px; margin-top:6px;">ይህ ክፍል ለ Multiple Choice, True/False, Fill in the Blank እና Short Answer ጥያቄዎችን ይደግፋል።</p>
+                <p style="color:#475569; font-size:13px; margin-top:6px;">ይህ ክፍል ለ ተማሪዎች ግልጽ የሆኑ ጥያቄዎችን ይደግፋል። አዲስ ጥያቄ ሲጨምሩ በዚህ መስመር ውስጥ ትክክለኛውን መልስ እንደ ሀ/ለ/ሐ/መ በትክክለኛ ቅደም ተከተል ያስገቡ።</p>
             </div>
             <div class="form-group">
                 <label for="question">ጥያቄ</label>
-                <textarea id="question" name="question" placeholder="ጥያቄዎን ይተይቡ" required></textarea>
+                <textarea id="question" name="question" placeholder="ለምሳሌ፦ ይህ ትምህርት የትኛው ነው?" required></textarea>
             </div>
             <div id="mcqFields">
-                <div class="form-group"><label for="a" id="labelA">A</label><input id="a" type="text" name="a" placeholder="አማራጭ 1" required></div>
-                <div class="form-group"><label for="b" id="labelB">B</label><input id="b" type="text" name="b" placeholder="አማራጭ 2" required></div>
-                <div class="form-group"><label for="c">C</label><input id="c" type="text" name="c" placeholder="አማራጭ 3" required></div>
-                <div class="form-group"><label for="d">D</label><input id="d" type="text" name="d" placeholder="አማራጭ 4" required></div>
+                <div class="form-group"><label for="a" id="labelA">ሀ</label><input id="a" type="text" name="a" placeholder="አማራጭ 1" required></div>
+                <div class="form-group"><label for="b" id="labelB">ለ</label><input id="b" type="text" name="b" placeholder="አማራጭ 2" required></div>
+                <div class="form-group"><label for="c">ሐ</label><input id="c" type="text" name="c" placeholder="አማራጭ 3" required></div>
+                <div class="form-group"><label for="d">መ</label><input id="d" type="text" name="d" placeholder="አማራጭ 4" required></div>
                 <div class="form-group">
                     <label for="correct">ትክክለኛ መልስ</label>
                     <select id="correct" name="correct">
-                        <option value="A">A</option>
-                        <option value="B">B</option>
-                        <option value="C">C</option>
-                        <option value="D">D</option>
+                        <option value="ሀ">ሀ</option>
+                        <option value="ለ">ለ</option>
+                        <option value="ሐ">ሐ</option>
+                        <option value="መ">መ</option>
                     </select>
                 </div>
             </div>
             <div id="shortAnswerFields" style="display:none;">
                 <div class="form-group">
                     <label for="answer">ትክክለኛ መልስ / Correct Answer</label>
-                    <input id="answer" type="text" name="answer" placeholder="ለ Short Answer / Fill in the Blank መልስ ያስገቡ">
-                    <p style="color:#475569; font-size:13px; margin-top:6px;">ይህ ቦታ ለ Short Answer እና Fill in the Blank ጥያቄዎች ያገለግላል።</p>
+                    <input id="answer" type="text" name="answer" placeholder="ለምሳሌ፦ አስተማሪ የሚሠራበት ቦታ">
+                    <p style="color:#475569; font-size:13px; margin-top:6px;">ይህ ቦታ በ Short Answer እና Fill in the Blank ጥያቄዎች ውስጥ ትክክለኛውን መልስ ይወስዳል። እባክዎ በድምር ለጥያቄው አንድ ትክክለኛ መልስ ብቻ ያስገቡ።</p>
                 </div>
             </div>
-            <button type="submit" name="save">ጥያቄ ጨምር</button>
+            <button type="submit" name="save" onclick="this.disabled=true; this.form.submit();" style="background:#2563eb; border-radius:8px; font-size:15px;">ጥያቄ አስገባ / Save Question</button>
         </form>
         <script>
             function toggleQuestionType(type) {
@@ -220,13 +227,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     d.value = '';
                     correct.innerHTML = '<option value="TRUE">True</option><option value="FALSE">False</option>';
                 } else {
-                    labelA.textContent = 'A';
-                    labelB.textContent = 'B';
+                    labelA.textContent = 'ሀ';
+                    labelB.textContent = 'ለ';
                     a.value = '';
                     b.value = '';
                     c.value = '';
                     d.value = '';
-                    correct.innerHTML = '<option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>';
+                    correct.innerHTML = '<option value="ሀ">ሀ</option><option value="ለ">ለ</option><option value="ሐ">ሐ</option><option value="መ">መ</option>';
                 }
             }
 

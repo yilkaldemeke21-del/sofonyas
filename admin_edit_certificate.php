@@ -102,18 +102,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php if ($success): ?><div class="msg ok"><?php echo safe($success); ?></div><?php endif; ?>
 
         <div class="preview">
-            <div class="logo-chip"><span class="logo-box">S</span> Sofyias Learning Platform</div>
+            <div class="logo-chip"><span class="logo-box">ሶፊ</span>ዲ/ን ሶፎንያስ(ቤተ ገብርኤል) ኦንላይን መንፈሳዊ የቤ/ክ ዌቭሣይት</div>
             <h3>Certificate Preview</h3>
-            <p class="mini">Student: <strong><?php echo safe($student_name ?: 'Student Name'); ?></strong></p>
-            <p class="mini">Exam: <strong><?php echo safe($exam_type ?: 'Exam Type'); ?></strong></p>
-            <p class="mini">Score: <strong><?php echo (int)$score; ?> / <?php echo (int)$total_questions; ?></strong></p>
-            <p class="mini">Issued: <strong><?php echo safe(date('Y-m-d H:i', strtotime($issued_at))); ?></strong></p>
-            <p class="mini">These values will also appear in the PDF certificate download.</p>
+            <p class="mini">የተማሪ ስም: <strong><?php echo safe($student_name ?: 'student name'); ?></strong></p>
+            <p class="mini">የፈተናው አይነት: <strong><?php echo safe($exam_type ?: 'Exam Type'); ?></strong></p>
+            <p class="mini">ያመጣው ነጥብ: <strong><?php echo (int)$score; ?> / <?php echo (int)$total_questions; ?></strong></p>
+            <p class="mini">የተሰጠበት ቀን: <strong><?php echo safe(date('Y-m-d H:i', strtotime($issued_at))); ?></strong></p>
+            <p class="mini">ይህንን በpdf መልኩ የሚታየዉን የሠርተፊኬት ዉጤት ማዉረድ ይቻላል።</p>
         </div>
 
         <form method="post">
             <div class="field">
-                <label for="student_name">ተማሪ ስም</label>
+                <label for="student_name">የተማሪ ስም</label>
                 <input type="text" id="student_name" name="student_name" value="<?php echo safe($student_name); ?>" required>
             </div>
             <div class="field">
@@ -131,7 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             </div>
             <div class="field">
-                <label for="issued_at">Issued Date</label>
+                <label for="issued_at">የተሰጠበት ቀን</label>
                 <input type="datetime-local" id="issued_at" name="issued_at" value="<?php echo date('Y-m-d\TH:i', strtotime($issued_at)); ?>" required>
             </div>
             <button type="submit">ሰርቲፊኬት አስተካክል</button>

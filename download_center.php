@@ -55,38 +55,38 @@ foreach ($courses as $course) {
 <div class="page">
   <div class="topbar">
     <div>
-      <h1>📥 Download Center</h1>
-      <p>PDFs, Audio, Video, and Assignments are grouped here for quick access.</p>
+      <h1>📥 የማዉረጃ ማዕከል</h1>
+      <p>ከዚህ ላይ በፍጥነት ፒዲኤፍ፣ኦዲዮ፣ቪዲዮ እና አሳይመንት ስብስቦችን ማግኘት ይቻላል።</p>
     </div>
     <div style="text-align:right;">
-      <span class="chip">Student Resources</span>
+      <span class="chip">የተማሪ የትምህርት መረጃዎች</span>
       <div class="actions" style="margin-top:8px; justify-content:flex-end;">
-        <a class="btn primary" href="student_dashboard.php">Student Dashboard</a>
-        <a class="btn" href="library.php">Library</a>
+        <a class="btn primary" href="student_dashboard.php">የተማሪዎች ዳሽቦርድ</a>
+        <a class="btn" href="library.php">ላይብራሪ</a>
       </div>
     </div>
   </div>
 
   <div class="grid">
     <div class="card">
-      <h2>📄 PDFs</h2>
-      <p class="muted">Download course notes, handouts, and reference files.</p>
+      <h2>📄 ፒዲኤፎች</h2>
+      <p class="muted">የኮርስ ጽሑፎችን፣ጠቃሚ ወረቀቶችን እና አጋዥ ፋይሎችን ማውረድ ይቻላል.</p>
       <?php if (empty($pdfItems)): ?>
         <p class="muted">No PDF files are available yet.</p>
       <?php else: foreach ($pdfItems as $course): ?>
         <div class="item">
           <h3><?php echo safe($course['course_name']); ?></h3>
           <p class="muted"><?php echo safe($course['instructor'] ?? 'Instructor'); ?></p>
-          <a class="btn primary" href="<?php echo safe(publicMediaUrl($course['pdf_file'])); ?>" target="_blank" rel="noopener">Open / Download PDF</a>
+          <a class="btn primary" href="<?php echo safe(publicMediaUrl($course['pdf_file'])); ?>" target="_blank" rel="noopener">ክፈት / ፒዲኤፍ አዉርድ</a>
         </div>
       <?php endforeach; endif; ?>
     </div>
 
     <div class="card">
-      <h2>🎧 Audio</h2>
-      <p class="muted">Listen to lesson audio clips and review notes on the go.</p>
+      <h2>🎧 ኦዲዮ</h2>
+      <p class="muted">እባክዎ ይህንን ኦዲዮ አዳምጠው አጭር ማስታወሻ ይያዙ.</p>
       <?php if (empty($audioItems)): ?>
-        <p class="muted">No audio files are available yet.</p>
+        <p class="muted">ምንም ኦዲዮ ፋይል የለም.</p>
       <?php else: foreach ($audioItems as $course): ?>
         <div class="item">
           <h3><?php echo safe($course['course_name']); ?></h3>
@@ -101,10 +101,10 @@ foreach ($courses as $course) {
     </div>
 
     <div class="card">
-      <h2>🎥 Video</h2>
-      <p class="muted">Watch lesson videos and course previews directly here.</p>
+      <h2>🎥 ቪዲዮ</h2>
+      <p class="muted">እባክዎ ይህንን የቪዲኦ ትምህርት በቀጥታ ከፍተው ይመልከቱ</p>
       <?php if (empty($videoItems)): ?>
-        <p class="muted">No video lessons are available yet.</p>
+        <p class="muted">ምንም ቪዲዮ ፋይል የለም.</p>
       <?php else: foreach ($videoItems as $course): ?>
         <div class="item">
           <h3><?php echo safe($course['course_name']); ?></h3>
@@ -123,10 +123,10 @@ foreach ($courses as $course) {
     </div>
 
     <div class="card">
-      <h2>📝 Assignments</h2>
-      <p class="muted">Review assignment instructions and tasks attached to each course.</p>
+      <h2>📝 አሳይመንቶች</h2>
+      <p class="muted">እባክዎ ከእያንዳንዱ ኮርስ ጋር የተያያዙትን የአሳይመንት መመሪያዎች ይመልከቱ </p>
       <?php if (empty($assignmentItems)): ?>
-        <p class="muted">No assignments have been added yet.</p>
+        <p class="muted">ምንም የተጨመረ አሳይመንት የለም</p>
       <?php else: foreach ($assignmentItems as $course): ?>
         <div class="item">
           <span class="pill">Assignment</span>
@@ -134,7 +134,7 @@ foreach ($courses as $course) {
           <div class="muted" style="margin-bottom:8px;">
             <?php echo renderRichText($course['assignment']); ?>
           </div>
-          <a class="btn" href="tutorial.php">Open Course</a>
+          <a class="btn" href="tutorial.php">ኮርስ ክፈት</a>
         </div>
       <?php endforeach; endif; ?>
     </div>

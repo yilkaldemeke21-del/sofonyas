@@ -62,16 +62,16 @@ if ($certificateIdInput !== '') {
   <div class="card">
     <div class="topbar">
       <div>
-        <span class="pill">Certificate Verification</span>
+        <span class="pill">ሶፊ ዌቭሣይት</span>
         <h1>ሰርቲፊኬት ማረጋገጫ</h1>
         <p>የሰርቲፊኬት መለያ ቁጥር በመጻፍ የሰርቲፊኬት መረጃን ያረጋግጡ።</p>
       </div>
-      <a class="link" href="library.php">← ወደ Library</a>
+      <a class="link" href="library.php">← ወደ ላይበራሪ</a>
     </div>
 
     <form method="get" action="certificate_verification.php">
       <input type="text" name="id" value="<?php echo safe($certificateIdInput); ?>" placeholder="Certificate ID (example: VC-000001 or 1)" required>
-      <button type="submit">Verify</button>
+      <button type="submit">አረጋግጥ</button>
     </form>
 
     <?php if ($message !== ''): ?>
@@ -83,11 +83,11 @@ if ($certificateIdInput !== '') {
         <strong>Certificate Found</strong>
         <p class="muted">This record matches the certificate ID provided.</p>
         <div class="grid">
-          <div class="mini"><h3>Certificate ID</h3><div class="value">VC-<?php echo str_pad((string)$certificate['id'], 6, '0', STR_PAD_LEFT); ?></div></div>
-          <div class="mini"><h3>Student</h3><div class="value"><?php echo safe($certificate['student_name'] ?? 'Student'); ?></div></div>
-          <div class="mini"><h3>Exam Type</h3><div class="value"><?php echo safe($certificate['exam_type'] ?? 'Certificate'); ?></div></div>
+          <div class="mini"><h3>የሰርተፊኬት መለያ ቁጥር</h3><div class="value">VC-<?php echo str_pad((string)$certificate['id'], 6, '0', STR_PAD_LEFT); ?></div></div>
+          <div class="mini"><h3>ተማሪ</h3><div class="value"><?php echo safe($certificate['student_name'] ?? 'Student'); ?></div></div>
+          <div class="mini"><h3>የፈተናዉ አይነት</h3><div class="value"><?php echo safe($certificate['exam_type'] ?? 'Certificate'); ?></div></div>
           <div class="mini"><h3>Score</h3><div class="value"><?php echo (int)($certificate['score'] ?? 0); ?> / <?php echo (int)($certificate['total_questions'] ?? 0); ?></div></div>
-          <div class="mini"><h3>Issued</h3><div class="value"><?php echo safe($certificate['issued_at'] ?? ''); ?></div></div>
+          <div class="mini"><h3>የተሰጠ</h3><div class="value"><?php echo safe($certificate['issued_at'] ?? ''); ?></div></div>
         </div>
       </div>
     <?php endif; ?>

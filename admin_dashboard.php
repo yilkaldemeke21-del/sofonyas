@@ -204,7 +204,7 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
 </div>
 
 <div class="container">
-    <h2 style="margin-bottom: 20px;">የዲያቆን ሶፎንያስ ዌብሳይት(የቤተ ገብርኤል አጠቃላይ መረጃ) </h2>
+    <h2 style="margin-bottom: 20px;">የዲያቆን ሶፎንያስ ዌቭሳይት ደመቀ(የቤተ ገብርኤል አጠቃላይ መረጃ) </h2>
     
     <div class="stats-grid">
         <div class="stat-card">
@@ -234,23 +234,23 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
         <div class="stat-card">
             <h3>ጠቅላላ ገቢ (ብር)</h3>
             <div class="value"><?php echo number_format($total_revenue, 2); ?></div>
-            <div class="meta">Paid registrations only</div>
+            <div class="meta">ከፍለው የተመዘገቡ ብቻ</div>
         </div>
         <div class="stat-card">
             <h3>ታዋቂው ኮርስ</h3>
             <div class="value" style="font-size: 18px; line-height: 1.4;"><?php echo safe($most_popular_course); ?></div>
-            <div class="meta"><?php echo $most_popular_count; ?> registrations</div>
+            <div class="meta"><?php echo $most_popular_count; ?> የተመዘገቡ</div>
         </div>
         <div class="stat-card">
             <h3>ንቁ ተማሪዎች</h3>
             <div class="value"><?php echo $active_students; ?></div>
-            <div class="meta">Last 30 days</div>
+            <div class="meta">ላለፉት 30 ቀናት</div>
         </div>
     </div>
 
     <div class="analytics-grid">
         <div class="chart-card">
-            <h3>📈 7 ቀን ምዝገባ አዝማሚያ</h3>
+            <h3>📈 የ7 ቀን ምዝገባ አዝማሚያ</h3>
             <?php if (empty($weekly_registrations)): ?>
                 <p style="color:#667;">ምንም ዳታ የለም።</p>
             <?php else: ?>
@@ -313,7 +313,7 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
     </div>
 
     <div class="table-section">
-        <h3>የቅርብ ምዝገቦች</h3>
+        <h3>የቅርብ መዝገቦች</h3>
         <table>
             <thead>
                 <tr>
@@ -404,10 +404,10 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
         </table>
     </div>
 
-    <h2 style="margin-bottom: 20px; margin-top: 30px;">📢 Notifications on Dashboard</h2>
+    <h2 style="margin-bottom: 20px; margin-top: 30px;">📢 በዳሽቦርድ ማስታወቂያ</h2>
 
     <div class="table-section">
-        <h3>📧 Email Notifications</h3>
+        <h3>📧 የኢሜይል ማስታወቂያ</h3>
         <table>
             <thead>
                 <tr>
@@ -435,7 +435,7 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
     </div>
 
     <div class="table-section" style="margin-top: 30px;">
-        <h3>📚 Course Updates</h3>
+        <h3>📚 የተሻሻሉ ኮርሶች</h3>
         <table>
             <thead>
                 <tr>
@@ -446,7 +446,7 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
             </thead>
             <tbody>
                 <?php if (empty($recent_course_updates)): ?>
-                    <tr><td colspan="3" style="text-align: center;">ምንም የኮርስ ዝርዝር ተሻሸር የለም</td></tr>
+                    <tr><td colspan="3" style="text-align: center;">ምንም የኮርስ ዝርዝር የተሻሻለ የለም</td></tr>
                 <?php else: ?>
                     <?php foreach ($recent_course_updates as $update): ?>
                         <tr>
@@ -461,7 +461,7 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
     </div>
 
     <div class="table-section" style="margin-top: 30px;">
-        <h3>🔔 Exam Reminders</h3>
+        <h3>🔔 ፈተናዎችን ማስታወሻ</h3>
         <table>
             <thead>
                 <tr>
@@ -489,7 +489,7 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
     </div>
 
     <div class="table-section" style="margin-top: 30px;">
-        <h3>🎉 Event Announcements</h3>
+        <h3>🎉 ሁኔታዎችን ማስታወቂያ እና መግለጫ</h3>
         <table>
             <thead>
                 <tr>

@@ -80,15 +80,6 @@ function buildExamOptions(array $question): array
     ];
 }
 
-$questionCount = (int)$pdo->query('SELECT COUNT(*) FROM questions')->fetchColumn();
-if ($questionCount === 0) {
-    $seed = $pdo->prepare('INSERT INTO questions (question_type, question_text, option_a, option_b, option_c, option_d, correct_answer) VALUES (:question_type, :question_text, :option_a, :option_b, :option_c, :option_d, :correct_answer)');
-    $seed->execute([':question_type' => 'multiple_choice', ':question_text' => 'ከሚከተሉት መካከል ትክክለኛ መልስ የቱ ነው?', ':option_a' => 'ሀ. እግዚአብሔር ነው', ':option_b' => 'ለ. ወልድ ነው', ':option_c' => 'ሐ. ሃይማኖት ነው', ':option_d' => 'መ. እንደዚህ አይደለም', ':correct_answer' => 'A']);
-    $seed->execute([':question_type' => 'true_false', ':question_text' => 'ጥሩ ትምህርት ግልጽ ነው።', ':option_a' => 'True', ':option_b' => 'False', ':option_c' => '', ':option_d' => '', ':correct_answer' => 'TRUE']);
-    $seed->execute([':question_type' => 'short_answer', ':question_text' => 'ቋንቋ እንዴት ይባላል?', ':option_a' => '', ':option_b' => '', ':option_c' => '', ':option_d' => '', ':correct_answer' => 'ቋንቋ']);
-    $questionCount = 3;
-}
-
 $stmt = $pdo->query('SELECT * FROM questions ORDER BY created_at DESC LIMIT 30');
 $questions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -101,38 +92,22 @@ $startedAt = (int)($_SESSION['exam20_started_at'] ?? time());
 $deadline = (int)($_SESSION['exam20_deadline'] ?? ($startedAt + $EXAM_LIMIT_SECONDS));
 $timeExpired = (time() >= $deadline);
 
-$questions = [
-    ['question' => '1. እግዚአብሔር ወልድ ከቅድስት ድንግል ማርያም ከሥጋዋ ሥጋን ከነፍሷ ነፍስን ነስቶ ሲዋሐድ ለወልድ ብቻ የሚሰጥ ግብር የትኛው ነው?', 'options' => ['ሀ. ሥጋን መክፈል', 'ለ. ሥጋን ማክበር', 'ሐ. ሥጋንና መለኮትን ማዋሐድ', 'መ. ለሥጋ ክብር መሆን'], 'correct' => 'መ. ለሥጋ ክብር መሆን'],
-    ['question' => '2. ስለምስጠመረ ሥላሴ ትክክል ያልሆነው የቱ ነው?', 'options' => ['ሀ. ሥላሴ ማለት ሦስት ማለት ነው', 'ለ. አብ አምላክ፤ ወልድ አምላክ፤ መንፈስ ቅዱስ አምላክ፤ አንድ አምላክ', 'ሐ. ሥላሴ በስም በአካል በግብር በኩነት ሦስት ሲሆኑ በመለኮት አንድ ናቸው', 'መ. መልስ የለም'], 'correct' => 'ሀ. ሥላሴ ማለት ሦስት ማለት ነው'],
-    ['question' => '3. ስለ እግዚአብሔር ወልድ ዳግም ልደትና የማዳን ስራ የሚያስረዳን ምስጢር ምን ይባላል?', 'options' => ['ሀ. ምስጢረ ሥላሴ', 'ለ. ትንሣኤ ዘክርስቶስ', 'ሐ. ምስጢረ ሥጋዌ', 'መ. ምስጢረ ቁርባን'], 'correct' => 'ሐ. ምስጢረ ሥጋዌ'],
-    ['question' => '4.ሃይማኖት ማለት በአንድ እግዚአብሔር በህላዌ መለኮቱ፤
-በፈጣሪነቱ፤ በመጋቢነቱ ፤በባህርይ ግብራቱ ማመን ለእርሱም
-ለእርሱም መታመን ማለት ነው።የሚለው የሃይማኖት ትርጉም የምን
-ትርጉም ይባላል?', 'options' => ['ሀ.ሕይወታዊ ትርጉም', 'ለ.ምስጢራዊ ትርጉም', 'ሐ.ፊደላዊ ትርጉም', 'መ.መዝገበ ቃላዊ ትርጉም'], 'correct' => 'ለ.ምስጢራዊ ትርጉም'],
-    ['question' => '5.እምነት ማለት በዓይን ሳያዩ፤በጆሮ ሳይሰሙ ሳይመረምሩ መቀበል
-ነው።', 'options' => ['ሀ.ሀሰት', 'ለ.እውነት', 'ሐ.መልስ የለም', 'መ. አይባልም'], 'correct' => 'ሀ.ሀሰት'],
-    ['question' => '6.በደቡብ ወሎ ዞሮ በጣም በርካታ ሰው አለ። ከእነዚህም መካከል
-ሶፎንያስ በመቅደላ አምባ ዩኒቨርሲቲ የ4ኛ ዓመት ተማሪ ነው፤ሶፎንያስ
-ለ12ኛ ክፍል፤ለ1ኛ ዓመትና ለሁለተኛ ዓመት ተማሪዎች የነገረ
-ሃይማኖት በመስጠት ለተወሰኑ ወራት መምህራቸው በመሆን ሲሰጥ
-ከቆዬ በኋላ አሁን ላይ ኮርሱን በሰላም አጠናቆ ፈተና በመስጠት ላይ
-ይገኛል። የተሰመረባቸው ቃላት በቅደም ተከተል ምንን ያመለክታሉ?', 'options' => ['ሀ.የአካል ስም፤የባህርይ ስም፤የግብር ስም', 'ለ.የግብር ስም፤የባህርይ ስም፤የአካል ስም', 'ሐ.የባህርይ ስም፤የአካል ስም፤የግብር ስም', 'መ.የአካል ስም፤የባህርይ ስም፤የተዋህዶ ስም'], 'correct' => 'ሐ.የባህርይ ስም፤የአካል ስም፤የግብር ስም'],
-    ['question' => '7.አፍአዊ ግብር ማለት ምን ማለት ነው?', 'options' => ['ሀ.በዓለመ ሥላሴ ብቻ የሚነገረ ወላዲ፤ተዋላዲ፤ሠራፂ የሚባሉት ናቸው።', 'ለ.ዓለምን የመፍጠር፣የመመገብ ፣የማሳለፍ ስራ', 'ሐ.ሥላሴ በየግላቸው የሚጠሩበት ስራ ነው።', 'መ. ሀ እና ሐ መልስ ናቸው።'], 'correct' => 'ለ.ዓለምን የመፍጠር፣የመመገብ ፣የማሳለፍ ስራ'],
-    ['question' => '8.በምስጢረ ሥላሴ ትምህርት ስለ ኩነት ትክክል ያልሆነው የቱ ነው?', 'options' => ['ሀ.አብ ቃል፤ወልድ ልብ፤መንፈስ ቅዱስ እስትንፋስ ነው።', 'ለ.አብ ልብ፤ወልድ ቃል፤መንፈስ ቅዱስ ሕይወት ነው።', 'ሐ.መንፈስ ቅዱስ እስትንፋስ፤ወልድ ቃል፤አብ ልብ ነው።', 'መ.ሁሉም መልስ ናቸው።'], 'correct' => 'ሀ.አብ ቃል፤ወልድ ልብ፤መንፈስ ቅዱስ እስትንፋስ ነው።'],
-    ['question' => '9.ሥላሴን በአካል ፫ ስንል ልብ ልንላቸው የሚገቡ ነገሮች የትኞቹ ናቸው?', 'options' => ['ሀ.ሦስት አካል ስንል ሦስት እግዚአብሔር የምንል መሆኑ', 'ለ.እያንዳንዳቸው ልብ፣ቃል፣እስትንፋስ አላቸው የምንል መሆኑ', 'ሐ.ሦስት አካል ስንል አንዱ አካል ከሌላው አካል ተለይቶ የተገኘበት
-ዘመን የሚታወቅና አባት ከልጁ ቀድሞ የሚገኝ መሆኑ፤', 'መ. መልስ የለም'], 'correct' => 'መ. መልስ የለም'],
-    ['question' => '10.አብ በሁሉ የመላ ከሆነ ወልድና መንፈስ ቅዱስ በምን ይመላሉ?', 'options' => ['ሀ.አባታችን ሆይ በሰማይ የምትኖር የምንለውም ከምድር ከፍ ብሎ
-በሰማይ ስለሚኖሩ ነው።', 'ለ.እነርሱ የሚኖሩት በምድር ነው።', 'ሐ.እነርሱ የሚኖሩ በራሳቸው ዓለምነት ነው', 'መ.መልስ የለም'], 'correct' => 'ሐ.እነርሱ የሚኖሩ በራሳቸው ዓለምነት ነው'],
-    ['question' => '12.በኦሪት ዘፍጥረት "ሰውን እንደምሳሌያችንና እንደ መልካችን
-እንፍጠር ሲሉ ሥላሴ ይህ የምን ግብር ነው??', 'options' => ['ሀ.አፍአዊ ግብር', 'ለ.ውሳጣዊ ግብር', 'ሐ.ግብረ ዋህድና', 'መ.ሀ እና ለ'], 'correct' => 'መ.ሀ እና ለ'],
-    
-];
+$existingSubmissionStmt = $pdo->prepare('SELECT id, score, total_questions, submitted_at FROM exam_submissions WHERE student_id = :student_id AND exam_type = :exam_type ORDER BY submitted_at DESC LIMIT 1');
+$existingSubmissionStmt->execute([':student_id' => $studentId, ':exam_type' => 'exam20']);
+$existingSubmission = $existingSubmissionStmt->fetch(PDO::FETCH_ASSOC);
+$hasSubmittedExam = !empty($existingSubmission);
 
 $score = 0;
 $answers = [];
 $submitted = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if ($hasSubmittedExam) {
+        $_SESSION['exam20_message'] = 'ይህን ፈተና አስቀድሞ መልስዎ ተመዝግቧል። እንደገና መስጠት አይቻልም።';
+        header('Location: exam20.php');
+        exit;
+    }
+
     if ($timeExpired || time() >= $deadline) {
         $_SESSION['exam20_message'] = 'የፈተና ጊዜ አልቋል፤ በ2:30 ሰዓት በኋላ መስጠት አይቻልም።';
         header('Location: exam20.php');
@@ -196,15 +171,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
 <div class="wrap">
     <div class="card">
-        <h1>Real Exam System</h1>
-        <p class="small">ይህ አሁን ከተጠቃሚ የተገኘ ጥያቄ ባንክ ላይ የሚሰራ ፈተና ስርዓት ነው።</p>
+        <h1>እዉነተኛ የፈተና ሥርዓት</h1>
+        <p class="small">ይህ ጥያቄ በቤተ ገብርኤል በኦንላይን ሲማሩ ለቆዩ የቤተ ክርስቲያን ልጆች የወጣ የማጠቃለያ ጥያቄ ሲሆን ጥያቄው የሚሰራዉ በተሰጠው ሰአት መሰረት ላይ የሚሰራ የፈተና ስርዓት ነው።</p>
         <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
-            <span class="badge">Timer</span>
-            <span class="badge">Auto-Grading</span>
-            <span class="badge">Instant Result</span>
+            <span class="badge">ሰአት መቆጣጠሪያ</span>
+            <span class="badge">ዉጤት ማስተካከያ</span>
+            <span class="badge">በቅጽበት ዉጤት አሳይ</span>
         </div>
         <p class="small" style="color:#b91c1c; font-weight:700;">የጊዜ ገደብ: 2:30 ሰዓት (150 ደቂቃ)</p>
         <div id="timerBox" class="result" style="margin-bottom:16px;">ቀሪ ጊዜ: <strong id="timerText">--:--:--</strong></div>
+        <?php if ($hasSubmittedExam): ?>
+            <div class="result" style="background:#fef3c7;border-color:#f59e0b;color:#92400e;">ይህን ፈተና አስቀድሞ መልስዎ ተመዝግቧል። እንደገና መስጠት አይቻልም።</div>
+        <?php endif; ?>
         <?php if (!empty($_SESSION['exam20_message'])): ?>
             <div class="result" style="background:#fef2f2;border-color:#fecaca;color:#991b1b;"><?php echo safe($_SESSION['exam20_message']); ?></div>
             <?php unset($_SESSION['exam20_message']); ?>
@@ -220,15 +198,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <?php if (!empty($options)): ?>
                             <?php foreach ($options as $option): ?>
                                 <label>
-                                    <input type="radio" name="q<?php echo (int)$item['id']; ?>" value="<?php echo safe($option['label']); ?>" required />
+                                    <input type="radio" name="q<?php echo (int)($item['id'] ?? $index); ?>" value="<?php echo safe((string)($option['label'] ?? '')); ?>" required />
                                     <?php echo safe($option['label'] . '. ' . $option['text']); ?>
                                 </label>
                             <?php endforeach; ?>
                         <?php else: ?>
-                            <input type="text" name="q<?php echo (int)$item['id']; ?>" value="<?php echo safe($_POST['q' . $item['id']] ?? ''); ?>" placeholder="መልስዎን ይተይቡ" required style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;" />
+                            <input type="text" name="q<?php echo (int)($item['id'] ?? $index); ?>" value="<?php echo safe($_POST['q' . ($item['id'] ?? $index)] ?? ''); ?>" placeholder="መልስዎን ይተይቡ" required style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;" />
                         <?php endif; ?>
                         <?php if ($submitted): ?>
-                            <?php $selected = trim((string)($_POST['q' . $item['id']] ?? '')); ?>
+                            <?php $selected = trim((string)($_POST['q' . ($item['id'] ?? $index)] ?? '')); ?>
                             <?php $correct = (string)($item['correct_answer'] ?? ''); ?>
                             <div class="answer-note <?php echo isCorrectExamAnswer($item, $selected) ? 'good' : 'bad'; ?>">
                                 <?php if (isCorrectExamAnswer($item, $selected)): ?>
@@ -240,7 +218,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
-                <button type="submit" id="submitBtn" <?php echo $timeExpired ? 'disabled' : ''; ?>>ውጤት አሳይ</button>
+                <button type="submit" id="submitBtn" <?php echo ($timeExpired || $hasSubmittedExam) ? 'disabled' : ''; ?>>ውጤት አሳይ</button>
             </form>
         <?php endif; ?>
         <?php if ($submitted && !empty($questions)): ?>

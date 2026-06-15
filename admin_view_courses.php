@@ -302,16 +302,16 @@ try {
     <div class="container">
         <section class="hero-card">
             <div>
-                <span class="eyebrow">Admin Overview</span>
-                <h1>Course management dashboard</h1>
-                <p>Here you can review each course, its teaching materials, and quickly update or remove entries.</p>
+                <span class="eyebrow">የአድሚኑ አጭር መግለጫ</span>
+                <h1>የኮርስ ማስተዳደሪያ ዳሽቦርድ</h1>
+                <p>እዚህ ላይ ኮርሶችን መከለስ፣የማስተማሪያ ማቴሪያሎችን ሙሉ በሙሉ በፍጥነት ማሽሽል እና ማጥፋት ይቻላል።</p>
                 <div class="badge-row">
-                    <span class="badge">📚 Courses</span>
-                    <span class="badge">🧩 Materials</span>
-                    <span class="badge">🛠️ Edit / Delete</span>
+                    <span class="badge">📚 ኮርሶች</span>
+                    <span class="badge">🧩 ልዩ ልዩ ማስረጃዎች</span>
+                    <span class="badge">🛠️ አስተካክል/ አጥፋ</span>
                 </div>
             </div>
-            <a href="admin_courses.php" class="primary-btn">+ Add a new course</a>
+            <a href="admin_courses.php" class="primary-btn">+ አዲስ ኮርስ ጨምር</a>
         </section>
 
         <div class="card">
