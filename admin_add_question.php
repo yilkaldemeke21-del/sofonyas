@@ -219,13 +219,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 answer.removeAttribute('required');
 
                 if (type === 'true_false') {
-                    labelA.textContent = 'True';
-                    labelB.textContent = 'False';
-                    a.value = 'True';
-                    b.value = 'False';
-                    c.value = '';
-                    d.value = '';
-                    correct.innerHTML = '<option value="TRUE">True</option><option value="FALSE">False</option>';
+                    labelA.textContent = 'እውነት';
+                    labelB.textContent = 'ሐሰት';
+                    a.value = 'እውነት';
+                    b.value = 'ሀሰት';
+                   
+                    correct.innerHTML = '<option value="TRUE">እውነት</option><option value="FALSE">ሀሰት</option>';
                 } else {
                     labelA.textContent = 'ሀ';
                     labelB.textContent = 'ለ';

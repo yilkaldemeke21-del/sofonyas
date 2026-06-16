@@ -7,9 +7,39 @@ if (!isset($_SESSION['student_id'])) {
     exit;
 }
 
-$studentId = (int)$_SESSION['student_id'];
+ensureExamAccessTables($pdo);
+
+$studentId = (string)($_SESSION['student_id'] ?? '');
 $studentName = $_SESSION['student_name'] ?? 'Student';
+$examType = 'exam20';
 $EXAM_LIMIT_SECONDS = 150 * 60;
+
+$approvalStmt = $pdo->prepare('SELECT status, approved_by, approved_at FROM student_exam_approvals WHERE student_id = :student_id AND exam_type = :exam_type LIMIT 1');
+$approvalStmt->execute([
+    ':student_id' => $studentId,
+    ':exam_type' => $examType,
+]);
+$approvalRecord = $approvalStmt->fetch(PDO::FETCH_ASSOC);
+$hasApproval = (($approvalRecord['status'] ?? '') === 'approved');
+
+$accessCodeStmt = $pdo->prepare('SELECT access_code, is_active FROM exam_access_codes WHERE exam_type = :exam_type LIMIT 1');
+$accessCodeStmt->execute([':exam_type' => $examType]);
+$accessCodeRecord = $accessCodeStmt->fetch(PDO::FETCH_ASSOC);
+$accessCodeIsActive = !empty($accessCodeRecord['is_active']);
+$accessCode = $accessCodeRecord['access_code'] ?? '';
+$accessCodeGranted = (!empty($_SESSION['exam20_access_granted']) && $_SESSION['exam20_access_granted'] === $examType);
+$accessError = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['exam_access_submit'])) {
+    $submittedCode = strtoupper(trim((string)($_POST['exam_access_code'] ?? '')));
+    if (!$accessCodeIsActive || $accessCode === '' || !hash_equals(strtoupper($accessCode), $submittedCode)) {
+        $accessError = 'የተሳሳተ የፈተና ኮድ ነው። እባክዎ እንደገና ይሞክሩ።';
+    } else {
+        $_SESSION['exam20_access_granted'] = $examType;
+        $_SESSION['exam20_access_granted_at'] = time();
+        $accessCodeGranted = true;
+    }
+}
 
 $pdo->exec('CREATE TABLE IF NOT EXISTS questions (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -93,7 +123,7 @@ $deadline = (int)($_SESSION['exam20_deadline'] ?? ($startedAt + $EXAM_LIMIT_SECO
 $timeExpired = (time() >= $deadline);
 
 $existingSubmissionStmt = $pdo->prepare('SELECT id, score, total_questions, submitted_at FROM exam_submissions WHERE student_id = :student_id AND exam_type = :exam_type ORDER BY submitted_at DESC LIMIT 1');
-$existingSubmissionStmt->execute([':student_id' => $studentId, ':exam_type' => 'exam20']);
+$existingSubmissionStmt->execute([':student_id' => $studentId, ':exam_type' => $examType]);
 $existingSubmission = $existingSubmissionStmt->fetch(PDO::FETCH_ASSOC);
 $hasSubmittedExam = !empty($existingSubmission);
 
@@ -101,9 +131,21 @@ $score = 0;
 $answers = [];
 $submitted = false;
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['exam_access_submit'])) {
     if ($hasSubmittedExam) {
         $_SESSION['exam20_message'] = 'ይህን ፈተና አስቀድሞ መልስዎ ተመዝግቧል። እንደገና መስጠት አይቻልም።';
+        header('Location: exam20.php');
+        exit;
+    }
+
+    if (!$hasApproval) {
+        $_SESSION['exam20_message'] = 'ይህን ፈተና ለመጀመር ከአስተዳዳሪ ማረጋገጫ ያስፈልጋል።';
+        header('Location: exam20.php');
+        exit;
+    }
+
+    if (!$accessCodeGranted) {
+        $_SESSION['exam20_message'] = 'ይህን ፈተና ለመጀመር የፈተና ኮድ መግባት ያስፈልጋል።';
         header('Location: exam20.php');
         exit;
     }
@@ -138,7 +180,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->execute([
         ':student_id' => $studentId,
         ':student_name' => $studentName,
-        ':exam_type' => 'exam20',
+        ':exam_type' => $examType,
         ':score' => $score,
         ':total_questions' => count($questions),
         ':answers' => json_encode($answers, JSON_UNESCAPED_UNICODE),
@@ -187,7 +229,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="result" style="background:#fef2f2;border-color:#fecaca;color:#991b1b;"><?php echo safe($_SESSION['exam20_message']); ?></div>
             <?php unset($_SESSION['exam20_message']); ?>
         <?php endif; ?>
-        <?php if (empty($questions)): ?>
+        <?php if (!$hasApproval): ?>
+            <div class="result" style="background:#fef3c7;border-color:#f59e0b;color:#92400e;">ይህን ፈተና ለመጀመር ከአስተዳዳሪ ማረጋገጫ ያስፈልጋል። እባክዎ አስተዳዳሪውን ያስተማሙ።</div>
+        <?php elseif (!$accessCodeGranted): ?>
+            <div class="result" style="background:#eef2ff;border-color:#c7d2fe;color:#3730a3;">
+                ፈተናውን ለመክፈት የፈተና ኮድ ያስገቡ።
+            </div>
+            <?php if ($accessError): ?>
+                <div class="result" style="background:#fef2f2;border-color:#fecaca;color:#991b1b;"><?php echo safe($accessError); ?></div>
+            <?php endif; ?>
+            <form method="post" style="margin-top: 12px; max-width: 420px;">
+                <input type="hidden" name="exam_access_submit" value="1">
+                <input type="text" name="exam_access_code" placeholder="ኮድ ያስገቡ" required style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px; margin-bottom: 10px;" />
+                <button type="submit">ኮድ አረጋግጥ</button>
+            </form>
+        <?php elseif (empty($questions)): ?>
             <div class="result" style="background:#fef3c7;border-color:#f59e0b;color:#92400e;">ምንም ጥያቄዎች አልተጫኑም። እባክዎ በ Admin ጥያቄዎች ውስጥ ጥያቄ ያክሉ።</div>
         <?php else: ?>
             <form method="post" id="examForm">

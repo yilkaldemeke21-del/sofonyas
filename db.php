@@ -158,6 +158,32 @@ function ensureLessonBookmarkTables(PDO $pdo): void
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 }
 
+function ensureExamAccessTables(PDO $pdo): void
+{
+    $pdo->exec('CREATE TABLE IF NOT EXISTS exam_access_codes (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        exam_type VARCHAR(50) NOT NULL,
+        access_code VARCHAR(50) NOT NULL,
+        is_active TINYINT(1) NOT NULL DEFAULT 1,
+        created_by VARCHAR(100) DEFAULT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_exam_access_code (exam_type)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+
+    $pdo->exec('CREATE TABLE IF NOT EXISTS student_exam_approvals (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id VARCHAR(100) NOT NULL,
+        exam_type VARCHAR(50) NOT NULL,
+        status VARCHAR(20) NOT NULL DEFAULT "pending",
+        approved_by VARCHAR(100) DEFAULT NULL,
+        approved_at DATETIME DEFAULT NULL,
+        notes TEXT DEFAULT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_student_exam_approval (student_id, exam_type),
+        INDEX idx_student_exam_approval_status (status)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+}
+
 try {
     ensureCourseStructureTables($pdo);
 } catch (Throwable $e) {
@@ -168,6 +194,12 @@ try {
     ensureLessonBookmarkTables($pdo);
 } catch (Throwable $e) {
     error_log('Lesson bookmark schema validation failed: ' . $e->getMessage());
+}
+
+try {
+    ensureExamAccessTables($pdo);
+} catch (Throwable $e) {
+    error_log('Exam access schema validation failed: ' . $e->getMessage());
 }
 
 function cleanText($value): string {
