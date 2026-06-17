@@ -184,6 +184,71 @@ function ensureExamAccessTables(PDO $pdo): void
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 }
 
+function ensureNotificationSupportTables(PDO $pdo): void
+{
+    $pdo->exec('CREATE TABLE IF NOT EXISTS contact_messages (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        phone VARCHAR(50) DEFAULT NULL,
+        subject VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        status VARCHAR(30) NOT NULL DEFAULT "new",
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_contact_messages_status (status)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+
+    $pdo->exec('CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        email VARCHAR(255) NOT NULL,
+        token VARCHAR(255) NOT NULL,
+        expires_at DATETIME NOT NULL,
+        used TINYINT(1) NOT NULL DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_password_reset_token (token),
+        INDEX idx_password_reset_email (email)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+
+    $pdo->exec('CREATE TABLE IF NOT EXISTS email_verification_tokens (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        email VARCHAR(255) NOT NULL,
+        token VARCHAR(255) NOT NULL,
+        expires_at DATETIME NOT NULL,
+        used TINYINT(1) NOT NULL DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_email_verification_token (token),
+        INDEX idx_email_verification_email (email)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+}
+
+function ensureStudentEmailVerificationColumns(PDO $pdo): void
+{
+    $tables = [
+        'students' => [
+            'email_verified' => "ALTER TABLE students ADD COLUMN email_verified TINYINT(1) NOT NULL DEFAULT 0",
+            'email_verification_token' => "ALTER TABLE students ADD COLUMN email_verification_token VARCHAR(255) DEFAULT NULL",
+            'email_verified_at' => "ALTER TABLE students ADD COLUMN email_verified_at DATETIME DEFAULT NULL"
+        ]
+    ];
+
+    foreach ($tables as $tableName => $columns) {
+        $existingColumns = [];
+        $columnStmt = $pdo->query("SELECT COLUMN_NAME FROM information_schema.columns WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '$tableName'");
+        foreach ($columnStmt->fetchAll(PDO::FETCH_COLUMN) as $columnName) {
+            $existingColumns[$columnName] = true;
+        }
+        foreach ($columns as $columnName => $sql) {
+            if (!isset($existingColumns[$columnName])) {
+                try {
+                    $pdo->exec($sql);
+                } catch (PDOException $e) {
+                    error_log('Email verification schema migration warning for ' . $tableName . '.' . $columnName . ': ' . $e->getMessage());
+                }
+            }
+        }
+    }
+}
+
 try {
     ensureCourseStructureTables($pdo);
 } catch (Throwable $e) {
@@ -200,6 +265,18 @@ try {
     ensureExamAccessTables($pdo);
 } catch (Throwable $e) {
     error_log('Exam access schema validation failed: ' . $e->getMessage());
+}
+
+try {
+    ensureNotificationSupportTables($pdo);
+} catch (Throwable $e) {
+    error_log('Notification support schema validation failed: ' . $e->getMessage());
+}
+
+try {
+    ensureStudentEmailVerificationColumns($pdo);
+} catch (Throwable $e) {
+    error_log('Email verification schema validation failed: ' . $e->getMessage());
 }
 
 function cleanText($value): string {

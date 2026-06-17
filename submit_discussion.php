@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/mail_config.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: discussion_forum.php');
@@ -127,6 +128,8 @@ try {
             ':subject' => 'የውይይት ፎርም አዲስ ልጥፍ',
             ':message' => $adminMsg,
         ]);
+
+        sendAppEmail($admin['email'], 'New discussion post', '<p>A new discussion post has been submitted.</p><p><strong>Topic:</strong> ' . safe($topic) . '</p><p><strong>Author:</strong> ' . safe($authorName) . '</p><p>' . nl2br(safe($message)) . '</p>');
     }
 
     header('Location: discussion_forum.php?status=success');

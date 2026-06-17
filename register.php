@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/mail_config.php';
 
 $errors = [];
 $csrfToken = csrfToken();
@@ -67,6 +68,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ':payment_status' => 'unpaid',
                     ':created_at' => date('Y-m-d H:i:s'),
                 ]);
+
+                $verificationToken = bin2hex(random_bytes(32));
+                $verificationExpires = date('Y-m-d H:i:s', strtotime('+24 hours'));
+                $stmt = $pdo->prepare('INSERT INTO email_verification_tokens (email, token, expires_at, used, created_at) VALUES (:email, :token, :expires_at, 0, NOW())');
+                $stmt->execute([
+                    ':email' => $email,
+                    ':token' => $verificationToken,
+                    ':expires_at' => $verificationExpires,
+                ]);
+
+                $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                $verifyUrl = $scheme . '://' . $host . '/verify_email.php?token=' . urlencode($verificationToken);
+
+                $welcomeSubject = 'Registration successful';
+                $welcomeMessage = '<p>Dear ' . safe($name) . ',</p>'
+                    . '<p>Your registration has been received successfully.</p>'
+                    . '<p><strong>Student ID:</strong> ' . safe($studentId) . '<br>'
+                    . '<strong>Course:</strong> ' . safe($course) . '<br>'
+                    . '<strong>Amount:</strong> ' . safe($amount) . '</p>'
+                    . '<p>Please verify your email here: <a href="' . safe($verifyUrl) . '">Verify Email</a></p>'
+                    . '<p>Thank you for choosing Sofnyas.</p>';
+                sendAppEmail($email, $welcomeSubject, $welcomeMessage);
 
                 session_regenerate_id(true);
                 $_SESSION['student_id'] = $studentId;
