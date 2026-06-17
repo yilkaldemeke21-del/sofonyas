@@ -75,6 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $stmt = $pdo->prepare('SELECT * FROM exam_access_codes WHERE exam_type = :exam_type LIMIT 1');
 $stmt->execute([':exam_type' => 'exam20']);
 $accessCodeRecord = $stmt->fetch(PDO::FETCH_ASSOC);
+$defaultAccessCode = !empty($accessCodeRecord['access_code']) ? $accessCodeRecord['access_code'] : 'SOFI2721';
 
 $stmt = $pdo->query('SELECT s.student_id, s.name, s.email, a.status, a.approved_at, a.notes FROM students s LEFT JOIN student_exam_approvals a ON a.student_id = s.student_id AND a.exam_type = "exam20" ORDER BY s.created_at DESC');
 $studentApprovals = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -104,7 +105,7 @@ $studentApprovals = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <input type="hidden" name="exam_type" value="exam20">
             <div style="margin-bottom:12px;">
                 <label for="access_code">ኮድ</label>
-                <input id="access_code" name="access_code" value="<?php echo safe($accessCodeRecord['access_code'] ?? ''); ?>" placeholder="ለምሳሌ EXAM-2026" required>
+                <input id="access_code" name="access_code" value="<?php echo safe($defaultAccessCode); ?>" placeholder="ለምሳሌ SOFI2721" required>
             </div>
             <div style="margin-bottom:12px;">
                 <label for="is_active">ሁኔታ</label>

@@ -36,7 +36,7 @@ try {
 } catch (PDOException $e) {
 }
 
-$stmt = $pdo->prepare('SELECT * FROM registrations WHERE student_id = :student_id ORDER BY created_at DESC');
+$stmt = $pdo->prepare('SELECT r.*, c.id AS course_id, c.course_code, c.short_description, c.description, c.instructor, c.thumbnail, c.price AS course_price, c.category, c.level FROM registrations r LEFT JOIN courses c ON c.course_name = r.course WHERE r.student_id = :student_id ORDER BY r.created_at DESC');
 $stmt->execute([':student_id' => $studentId]);
 $registrations = $stmt->fetchAll();
 
@@ -289,6 +289,9 @@ $student_exam_reminders = $stmt->fetchAll();
 $stmt = $pdo->query('SELECT * FROM event_announcements ORDER BY event_date DESC LIMIT 5');
 $student_events = $stmt->fetchAll();
 
+$stmt = $pdo->query('SELECT * FROM live_class_sessions ORDER BY session_date ASC, id DESC LIMIT 4');
+$live_sessions = $stmt->fetchAll();
+
 if (empty($notifications)) {
     $notifications = [
         ['message' => 'አዲስ ትምህርት ለመጀመር ዝግጁ ነው።', 'created_at' => date('Y-m-d H:i:s')],
@@ -377,6 +380,7 @@ if (empty($notifications)) {
         <div class="quick-actions">
             <a class="button" href="sofonyas%20(2).html">መጀመሪያ</a>
             <a class="button" href="tutorial.php">ኮርሶች</a>
+            <a class="button" href="live_class.php">Live Class</a>
             <a class="button" href="discussion_forum.php">ፎርም</a>
             <a class="button" href="library.php">ላይብራሪ</a>
             <a class="button secondary" href="student_logout.php">ውጣ</a>
@@ -390,6 +394,36 @@ if (empty($notifications)) {
         <div class="card"><h2>የተገኙ ሰርተፊኬት</h2><p><?php echo $certificates; ?></p></div>
         <div class="card"><h2>የQuiz አማካይ ውጤት</h2><p><?php echo $avg_quiz_score; ?>%</p></div>
         <div class="card"><h2>የትምህርት የእድገት ማሽሽያ (%)</h2><p><?php echo $progress_percentage; ?>%</p></div>
+    </div>
+
+    <div class="card" style="margin-bottom: 24px;">
+        <h2 class="section-title">📡 Live Classes</h2>
+        <p class="section-sub">እዚህ ከዳታቤዝ ጋር ተገናኝተው የላይቭ ስትሬም ወይም የቪርቹዋል ትምህርት ክፍል ማገናኘት ይችላሉ።</p>
+        <?php if (empty($live_sessions)): ?>
+            <p class="muted">አሁን ምንም ላይቭ ክላስ አልተዘጋጀም።</p>
+        <?php else: ?>
+            <div class="grid-3">
+                <?php foreach ($live_sessions as $session): ?>
+                    <div class="mini-card">
+                        <span class="pill success">Live</span>
+                        <h3><?php echo safe($session['title'] ?? 'Live Session'); ?></h3>
+                        <p class="muted" style="margin-top:6px;"><?php echo safe(!empty($session['description']) ? $session['description'] : 'Join this live learning session now.'); ?></p>
+                        <p class="muted"><strong>Time:</strong> <?php echo !empty($session['session_date']) ? safe(date('D, M d Y H:i', strtotime($session['session_date']))) : 'Time not set'; ?></p>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+                            <?php if (!empty($session['stream_url'])): ?>
+                                <a class="button" href="<?php echo safe($session['stream_url']); ?>" target="_blank" rel="noopener">Join Live Stream</a>
+                            <?php endif; ?>
+                            <?php if (!empty($session['room_url'])): ?>
+                                <a class="button secondary" href="<?php echo safe($session['room_url']); ?>" target="_blank" rel="noopener">Join Virtual Room</a>
+                            <?php endif; ?>
+                            <?php if (empty($session['stream_url']) && empty($session['room_url'])): ?>
+                                <span class="pill warning">No link yet</span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
     </div>
 
     <div class="card" style="margin-bottom: 24px;">
@@ -429,13 +463,18 @@ if (empty($notifications)) {
                 <p class="muted">ምንም ተመዝጋቢ ኮርስ የለም።</p>
             <?php else: ?>
                 <?php foreach (array_slice($registrations, 0, 3) as $row): ?>
+                    <?php $courseName = $row['course'] ?: ($row['course_name'] ?? 'Course'); ?>
+                    <?php $courseThumb = !empty($row['thumbnail']) ? publicMediaUrl($row['thumbnail']) : 'https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=900&q=80'; ?>
+                    <?php $courseDesc = $row['short_description'] ?: $row['description'] ?: 'ይህ ኮርስ ለእርስዎ ተዘጋጅቷል።'; ?>
+                    <?php $progressValue = (!empty($row['payment_status']) && $row['payment_status'] === 'paid') ? 65 : 35; ?>
                     <div class="course-card" style="margin-bottom: 12px;">
-                        <img src="https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=900&q=80" alt="Course preview">
-                        <h3><?php echo safe($row['course']); ?></h3>
-                        <p class="muted">ኢንስትራክተር: <?php echo safe($student['name']); ?></p>
-                        <div class="progress-track"><div class="progress-fill" style="width: <?php echo min(100, 45 + (int)$row['id'] % 30); ?>%;"></div></div>
+                        <img src="<?php echo safe($courseThumb); ?>" alt="<?php echo safe($courseName); ?>">
+                        <h3><?php echo safe($courseName); ?></h3>
+                        <div class="muted rich-content" style="margin-bottom:8px;"><?php echo renderRichText($courseDesc); ?></div>
+                        <p class="muted">ኢንስትራክተር: <?php echo safe($row['instructor'] ?? 'Admin Instructor'); ?></p>
+                        <div class="progress-track"><div class="progress-fill" style="width: <?php echo $progressValue; ?>%;"></div></div>
                         <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-                            <span class="pill info">Progress <?php echo min(100, 45 + (int)$row['id'] % 30); ?>%</span>
+                            <span class="pill info">Progress <?php echo $progressValue; ?>%</span>
                             <a class="button" href="tutorial.php">ትምህርት ቀጥል</a>
                         </div>
                     </div>
@@ -631,9 +670,15 @@ if (empty($notifications)) {
                 </thead>
                 <tbody>
                     <?php foreach ($registrations as $row): ?>
+                        <?php $courseName = $row['course'] ?: ($row['course_name'] ?? 'Course'); ?>
                         <tr>
-                            <td><?php echo safe($row['course']); ?></td>
-                            <td><?php echo safe($row['amount']); ?> ብር</td>
+                            <td>
+                                <strong><?php echo safe($courseName); ?></strong>
+                                <?php if (!empty($row['short_description']) || !empty($row['description'])): ?>
+                                    <br><small class="muted"><?php echo safe(substr(strip_tags($row['short_description'] ?: $row['description'] ?: ''), 0, 90)); ?><?php echo (strlen(strip_tags($row['short_description'] ?: $row['description'] ?: '')) > 90) ? '...' : ''; ?></small>
+                                <?php endif; ?>
+                            </td>
+                            <td><?php echo safe($row['amount'] ?? $row['course_price'] ?? 0); ?> ብር</td>
                             <td><span class="badge <?php echo ($row['payment_status'] === 'paid' ? 'paid' : 'unpaid'); ?>"><?php echo safe($row['payment_status']); ?></span></td>
                             <td><?php echo date('Y-m-d', strtotime($row['created_at'])); ?></td>
                             <td><?php if ($row['payment_status'] !== 'paid'): ?><a class="action-link" href="payment.php?id=<?php echo urlencode($row['id']); ?>">ክፍያ አረጋግጥ</a><?php else: ?>ተከፍሏል<?php endif; ?></td>

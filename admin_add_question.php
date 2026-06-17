@@ -54,8 +54,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $correct = strtoupper(trim($_POST['correct'] ?? 'A'));
 
         if ($question_type === 'true_false') {
-            $a = 'True';
-            $b = 'False';
+            $a = 'እውነት';
+            $b = 'ሀሰት';
             $c = '';
             $d = '';
             $correct = strtoupper(trim($_POST['correct'] ?? 'TRUE'));
@@ -220,10 +220,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 if (type === 'true_false') {
                     labelA.textContent = 'እውነት';
-                    labelB.textContent = 'ሐሰት';
+                    labelB.textContent = 'ሀሰት';
                     a.value = 'እውነት';
                     b.value = 'ሀሰት';
-                   
+
                     correct.innerHTML = '<option value="TRUE">እውነት</option><option value="FALSE">ሀሰት</option>';
                 } else {
                     labelA.textContent = 'ሀ';

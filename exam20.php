@@ -120,7 +120,8 @@ if (!isset($_SESSION['exam20_started_at'])) {
 
 $startedAt = (int)($_SESSION['exam20_started_at'] ?? time());
 $deadline = (int)($_SESSION['exam20_deadline'] ?? ($startedAt + $EXAM_LIMIT_SECONDS));
-$timeExpired = (time() >= $deadline);
+$currentTime = time();
+$timeExpired = ($currentTime >= $deadline);
 
 $existingSubmissionStmt = $pdo->prepare('SELECT id, score, total_questions, submitted_at FROM exam_submissions WHERE student_id = :student_id AND exam_type = :exam_type ORDER BY submitted_at DESC LIMIT 1');
 $existingSubmissionStmt->execute([':student_id' => $studentId, ':exam_type' => $examType]);
@@ -150,8 +151,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['exam_access_submit']
         exit;
     }
 
-    if ($timeExpired || time() >= $deadline) {
-        $_SESSION['exam20_message'] = 'የፈተና ጊዜ አልቋል፤ በ2:30 ሰዓት በኋላ መስጠት አይቻልም።';
+    if ($timeExpired) {
+        $_SESSION['exam20_message'] = 'የፈተና ጊዜ አልቋል፤ በ3:00 ሰዓት በኋላ መስጠት አይቻልም።';
         header('Location: exam20.php');
         exit;
     }
@@ -299,7 +300,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['exam_access_submit']
                 timerText.textContent = '00:00:00';
                 if (submitBtn) submitBtn.disabled = true;
                 if (examForm) {
-                    examForm.querySelectorAll('input[type="radio"]').forEach((el) => el.disabled = true);
+                    examForm.querySelectorAll('input').forEach((el) => el.disabled = true);
+                    examForm.submit();
                 }
                 return;
             }
