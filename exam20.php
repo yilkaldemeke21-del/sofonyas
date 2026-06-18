@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/mail_config.php';
 
 if (!isset($_SESSION['student_id'])) {
     header('Location: student_login.php');
@@ -64,6 +65,50 @@ function normalizeExamAnswer(string $value): string
     $value = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $value) ?? '';
     $value = preg_replace('/\s+/u', ' ', $value);
     return trim($value);
+}
+
+function sendCertificateEmail(PDO $pdo, string $studentId, string $studentName, string $examType, int $score, int $totalQuestions): void
+{
+    if ($totalQuestions <= 0 || $score < $totalQuestions) {
+        return;
+    }
+
+    $stmt = $pdo->prepare('SELECT email FROM students WHERE student_id = :student_id LIMIT 1');
+    $stmt->execute([':student_id' => $studentId]);
+    $student = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$student || empty($student['email'])) {
+        return;
+    }
+
+    $stmt = $pdo->prepare('INSERT IGNORE INTO certificates (student_id, student_name, exam_type, score, total_questions) VALUES (:student_id, :student_name, :exam_type, :score, :total_questions)');
+    $stmt->execute([
+        ':student_id' => $studentId,
+        ':student_name' => $studentName,
+        ':exam_type' => $examType,
+        ':score' => $score,
+        ':total_questions' => $totalQuestions,
+    ]);
+
+    $stmt = $pdo->prepare('SELECT id FROM certificates WHERE student_id = :student_id AND exam_type = :exam_type ORDER BY id DESC LIMIT 1');
+    $stmt->execute([
+        ':student_id' => $studentId,
+        ':exam_type' => $examType,
+    ]);
+    $certificate = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$certificate) {
+        return;
+    }
+
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $downloadUrl = $scheme . '://' . $host . '/admin_certificate.php?download=' . (int)$certificate['id'];
+
+    $message = '<p>Hello ' . safe($studentName) . ',</p>'
+        . '<p>Congratulations! You completed the exam with a perfect score.</p>'
+        . '<p>Your certificate has been generated automatically.</p>'
+        . '<p><a href="' . safe($downloadUrl) . '">Download your certificate PDF</a></p>';
+
+    sendAppEmail($student['email'], 'Your certificate is ready', $message);
 }
 
 function isCorrectExamAnswer(array $question, string $selected): bool
@@ -186,6 +231,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['exam_access_submit']
         ':total_questions' => count($questions),
         ':answers' => json_encode($answers, JSON_UNESCAPED_UNICODE),
     ]);
+
+    if (count($questions) > 0 && $score === count($questions)) {
+        sendCertificateEmail($pdo, $studentId, $studentName, $examType, $score, count($questions));
+        $_SESSION['certificate_message'] = 'Congratulations! Your certificate has been generated and sent to your email.';
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -229,6 +279,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['exam_access_submit']
         <?php if (!empty($_SESSION['exam20_message'])): ?>
             <div class="result" style="background:#fef2f2;border-color:#fecaca;color:#991b1b;"><?php echo safe($_SESSION['exam20_message']); ?></div>
             <?php unset($_SESSION['exam20_message']); ?>
+        <?php endif; ?>
+        <?php if (!empty($_SESSION['certificate_message'])): ?>
+            <div class="result" style="background:#ecfdf5;border-color:#a7f3d0;color:#166534;"><?php echo safe($_SESSION['certificate_message']); ?></div>
+            <?php unset($_SESSION['certificate_message']); ?>
         <?php endif; ?>
         <?php if (!$hasApproval): ?>
             <div class="result" style="background:#fef3c7;border-color:#f59e0b;color:#92400e;">ይህን ፈተና ለመጀመር ከአስተዳዳሪ ማረጋገጫ ያስፈልጋል። እባክዎ አስተዳዳሪውን ያስተማሙ።</div>

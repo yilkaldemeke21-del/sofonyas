@@ -5,6 +5,8 @@ require_once __DIR__ . '/mail_config.php';
 
 $errors = [];
 $csrfToken = csrfToken();
+$recaptchaSiteKey = getenv('RECAPTCHA_SITE_KEY') ?: '';
+$recaptchaSecret = getenv('RECAPTCHA_SECRET_KEY') ?: '';
 $name = '';
 $email = '';
 $studentId = '';
@@ -27,6 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $confirmPassword = $_POST['confirm_password'] ?? '';
         $course = trim($_POST['course'] ?? '');
         $amount = trim($_POST['amount'] ?? '0');
+        $captchaResponse = $_POST['g-recaptcha-response'] ?? '';
 
         if ($name === '') {
             $errors[] = 'ስም ያስገቡ።';
@@ -47,6 +50,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         if (!is_numeric($amount) || $amount < 0) {
             $errors[] = 'እባክዎ ትክክለኛ የክፍያ መጠን ያስገቡ።';
+        }
+        if ($recaptchaSiteKey !== '' && $recaptchaSecret !== '' && !verifyCaptchaResponse($captchaResponse, $recaptchaSecret)) {
+            $errors[] = 'የማንኛውም ደህንነት ምልክት አልተሳካም። እባክዎ ዳግም ይሞክሩ።';
         }
 
         if (empty($errors)) {
@@ -216,6 +222,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <input id="amount" type="number" step="0.01" name="amount" value="<?php echo safe($amount ?: '0'); ?>" required>
             </div>
         </div>
+
+        <?php if ($recaptchaSiteKey !== ''): ?>
+            <div style="margin-top: 16px;">
+                <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+                <div class="g-recaptcha" data-sitekey="<?php echo safe($recaptchaSiteKey); ?>"></div>
+            </div>
+        <?php endif; ?>
 
         <button class="button" type="submit">መመዝገብ ጨርስ</button>
     </form>

@@ -10,61 +10,74 @@ if (isset($_SESSION['student_id'])) {
 $error = '';
 $email = '';
 $csrfToken = csrfToken();
+$recaptchaSiteKey = getenv('RECAPTCHA_SITE_KEY') ?: '';
+$recaptchaSecret = getenv('RECAPTCHA_SECRET_KEY') ?: '';
+$maxAttempts = 5;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
         $error = 'ደህንነት ተሰርዟል። እባክዎ ገጹን እንደገና ይጫኑ።';
     } else {
-    $email = trim($_POST['email'] ?? '');
-    $password = $_POST['password'] ?? '';
+        $email = trim($_POST['email'] ?? '');
+        $password = $_POST['password'] ?? '';
+        $captchaResponse = $_POST['g-recaptcha-response'] ?? '';
 
-    if ($email === '' || $password === '') {
-        $error = 'እባክዎ ኢሜይልና የይለፍ ቃል ያስገቡ።';
-    } else {
-        $stmt = $pdo->prepare('SELECT * FROM students WHERE email = :email OR student_id = :student_id LIMIT 1');
-        $stmt->execute([':email' => $email, ':student_id' => $email]);
-        $student = $stmt->fetch();
+        if ($email === '' || $password === '') {
+            $error = 'እባክዎ ኢሜይልና የይለፍ ቃል ያስገቡ።';
+        } else {
+            $attemptKey = 'student_login:' . strtolower($email) . ':' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+            if (loginAttemptWindowCount($pdo, $attemptKey) >= $maxAttempts) {
+                $error = 'ብዙ የመግቢያ ሙከራዎች ተደርገዋል። እባክዎ ከጥቂት ደቂቃዎች በኋላ እንደገና ይሞክሩ።';
+            } elseif ($recaptchaSiteKey !== '' && $recaptchaSecret !== '' && !verifyCaptchaResponse($captchaResponse, $recaptchaSecret)) {
+                $error = 'የማንኛውም ደህንነት ምልክት አልተሳካም። እባክዎ ዳግም ይሞክሩ።';
+            } else {
+                $stmt = $pdo->prepare('SELECT * FROM students WHERE email = :email OR student_id = :student_id LIMIT 1');
+                $stmt->execute([':email' => $email, ':student_id' => $email]);
+                $student = $stmt->fetch();
 
-        if ($student && password_verify($password, $student['password_hash'])) {
-            session_regenerate_id(true);
-            $_SESSION['student_id'] = $student['student_id'];
-            $_SESSION['student_email'] = $student['email'];
-            $_SESSION['student_name'] = $student['name'];
-            $_SESSION['user_role'] = isset($student['role']) && $student['role'] !== '' ? $student['role'] : 'Student';
-            $_SESSION['is_student'] = true;
+                if ($student && password_verify($password, $student['password_hash'])) {
+                    clearLoginAttempts($pdo, $attemptKey);
+                    session_regenerate_id(true);
+                    $_SESSION['student_id'] = $student['student_id'];
+                    $_SESSION['student_email'] = $student['email'];
+                    $_SESSION['student_name'] = $student['name'];
+                    $_SESSION['user_role'] = isset($student['role']) && $student['role'] !== '' ? $student['role'] : 'Student';
+                    $_SESSION['is_student'] = true;
 
-            try {
-                $pdo->exec('CREATE TABLE IF NOT EXISTS student_attendance (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    student_id VARCHAR(100) NOT NULL,
-                    student_name VARCHAR(255) NOT NULL,
-                    login_date DATE NOT NULL,
-                    login_time DATETIME NOT NULL,
-                    ip_address VARCHAR(45) DEFAULT NULL,
-                    user_agent TEXT DEFAULT NULL,
-                    status VARCHAR(30) NOT NULL DEFAULT "Present",
-                    UNIQUE KEY uq_student_attendance (student_id, login_date)
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+                    try {
+                        $pdo->exec('CREATE TABLE IF NOT EXISTS student_attendance (
+                            id INT AUTO_INCREMENT PRIMARY KEY,
+                            student_id VARCHAR(100) NOT NULL,
+                            student_name VARCHAR(255) NOT NULL,
+                            login_date DATE NOT NULL,
+                            login_time DATETIME NOT NULL,
+                            ip_address VARCHAR(45) DEFAULT NULL,
+                            user_agent TEXT DEFAULT NULL,
+                            status VARCHAR(30) NOT NULL DEFAULT "Present",
+                            UNIQUE KEY uq_student_attendance (student_id, login_date)
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 
-                $stmtAttendance = $pdo->prepare('INSERT INTO student_attendance (student_id, student_name, login_date, login_time, ip_address, user_agent, status)
-                    VALUES (:student_id, :student_name, CURDATE(), NOW(), :ip_address, :user_agent, "Present")
-                    ON DUPLICATE KEY UPDATE login_time = NOW(), ip_address = VALUES(ip_address), user_agent = VALUES(user_agent), status = "Present"');
-                $stmtAttendance->execute([
-                    ':student_id' => $student['student_id'],
-                    ':student_name' => $student['name'],
-                    ':ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'Unknown',
-                    ':user_agent' => substr($_SERVER['HTTP_USER_AGENT'] ?? 'Unknown', 0, 255),
-                ]);
-            } catch (PDOException $e) {
-                error_log('Attendance record failed: ' . $e->getMessage());
+                        $stmtAttendance = $pdo->prepare('INSERT INTO student_attendance (student_id, student_name, login_date, login_time, ip_address, user_agent, status)
+                            VALUES (:student_id, :student_name, CURDATE(), NOW(), :ip_address, :user_agent, "Present")
+                            ON DUPLICATE KEY UPDATE login_time = NOW(), ip_address = VALUES(ip_address), user_agent = VALUES(user_agent), status = "Present"');
+                        $stmtAttendance->execute([
+                            ':student_id' => $student['student_id'],
+                            ':student_name' => $student['name'],
+                            ':ip_address' => $_SERVER['REMOTE_ADDR'] ?? 'Unknown',
+                            ':user_agent' => substr($_SERVER['HTTP_USER_AGENT'] ?? 'Unknown', 0, 255),
+                        ]);
+                    } catch (PDOException $e) {
+                        error_log('Attendance record failed: ' . $e->getMessage());
+                    }
+
+                    header('Location: student_dashboard.php');
+                    exit;
+                }
+
+                recordLoginAttempt($pdo, $attemptKey);
+                $error = 'ኢሜይል ወይም የይለፍ ቃል ትክክል አይደለም።';
             }
-
-            header('Location: student_dashboard.php');
-            exit;
         }
-
-        $error = 'ኢሜይል ወይም የይለፍ ቃል ትክክል አይደለም።';
-    }
     }
 }
 ?>
@@ -108,6 +121,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <label for="password">የይለፍ ቃል</label>
         <input id="password" type="password" name="password" required>
+
+        <?php if ($recaptchaSiteKey !== ''): ?>
+            <div style="margin-top: 14px;">
+                <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+                <div class="g-recaptcha" data-sitekey="<?php echo safe($recaptchaSiteKey); ?>"></div>
+            </div>
+        <?php endif; ?>
 
         <button class="button" type="submit">ግባ</button>
     </form>

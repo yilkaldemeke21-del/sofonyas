@@ -54,14 +54,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['resend_email'])) {
             $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
             $verifyUrl = $scheme . '://' . $host . '/verify_email.php?token=' . urlencode($verificationToken);
 
-            sendAppEmail(
+            $mailSent = sendAppEmail(
                 $emailToResend,
                 'Verify your email',
                 '<p>Hello ' . safe($student['name']) . ',</p>'
                 . '<p>Please verify your email address by clicking the link below.</p>'
                 . '<p><a href="' . safe($verifyUrl) . '">Verify Email</a></p>'
             );
-            $success = 'A new verification email has been sent.';
+            if ($mailSent) {
+                $success = 'A new verification email has been sent.';
+            } else {
+                $success = 'A verification request was created, but email delivery is not configured. You can still use the verification link shown in the server log or contact the administrator.';
+            }
         } else {
             $errors[] = 'No account was found for that email.';
         }

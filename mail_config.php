@@ -82,8 +82,9 @@ if (!function_exists('sendAppEmail')) {
             return false;
         }
 
-        if ($host === '' && empty($username) && empty($password)) {
-            error_log('sendAppEmail: no SMTP settings found. Set SMTP_HOST, SMTP_USERNAME, and SMTP_PASSWORD or add them to .env.');
+        if ($host === '' && ($username === '' || $password === '')) {
+            error_log('sendAppEmail: no SMTP settings found for ' . $to . '. Set SMTP_HOST, SMTP_USERNAME, and SMTP_PASSWORD or add them to .env.');
+            return false;
         }
 
         $mail = new PHPMailer(true);

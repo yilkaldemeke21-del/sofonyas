@@ -320,26 +320,64 @@ if (empty($notifications)) {
         .live-pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 999px; background: linear-gradient(135deg, rgba(37,99,235,0.12), rgba(124,58,237,0.12)); color: #1e3a8a; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; }
         .live-pill span.dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 0 rgba(34,197,94,0.35); animation: pulse 1.8s infinite; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(34,197,94,0.35); } 70% { box-shadow: 0 0 0 10px rgba(34,197,94,0); } 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); } }
+        :root {
+            --page-bg: #f7f9fc;
+            --surface: #ffffff;
+            --surface-2: #f8fbff;
+            --surface-3: #f8fafc;
+            --text: #0f172a;
+            --muted: #475569;
+            --border: #e5e7eb;
+            --primary: #2563eb;
+            --primary-2: #4f46e5;
+            --shadow: rgba(148,163,184,0.12);
+        }
+        body {
+            background: var(--page-bg);
+            color: var(--text);
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+        body[data-theme="dark"] {
+            --page-bg: #0f172a;
+            --surface: #111827;
+            --surface-2: #0b1220;
+            --surface-3: #0f172a;
+            --text: #e5eefb;
+            --muted: #94a3b8;
+            --border: #1f2937;
+            --primary: #8b5cf6;
+            --primary-2: #6d28d9;
+            --shadow: rgba(15,23,42,0.45);
+        }
         .button { padding: 10px 14px; background: linear-gradient(135deg,#2563eb,#4f46e5); color: white; border: none; border-radius: 10px; text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 10px 18px rgba(37,99,235,0.20); transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease; }
         .button:hover { transform: translateY(-1px); box-shadow: 0 14px 24px rgba(37,99,235,0.28); }
         .button.secondary { background: linear-gradient(135deg,#111827,#1f2937); }
+        .theme-toggle {
+            background: linear-gradient(135deg, rgba(37,99,235,0.12), rgba(124,58,237,0.12));
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            padding: 10px 14px;
+            cursor: pointer;
+            font-weight: 700;
+        }
         .quick-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
         .account-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 12px; }
         .account-actions .button { min-width: 150px; }
         .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
-        .card { padding: 18px; border-radius: 18px; background: linear-gradient(145deg,#ffffff,#f8fbff); border: 1px solid #e5e7eb; box-shadow: 0 8px 18px rgba(148,163,184,0.12); transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; }
+        .card { padding: 18px; border-radius: 18px; background: linear-gradient(145deg, var(--surface), var(--surface-2)); border: 1px solid var(--border); box-shadow: 0 8px 18px var(--shadow); transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; }
         .card:hover { transform: translateY(-2px); border-color: rgba(37,99,235,0.35); box-shadow: 0 14px 28px rgba(37,99,235,0.14); }
-        .card h2 { margin: 0 0 8px; font-size: 15px; color: #475569; font-weight: 700; }
-        .card p { font-size: 17px; font-weight: 800; margin: 0; color: #1d4ed8; }
+        .card h2 { margin: 0 0 8px; font-size: 15px; color: var(--muted); font-weight: 700; }
+        .card p { font-size: 17px; font-weight: 800; margin: 0; color: var(--primary); }
         .section-title { font-size: 20px; color: #ca1484; margin: 0 0 6px; font-weight: 800; }
         .section-sub { color: #475569; margin-bottom: 12px; font-size: 14px; line-height: 1.55; }
         .grid-2, .grid-3 { display: grid; gap: 18px; margin-bottom: 24px; }
         .grid-2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
         .grid-3 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
-        .course-card, .mini-card { background: linear-gradient(135deg,#ffffff,#f8fbff); border: 1px solid #e5e7eb; border-radius: 14px; padding: 14px; }
+        .course-card, .mini-card { background: linear-gradient(135deg, var(--surface), var(--surface-3)); border: 1px solid var(--border); border-radius: 14px; padding: 14px; color: var(--text); }
         .course-card img { width: 100%; border-radius: 50px; height: 410px; object-fit: cover; background: linear-gradient(135deg,#dbeafe,#c4b5fd); }
-        .course-card h3, .mini-card h3 { font-size: 20px; color: #1b4d98; margin: 10px 0 6px; font-weight: 800; line-height: 1.35; }
-        .muted { color: #475569; font-size: 16px; line-height: 1.35; font-weight: 500; }
+        .course-card h3, .mini-card h3 { font-size: 20px; color: var(--text); margin: 10px 0 6px; font-weight: 800; line-height: 1.35; }
+        .muted { color: var(--muted); font-size: 16px; line-height: 1.35; font-weight: 500; }
         .rich-content h1, .rich-content h2, .rich-content h3 { font-size: 16px; line-height: 1.35; margin: 0.35em 0; }
         .rich-content ul, .rich-content ol { padding-left: 18px; margin: 8px 0 10px; }
         .rich-content li { margin-bottom: 6px; }
@@ -378,6 +416,7 @@ if (empty($notifications)) {
             <p>የኢሜይልዎ: <?php echo safe($student['email']); ?> • በአሁኑ ጊዜ ኮርሶችዎን ቀጥለው እና እድገትዎን ተመልከቱ።</p>
         </div>
         <div class="quick-actions">
+            <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle theme">🌙 Dark</button>
             <a class="button" href="sofonyas%20(2).html">መጀመሪያ</a>
             <a class="button" href="tutorial.php">ኮርሶች</a>
             <a class="button" href="live_class.php">Live Class</a>
@@ -411,10 +450,14 @@ if (empty($notifications)) {
                         <p class="muted"><strong>Time:</strong> <?php echo !empty($session['session_date']) ? safe(date('D, M d Y H:i', strtotime($session['session_date']))) : 'Time not set'; ?></p>
                         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
                             <?php if (!empty($session['stream_url'])): ?>
-                                <a class="button" href="<?php echo safe($session['stream_url']); ?>" target="_blank" rel="noopener">Join Live Stream</a>
+                                <a class="button" href="<?php echo safe($session['stream_url']); ?>" target="_blank" rel="noopener">
+                                    <?php echo safe((strpos(strtolower((string)$session['stream_url']), 'meet.google.com') !== false || strpos(strtolower((string)$session['stream_url']), 'google.com/meet') !== false) ? 'Join Google Meet' : (strpos(strtolower((string)$session['stream_url']), 'zoom') !== false ? 'Join Zoom' : 'Open Stream Link')); ?>
+                                </a>
                             <?php endif; ?>
                             <?php if (!empty($session['room_url'])): ?>
-                                <a class="button secondary" href="<?php echo safe($session['room_url']); ?>" target="_blank" rel="noopener">Join Virtual Room</a>
+                                <a class="button secondary" href="<?php echo safe($session['room_url']); ?>" target="_blank" rel="noopener">
+                                    <?php echo safe((strpos(strtolower((string)$session['room_url']), 'meet.google.com') !== false || strpos(strtolower((string)$session['room_url']), 'google.com/meet') !== false) ? 'Join Google Meet' : (strpos(strtolower((string)$session['room_url']), 'zoom') !== false ? 'Join Zoom' : 'Open Meeting Link')); ?>
+                                </a>
                             <?php endif; ?>
                             <?php if (empty($session['stream_url']) && empty($session['room_url'])): ?>
                                 <span class="pill warning">No link yet</span>
@@ -701,5 +744,33 @@ if (empty($notifications)) {
     setInterval(updateClock, 1000);
   })();
 </script>
+    <script>
+        (function () {
+            const storageKey = 'sofnyas-theme';
+            const toggle = document.getElementById('themeToggle');
+            const applyTheme = (theme) => {
+                document.body.setAttribute('data-theme', theme);
+                if (toggle) {
+                    toggle.textContent = theme === 'dark' ? '☀️ Light' : '🌙 Dark';
+                }
+            };
+            const savedTheme = localStorage.getItem(storageKey);
+            if (savedTheme === 'dark' || savedTheme === 'light') {
+                applyTheme(savedTheme);
+            } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                applyTheme('dark');
+            } else {
+                applyTheme('light');
+            }
+            if (toggle) {
+                toggle.addEventListener('click', () => {
+                    const currentTheme = document.body.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+                    const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                    applyTheme(nextTheme);
+                    localStorage.setItem(storageKey, nextTheme);
+                });
+            }
+        })();
+    </script>
 </body>
 </html>

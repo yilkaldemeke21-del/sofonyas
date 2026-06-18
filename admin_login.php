@@ -10,41 +10,54 @@ if (isset($_SESSION['admin_id'])) {
 
 $error = '';
 $csrfToken = csrfToken();
+$recaptchaSiteKey = getenv('RECAPTCHA_SITE_KEY') ?: '';
+$recaptchaSecret = getenv('RECAPTCHA_SECRET_KEY') ?: '';
+$maxAttempts = 5;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
         $error = 'ደህንነት ተሰርዟል። እባክዎ ገጹን እንደገና ይጫኑ።';
     } else {
-    $username = trim($_POST['username'] ?? '');
-    $password = $_POST['password'] ?? '';
+        $username = trim($_POST['username'] ?? '');
+        $password = $_POST['password'] ?? '';
+        $captchaResponse = $_POST['g-recaptcha-response'] ?? '';
 
-    if ($username !== '' && $password !== '') {
-        $stmt = $pdo->prepare('SELECT * FROM admin_users WHERE username = :username');
-        $stmt->execute([':username' => $username]);
-        $admin = $stmt->fetch();
-
-        if ($admin && password_verify($password, $admin['password_hash'])) {
-            session_regenerate_id(true);
-            $role = isset($admin['role']) && $admin['role'] !== '' ? $admin['role'] : 'Admin';
-            $_SESSION['admin_id'] = $admin['id'];
-            $_SESSION['admin_username'] = $admin['username'];
-            $_SESSION['user_role'] = $role;
-            $_SESSION['is_admin'] = ($role === 'Admin');
-            $_SESSION['is_instructor'] = ($role === 'Instructor');
-
-            if ($role === 'Instructor') {
-                $instructorRoute = file_exists(__DIR__ . '/instructor_dashboard.php') ? 'instructor_dashboard.php' : 'instractor_dashboard.php';
-                header('Location: ' . $instructorRoute);
+        if ($username !== '' && $password !== '') {
+            $attemptKey = 'admin_login:' . strtolower($username) . ':' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+            if (loginAttemptWindowCount($pdo, $attemptKey) >= $maxAttempts) {
+                $error = 'ብዙ የመግቢያ ሙከራዎች ተደርገዋል። እባክዎ ከጥቂት ደቂቃዎች በኋላ እንደገና ይሞክሩ።';
+            } elseif ($recaptchaSiteKey !== '' && $recaptchaSecret !== '' && !verifyCaptchaResponse($captchaResponse, $recaptchaSecret)) {
+                $error = 'የማንኛውም ደህንነት ምልክት አልተሳካም። እባክዎ ዳግም ይሞክሩ።';
             } else {
-                header('Location: admin_dashboard.php');
-            }
-            exit;
-        }
+                $stmt = $pdo->prepare('SELECT * FROM admin_users WHERE username = :username');
+                $stmt->execute([':username' => $username]);
+                $admin = $stmt->fetch();
 
-        $error = 'አገልግሎት ስም ወይም ይለፍ ቃል ትክክል አይደለም።';
-    } else {
-        $error = 'እባክዎ ሁለቱንም መስኮች ይሙሉ።';
-    }
+                if ($admin && password_verify($password, $admin['password_hash'])) {
+                    clearLoginAttempts($pdo, $attemptKey);
+                    session_regenerate_id(true);
+                    $role = isset($admin['role']) && $admin['role'] !== '' ? $admin['role'] : 'Admin';
+                    $_SESSION['admin_id'] = $admin['id'];
+                    $_SESSION['admin_username'] = $admin['username'];
+                    $_SESSION['user_role'] = $role;
+                    $_SESSION['is_admin'] = ($role === 'Admin');
+                    $_SESSION['is_instructor'] = ($role === 'Instructor');
+
+                    if ($role === 'Instructor') {
+                        $instructorRoute = file_exists(__DIR__ . '/instructor_dashboard.php') ? 'instructor_dashboard.php' : 'instractor_dashboard.php';
+                        header('Location: ' . $instructorRoute);
+                    } else {
+                        header('Location: admin_dashboard.php');
+                    }
+                    exit;
+                }
+
+                recordLoginAttempt($pdo, $attemptKey);
+                $error = 'አገልግሎት ስም ወይም ይለፍ ቃል ትክክል አይደለም።';
+            }
+        } else {
+            $error = 'እባክዎ ሁለቱንም መስኮች ይሙሉ።';
+        }
     }
 }
 ?>
@@ -85,6 +98,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <label for="password">ይለፍ ቃል</label>
             <input type="password" id="password" name="password" required>
         </div>
+        <?php if ($recaptchaSiteKey !== ''): ?>
+            <div class="form-group">
+                <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+                <div class="g-recaptcha" data-sitekey="<?php echo safe($recaptchaSiteKey); ?>"></div>
+            </div>
+        <?php endif; ?>
         
         <button type="submit">ግባ</button>
     </form>

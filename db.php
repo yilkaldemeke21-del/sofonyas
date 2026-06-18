@@ -10,12 +10,19 @@ $options = [
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
     PDO::ATTR_EMULATE_PREPARES => false,
+    PDO::ATTR_TIMEOUT => 5,
 ];
 
 $pdo = null;
 $lastError = null;
 
-$hosts = array_unique(array_filter([$host, '127.0.0.1', 'localhost']));
+$hosts = array_values(array_unique(array_filter([
+    $host,
+    '127.0.0.1',
+    'localhost',
+], static function ($value): bool {
+    return $value !== null && $value !== '';
+})));
 
 foreach ($hosts as $candidateHost) {
     $dsn = "mysql:host=$candidateHost;port=$port;dbname=$db;charset=$charset";
@@ -25,6 +32,7 @@ foreach ($hosts as $candidateHost) {
         break;
     } catch (PDOException $e) {
         $lastError = $e;
+        error_log('DB connection attempt failed for host ' . $candidateHost . ': ' . $e->getMessage());
     }
 }
 
@@ -221,6 +229,69 @@ function ensureNotificationSupportTables(PDO $pdo): void
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 }
 
+function ensureSecurityTables(PDO $pdo): void
+{
+    $pdo->exec('CREATE TABLE IF NOT EXISTS login_attempts (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        key_identifier VARCHAR(255) NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_login_attempts_key_time (key_identifier, created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+}
+
+function loginAttemptWindowCount(PDO $pdo, string $key, int $windowSeconds = 900): int
+{
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM login_attempts WHERE key_identifier = :key_identifier AND created_at >= DATE_SUB(NOW(), INTERVAL :window SECOND)');
+    $stmt->execute([
+        ':key_identifier' => $key,
+        ':window' => $windowSeconds,
+    ]);
+    return (int)$stmt->fetchColumn();
+}
+
+function recordLoginAttempt(PDO $pdo, string $key): void
+{
+    $stmt = $pdo->prepare('INSERT INTO login_attempts (key_identifier, created_at) VALUES (:key_identifier, NOW())');
+    $stmt->execute([':key_identifier' => $key]);
+}
+
+function clearLoginAttempts(PDO $pdo, string $key): void
+{
+    $stmt = $pdo->prepare('DELETE FROM login_attempts WHERE key_identifier = :key_identifier');
+    $stmt->execute([':key_identifier' => $key]);
+}
+
+function verifyCaptchaResponse(string $response, string $secret): bool
+{
+    if ($response === '' || $secret === '') {
+        return false;
+    }
+
+    $url = 'https://www.google.com/recaptcha/api/siteverify';
+    $postData = http_build_query([
+        'secret' => $secret,
+        'response' => $response,
+        'remoteip' => $_SERVER['REMOTE_ADDR'] ?? ''
+    ]);
+
+    $context = stream_context_create([
+        'http' => [
+            'method' => 'POST',
+            'header' => "Content-Type: application/x-www-form-urlencoded\r\n",
+            'content' => $postData,
+            'timeout' => 8,
+        ]
+    ]);
+
+    $result = @file_get_contents($url, false, $context);
+    if ($result === false) {
+        return false;
+    }
+
+    $payload = json_decode($result, true);
+    return is_array($payload) && !empty($payload['success']);
+}
+
 function ensureStudentEmailVerificationColumns(PDO $pdo): void
 {
     $tables = [
@@ -271,6 +342,12 @@ try {
     ensureNotificationSupportTables($pdo);
 } catch (Throwable $e) {
     error_log('Notification support schema validation failed: ' . $e->getMessage());
+}
+
+try {
+    ensureSecurityTables($pdo);
+} catch (Throwable $e) {
+    error_log('Security schema validation failed: ' . $e->getMessage());
 }
 
 try {

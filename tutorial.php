@@ -78,9 +78,16 @@ foreach ($lessonStmt->fetchAll() as $lesson) {
     .video-card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px; background: #fff; margin-top: 12px; }
     .video-frame { width: 100%; border-radius: 10px; background: #0f172a; }
     .video-meta { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    .video-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .video-actions .btn { margin-right: 0; padding: 8px 12px; font-size: 13px; }
     .pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; background: #eff6ff; color: #1d4ed8; font-size: 12px; font-weight: 700; }
     .progress-track { width: 100%; height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin-top: 8px; }
     .progress-fill { height: 100%; background: linear-gradient(90deg,#2563eb,#38bdf8); border-radius: 999px; width: 0%; }
+    .history-panel { margin-top: 12px; padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; }
+    .history-panel h5 { margin: 0 0 8px; font-size: 14px; color: #0f172a; }
+    .history-list { display: flex; flex-direction: column; gap: 8px; }
+    .history-item { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 10px; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; }
+    .history-item small { color: #475569; }
     @media (max-width: 980px) { nav { padding: 10px 12px; } nav a { display: inline-block; margin: 4px 10px 4px 0; } .wrap { padding: 14px; } .grid { grid-template-columns: 1fr; } }
     @media (max-width: 576px) { .btn { display: block; width: 100%; margin: 6px 0; text-align: center; } .card { padding: 14px; } }
   </style>
@@ -120,7 +127,7 @@ foreach ($lessonStmt->fetchAll() as $lesson) {
           <div style="border:1px solid #e5e7eb; border-radius:10px; padding:14px; background:#f8fafc;">
             <h3 style="margin-top:0;"><?php echo htmlspecialchars($course['course_name']); ?></h3>
             <?php if (!empty($course['tutorial_video'])): ?>
-              <div class="video-card" data-course-id="<?php echo (int)$course['id']; ?>">
+              <div class="video-card" data-course-id="<?php echo (int)$course['id']; ?>" data-course-title="<?php echo htmlspecialchars($course['course_name']); ?>" data-video-url="<?php echo htmlspecialchars($course['tutorial_video']); ?>">
                 <?php if (preg_match('/youtube\.com|youtu\.be/i', (string)$course['tutorial_video'])): ?>
                   <iframe class="video-frame" height="220" src="<?php echo htmlspecialchars($course['tutorial_video']); ?>" title="Lesson video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
                 <?php else: ?>
@@ -130,11 +137,21 @@ foreach ($lessonStmt->fetchAll() as $lesson) {
                   </video>
                 <?php endif; ?>
                 <div class="video-meta">
+                  <div class="video-actions">
+                    <button class="btn" type="button" data-play-btn>▶ Play</button>
+                    <button class="btn" type="button" data-resume-btn>↻ Resume</button>
+                  </div>
                   <span class="pill" data-status-label>Start video</span>
-                  <span class="pill" data-completion-label>Completion 0%</span>
                 </div>
                 <div class="progress-track"><div class="progress-fill" data-progress-fill></div></div>
-                <p class="muted" style="margin-top:8px;">Watch this lesson and the system will remember your last position and completion % for this course.</p>
+                <div class="video-meta" style="margin-top:8px;">
+                  <span class="pill" data-completion-label>Completion 0%</span>
+                </div>
+                <div class="history-panel" data-history-panel>
+                  <h5>Watch History</h5>
+                  <div class="history-list" data-history-list></div>
+                </div>
+                <p class="muted" style="margin-top:8px;">Play, resume, or revisit your last watched position for this lesson.</p>
               </div>
             <?php endif; ?>
             <?php if (!empty($course['thumbnail'])): ?>
@@ -231,28 +248,85 @@ foreach ($lessonStmt->fetchAll() as $lesson) {
 <script>
   (function () {
     const prefix = 'lms_video_progress_';
+    const historyKey = 'lms_watch_history';
+
+    function formatTime(seconds) {
+      if (!Number.isFinite(seconds) || seconds <= 0) return '0:00';
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return mins + ':' + (secs < 10 ? '0' + secs : secs);
+    }
+
+    function saveHistory(card, saved) {
+      const history = JSON.parse(localStorage.getItem(historyKey) || '[]');
+      const courseId = card.getAttribute('data-course-id');
+      const courseTitle = card.getAttribute('data-course-title') || 'Lesson';
+      const videoUrl = card.getAttribute('data-video-url') || '';
+      const entry = {
+        courseId: courseId,
+        title: courseTitle,
+        videoUrl: videoUrl,
+        percent: saved.percent || 0,
+        currentTime: saved.currentTime || 0,
+        updatedAt: Date.now()
+      };
+      const filtered = history.filter(function (item) { return item.courseId !== courseId; });
+      filtered.unshift(entry);
+      localStorage.setItem(historyKey, JSON.stringify(filtered.slice(0, 6)));
+    }
+
+    function updateHistory(card) {
+      const list = card.querySelector('[data-history-list]');
+      if (!list) return;
+      const history = JSON.parse(localStorage.getItem(historyKey) || '[]');
+      const courseId = card.getAttribute('data-course-id');
+      const relevant = history.filter(function (item) { return item.courseId === courseId; });
+      if (!relevant.length) {
+        list.innerHTML = '<small class="muted">No watch history yet.</small>';
+        return;
+      }
+      list.innerHTML = '';
+      relevant.slice(0, 3).forEach(function (item) {
+        const row = document.createElement('div');
+        row.className = 'history-item';
+        row.innerHTML = '<div><strong>' + item.percent + '%</strong><br><small>' + formatTime(item.currentTime) + ' watched</small></div><a class="btn" href="' + (item.videoUrl || '#') + '" target="_blank" rel="noopener">Open</a>';
+        list.appendChild(row);
+      });
+    }
 
     function updateUi(card, saved) {
       const label = card.querySelector('[data-status-label]');
       const completion = card.querySelector('[data-completion-label]');
       const fill = card.querySelector('[data-progress-fill]');
+      const playBtn = card.querySelector('[data-play-btn]');
+      const resumeBtn = card.querySelector('[data-resume-btn]');
       const percent = Math.min(100, Math.max(0, Number(saved && saved.percent ? saved.percent : 0) || 0));
       if (fill) fill.style.width = percent + '%';
       if (completion) completion.textContent = 'Completion ' + percent + '%';
       if (label) label.textContent = percent >= 95 ? 'Completed' : (saved && saved.currentTime ? 'Resume video' : 'Start video');
+      if (playBtn) playBtn.disabled = false;
+      if (resumeBtn) resumeBtn.style.display = saved && saved.currentTime ? 'inline-block' : 'none';
     }
 
     document.querySelectorAll('.video-card').forEach(function (card) {
       const courseId = card.getAttribute('data-course-id');
       const storageKey = prefix + courseId;
       const video = card.querySelector('video');
-      const saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
+      const iframe = card.querySelector('iframe');
+      const playBtn = card.querySelector('[data-play-btn]');
+      const resumeBtn = card.querySelector('[data-resume-btn]');
+      let saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
+      updateUi(card, saved);
+      updateHistory(card);
 
       function saveProgress() {
         if (!video || !isFinite(video.duration) || !video.duration) return;
         const percent = Math.min(100, Math.max(0, Math.round((video.currentTime / video.duration) * 100)));
-        localStorage.setItem(storageKey, JSON.stringify({ currentTime: video.currentTime, percent: percent, updatedAt: Date.now(), completed: percent >= 95 }));
-        updateUi(card, { percent: percent, currentTime: video.currentTime });
+        const progress = { currentTime: video.currentTime, percent: percent, updatedAt: Date.now(), completed: percent >= 95 };
+        localStorage.setItem(storageKey, JSON.stringify(progress));
+        saveHistory(card, progress);
+        updateUi(card, progress);
+        updateHistory(card);
       }
 
       if (video) {
@@ -270,12 +344,37 @@ foreach ($lessonStmt->fetchAll() as $lesson) {
 
         video.addEventListener('ended', function () {
           const percent = 100;
-          localStorage.setItem(storageKey, JSON.stringify({ currentTime: video.duration || 0, percent: percent, updatedAt: Date.now(), completed: true }));
-          updateUi(card, { percent: percent, currentTime: video.duration || 0 });
+          const progress = { currentTime: video.duration || 0, percent: percent, updatedAt: Date.now(), completed: true };
+          localStorage.setItem(storageKey, JSON.stringify(progress));
+          saveHistory(card, progress);
+          updateUi(card, progress);
+          updateHistory(card);
         });
       }
 
-      updateUi(card, saved);
+      if (playBtn) {
+        playBtn.addEventListener('click', function () {
+          if (video) {
+            if (video.currentTime > 0 && video.duration) {
+              video.currentTime = 0;
+            }
+            video.play().catch(function () {});
+          } else if (iframe) {
+            window.open(iframe.getAttribute('src') || card.getAttribute('data-video-url'), '_blank', 'noopener');
+          }
+        });
+      }
+
+      if (resumeBtn) {
+        resumeBtn.addEventListener('click', function () {
+          if (video && saved && saved.currentTime) {
+            video.currentTime = saved.currentTime;
+            video.play().catch(function () {});
+          } else if (iframe) {
+            window.open(iframe.getAttribute('src') || card.getAttribute('data-video-url'), '_blank', 'noopener');
+          }
+        });
+      }
     });
   })();
 </script>

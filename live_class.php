@@ -29,6 +29,27 @@ if ($role === 'student') {
 $error = '';
 $success = '';
 
+function isGoogleMeetUrl(string $url): bool
+{
+    return preg_match('/(meet\.google\.com|google\.com\/meet)/i', $url) === 1;
+}
+
+function isZoomUrl(string $url): bool
+{
+    return preg_match('/(zoom\.us|zoom\.com|\\bzoom\\b)/i', $url) === 1;
+}
+
+function labelForLink(string $url, string $fallback): string
+{
+    if (isGoogleMeetUrl($url)) {
+        return 'Google Meet';
+    }
+    if (isZoomUrl($url)) {
+        return 'Zoom';
+    }
+    return $fallback;
+}
+
 function ensureLiveClassTables(PDO $pdo): void
 {
     $pdo->exec('CREATE TABLE IF NOT EXISTS live_class_sessions (
@@ -173,7 +194,7 @@ if (!empty($sessions)) {
 <div class="wrap">
     <div class="card" style="margin-bottom: 18px; background: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%);">
         <h3 style="margin-top:0;">Welcome, <?php echo safe($user_name); ?></h3>
-        <p style="margin: 8px 0 0; color: #475569;">Join your live session, watch the YouTube stream, open the Zoom room, and use the Q&A panel for questions.</p>
+        <p style="margin: 8px 0 0; color: #475569;">Join your live session, watch the stream, open Zoom or Google Meet links, and use the Q&A panel for questions.</p>
         <p style="margin-top: 10px;">
             <a href="#live-session" class="btn">Join Live Class</a>
         </p>
@@ -212,9 +233,9 @@ if (!empty($sessions)) {
                 <label for="session_date">Session Date & Time</label>
                 <input id="session_date" name="session_date" type="datetime-local">
                 <label for="stream_url">YouTube / Stream URL</label>
-                <input id="stream_url" name="stream_url" placeholder="https://youtube.com/watch?v=...">
-                <label for="room_url">Zoom / Virtual Room URL</label>
-                <input id="room_url" name="room_url" placeholder="https://zoom.us/j/...">
+                <input id="stream_url" name="stream_url" placeholder="https://youtube.com/watch?v=... or https://meet.google.com/...">
+                <label for="room_url">Zoom / Google Meet Link</label>
+                <input id="room_url" name="room_url" placeholder="https://zoom.us/j/... or https://meet.google.com/...">
                 <p style="margin-top: 10px;"><button class="btn" type="submit">Save Session</button></p>
             </form>
         </div>
@@ -237,10 +258,14 @@ if (!empty($sessions)) {
                     <?php endif; ?>
                     <div class="session-actions">
                         <?php if (!empty($session['stream_url'])): ?>
-                            <a class="btn" href="<?php echo safe($session['stream_url']); ?>" target="_blank" rel="noopener">Join Live Stream</a>
+                            <a class="btn" href="<?php echo safe($session['stream_url']); ?>" target="_blank" rel="noopener">
+                                <?php echo safe(labelForLink((string)$session['stream_url'], 'Open Stream Link')); ?>
+                            </a>
                         <?php endif; ?>
                         <?php if (!empty($session['room_url'])): ?>
-                            <a class="btn secondary" href="<?php echo safe($session['room_url']); ?>" target="_blank" rel="noopener">Join Virtual Room</a>
+                            <a class="btn secondary" href="<?php echo safe($session['room_url']); ?>" target="_blank" rel="noopener">
+                                <?php echo safe(labelForLink((string)$session['room_url'], 'Open Meeting Link')); ?>
+                            </a>
                         <?php endif; ?>
                     </div>
 

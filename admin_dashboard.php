@@ -152,21 +152,65 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
     <title>አስተዳዳሪ ዳሽቦርድ</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
+        :root {
+            --bg: #f5f7fa;
+            --surface: #ffffff;
+            --surface-alt: #f1f5ff;
+            --surface-muted: #f8fafc;
+            --text: #333333;
+            --muted: #6b7280;
+            --border: #e5e7eb;
+            --primary: #667eea;
+            --primary-2: #764ba2;
+            --primary-text: #ffffff;
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; background: #f5f7fa; color: #333; }
-        .navbar { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        body {
+            font-family: Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+        body[data-theme="dark"] {
+            --bg: #0f172a;
+            --surface: #111827;
+            --surface-alt: #0b1220;
+            --surface-muted: #0f172a;
+            --text: #e5eefb;
+            --muted: #94a3b8;
+            --border: #1f2937;
+            --primary: #8b5cf6;
+            --primary-2: #6d28d9;
+            --primary-text: #eef2ff;
+        }
+        .navbar { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-2) 100%); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         .navbar h1 { font-size: 24px; }
         .navbar a { color: white; text-decoration: none; margin-left: 20px; padding: 8px 15px; background: rgba(255,255,255,0.1); border-radius: 5px; }
         .navbar a:hover { background: rgba(255,255,255,0.2); }
+        .theme-toggle {
+            background: rgba(255,255,255,0.12);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 999px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-weight: 700;
+            margin-left: 12px;
+        }
+        body[data-theme="dark"] .theme-toggle {
+            background: rgba(15, 23, 42, 0.7);
+            border-color: var(--border);
+            color: var(--text);
+        }
         .container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px; }
-        .stat-card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-left: 4px solid #667eea; }
-        .stat-card h3 { color: #666; font-size: 14px; margin-bottom: 10px; }
-        .stat-card .value { font-size: 32px; font-weight: bold; color: #667eea; }
-        .stat-card .meta { color: #777; font-size: 12px; margin-top: 8px; }
+        .stat-card { background: var(--surface); padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-left: 4px solid var(--primary); color: var(--text); }
+        .stat-card h3 { color: var(--muted); font-size: 14px; margin-bottom: 10px; }
+        .stat-card .value { font-size: 32px; font-weight: bold; color: var(--primary); }
+        .stat-card .meta { color: var(--muted); font-size: 12px; margin-top: 8px; }
         .analytics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .chart-card { background: white; padding: 18px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        .chart-card h3 { margin-bottom: 12px; color: #344054; font-size: 17px; }
+        .chart-card { background: var(--surface); padding: 18px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); color: var(--text); }
+        .chart-card h3 { margin-bottom: 12px; color: var(--text); font-size: 17px; }
         .chart-bars { display: flex; align-items: flex-end; gap: 10px; min-height: 160px; }
         .bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px; height: 160px; }
         .bar-track { height: 110px; width: 100%; display: flex; align-items: flex-end; justify-content: center; }
@@ -180,12 +224,12 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
         .progress-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #667eea 0%, #8b7cf6 100%); }
         .mini-badge { display: inline-block; padding: 4px 8px; border-radius: 999px; background: #eef2ff; color: #4f46e5; font-size: 11px; font-weight: 700; }
         .actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }
-        .action-btn { background: white; padding: 15px; border-radius: 8px; text-align: center; cursor: pointer; border: 2px solid #667eea; transition: all 0.3s; text-decoration: none; color: #667eea; font-weight: bold; }
-        .action-btn:hover { background: #667eea; color: white; }
-        .table-section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .action-btn { background: var(--surface); padding: 15px; border-radius: 8px; text-align: center; cursor: pointer; border: 2px solid var(--primary); transition: all 0.3s; text-decoration: none; color: var(--primary); font-weight: bold; }
+        .action-btn:hover { background: var(--primary); color: white; }
+        .table-section { background: var(--surface); padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); color: var(--text); }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background: #f1f5ff; font-weight: bold; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: var(--surface-alt); font-weight: bold; color: var(--text); }
         .badge { padding: 5px 10px; border-radius: 5px; font-size: 12px; }
         .paid { background: #d4f1d8; color: #1d6a2b; }
         .unpaid { background: #ffe6e6; color: #a41616; }
@@ -199,10 +243,7 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
     <h1>🎓 ቤተ ገብርኤል - ዳሽቦርድ</h1>
     <div>
         <span>እንኳን ደህና መጡ, <?php echo safe($_SESSION['admin_username']); ?>!</span>
-        <a href="admin_logout.php">ውጣ</a>
-    </div>
-</div>
-
+            <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle theme">🌙 Dark</button>
 <div class="container">
     <h2 style="margin-bottom: 20px;">የዲያቆን ሶፎንያስ ዌቭሳይት ደመቀ(የቤተ ገብርኤል አጠቃላይ መረጃ) </h2>
     
@@ -516,5 +557,33 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
     </div>
 </div>
 
+    <script>
+        (function () {
+            const storageKey = 'sofnyas-theme';
+            const toggle = document.getElementById('themeToggle');
+            const applyTheme = (theme) => {
+                document.body.setAttribute('data-theme', theme);
+                if (toggle) {
+                    toggle.textContent = theme === 'dark' ? '☀️ Light' : '🌙 Dark';
+                }
+            };
+            const savedTheme = localStorage.getItem(storageKey);
+            if (savedTheme === 'dark' || savedTheme === 'light') {
+                applyTheme(savedTheme);
+            } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                applyTheme('dark');
+            } else {
+                applyTheme('light');
+            }
+            if (toggle) {
+                toggle.addEventListener('click', () => {
+                    const currentTheme = document.body.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+                    const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                    applyTheme(nextTheme);
+                    localStorage.setItem(storageKey, nextTheme);
+                });
+            }
+        })();
+    </script>
 </body>
 </html>

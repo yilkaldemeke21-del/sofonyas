@@ -5,6 +5,8 @@ require_once __DIR__ . '/mail_config.php';
 
 $errors = [];
 $csrfToken = csrfToken();
+$recaptchaSiteKey = getenv('RECAPTCHA_SITE_KEY') ?: '';
+$recaptchaSecret = getenv('RECAPTCHA_SECRET_KEY') ?: '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
@@ -16,6 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $password = $_POST['password'] ?? '';
         $course = trim($_POST['course'] ?? 'ነገረ ሃይማኖት');
         $amount = trim($_POST['amount'] ?? '0');
+        $captchaResponse = $_POST['g-recaptcha-response'] ?? '';
 
         if ($name === '') {
             $errors[] = 'ስም ያስገቡ።';
@@ -31,6 +34,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         if (!is_numeric($amount) || (float)$amount < 0) {
             $errors[] = 'እባክዎ ትክክለኛ የክፍያ መጠን ያስገቡ።';
+        }
+        if ($recaptchaSiteKey !== '' && $recaptchaSecret !== '' && !verifyCaptchaResponse($captchaResponse, $recaptchaSecret)) {
+            $errors[] = 'የማንኛውም ደህንነት ምልክት አልተሳካም። እባክዎ ዳግም ይሞክሩ።';
         }
 
         if (empty($errors)) {
@@ -90,14 +96,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     . '<strong>Amount:</strong> ' . safe($amount) . '</p>'
                     . '<p>Please verify your email here: <a href="' . safe($verifyUrl) . '">Verify Email</a></p>'
                     . '<p>Thank you for choosing Sofnyas.</p>';
-                sendAppEmail($email, $welcomeSubject, $welcomeMessage);
+                $mailSent = sendAppEmail($email, $welcomeSubject, $welcomeMessage);
+                if (!$mailSent) {
+                    error_log('Registration email could not be sent for ' . $email);
+                }
 
                 session_regenerate_id(true);
                 $_SESSION['student_id'] = $studentId;
                 $_SESSION['student_email'] = $email;
                 $_SESSION['student_name'] = $name;
 
-                header('Location: student_dashboard.php');
+                header('Location: verify_email.php?token=' . urlencode($verificationToken));
                 exit;
             } catch (PDOException $e) {
                 $errors[] = 'ምዝገባው አልተሳካም። እባክዎ እንደገና ይሞክሩ።';
@@ -124,18 +133,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
 <div class="card">
-    <h1>የምዝገባ ውጤት</h1>
+    <h1>የምዝገባ ገጽ</h1>
     <?php if (!empty($errors)): ?>
         <div class="message error">
             <ul>
                 <?php foreach ($errors as $error): ?>
-                    <li><?php echo $error; ?></li>
+                    <li><?php echo safe($error); ?></li>
                 <?php endforeach; ?>
             </ul>
         </div>
     <?php endif; ?>
-    <p>እባክዎ የምዝገባ ቅጽዎን ይሙሉ እና ወደ ዳሽቦርድ ይግቡ።</p>
-    <a class="button" href="dashboard.php">ዳሽቦርድ እይ</a>
+
+    <form method="post">
+        <input type="hidden" name="csrf_token" value="<?php echo safe($csrfToken); ?>">
+
+        <p>
+            <label for="name">ስም</label>
+            <input id="name" name="name" value="<?php echo safe($name); ?>" required>
+        </p>
+
+        <p>
+            <label for="email">ኢሜይል</label>
+            <input id="email" type="email" name="email" value="<?php echo safe($email); ?>" required>
+        </p>
+
+        <p>
+            <label for="student_id">የተማሪ መለያ</label>
+            <input id="student_id" name="student_id" value="<?php echo safe($studentId); ?>" required>
+        </p>
+
+        <p>
+            <label for="password">የይለፍ ቃል</label>
+            <input id="password" type="password" name="password" required>
+        </p>
+
+        <p>
+            <label for="course">ኮርስ</label>
+            <input id="course" name="course" value="<?php echo safe($course); ?>" required>
+        </p>
+
+        <p>
+            <label for="amount">ክፍያ መጠን</label>
+            <input id="amount" type="number" step="0.01" name="amount" value="<?php echo safe($amount); ?>" required>
+        </p>
+
+        <?php if ($recaptchaSiteKey !== ''): ?>
+            <div style="margin: 16px 0;">
+                <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+                <div class="g-recaptcha" data-sitekey="<?php echo safe($recaptchaSiteKey); ?>"></div>
+            </div>
+        <?php endif; ?>
+
+        <button class="button" type="submit">መመዝገብ ጨርስ</button>
+    </form>
+
+    <p style="margin-top: 16px;">
+        <a class="button" href="dashboard.php">ዳሽቦርድ እይ</a>
+    </p>
 </div>
 </body>
 </html>
