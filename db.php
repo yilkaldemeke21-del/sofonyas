@@ -10,7 +10,7 @@ $options = [
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
     PDO::ATTR_EMULATE_PREPARES => false,
-    PDO::ATTR_TIMEOUT => 5,
+    PDO::ATTR_TIMEOUT => 2,
 ];
 
 $pdo = null;
@@ -36,9 +36,18 @@ foreach ($hosts as $candidateHost) {
     }
 }
 
+$dbConnectionError = '';
+
 if (!$pdo) {
-    error_log('DB connection failed: ' . $lastError->getMessage());
-    die('DB connection failed. Please start the MySQL service on port 3306 and confirm the database credentials. Details: ' . $lastError->getMessage());
+    $dbConnectionError = 'DB connection failed. Please start the MySQL service on port 3306 and confirm the database credentials.';
+    if ($lastError instanceof PDOException) {
+        $dbConnectionError .= ' Details: ' . $lastError->getMessage();
+    }
+    error_log($dbConnectionError);
+}
+
+if (!defined('DB_CONNECTION_ERROR')) {
+    define('DB_CONNECTION_ERROR', $dbConnectionError);
 }
 
 if (!function_exists('ensureCourseColumns')) {
@@ -79,10 +88,12 @@ if (!function_exists('ensureCourseColumns')) {
     }
 }
 
-try {
-    ensureCourseColumns($pdo);
-} catch (Throwable $e) {
-    error_log('Course schema validation failed: ' . $e->getMessage());
+if ($pdo instanceof PDO) {
+    try {
+        ensureCourseColumns($pdo);
+    } catch (Throwable $e) {
+        error_log('Course schema validation failed: ' . $e->getMessage());
+    }
 }
 
 function ensureUserRoleColumns(PDO $pdo): void
@@ -119,10 +130,12 @@ function ensureUserRoleColumns(PDO $pdo): void
     $pdo->exec("UPDATE students SET role = 'Student' WHERE role IS NULL OR role = ''");
 }
 
-try {
-    ensureUserRoleColumns($pdo);
-} catch (Throwable $e) {
-    error_log('User role schema validation failed: ' . $e->getMessage());
+if ($pdo instanceof PDO) {
+    try {
+        ensureUserRoleColumns($pdo);
+    } catch (Throwable $e) {
+        error_log('User role schema validation failed: ' . $e->getMessage());
+    }
 }
 
 function ensureCourseStructureTables(PDO $pdo): void
@@ -320,40 +333,42 @@ function ensureStudentEmailVerificationColumns(PDO $pdo): void
     }
 }
 
-try {
-    ensureCourseStructureTables($pdo);
-} catch (Throwable $e) {
-    error_log('Course structure schema validation failed: ' . $e->getMessage());
-}
+if ($pdo instanceof PDO) {
+    try {
+        ensureCourseStructureTables($pdo);
+    } catch (Throwable $e) {
+        error_log('Course structure schema validation failed: ' . $e->getMessage());
+    }
 
-try {
-    ensureLessonBookmarkTables($pdo);
-} catch (Throwable $e) {
-    error_log('Lesson bookmark schema validation failed: ' . $e->getMessage());
-}
+    try {
+        ensureLessonBookmarkTables($pdo);
+    } catch (Throwable $e) {
+        error_log('Lesson bookmark schema validation failed: ' . $e->getMessage());
+    }
 
-try {
-    ensureExamAccessTables($pdo);
-} catch (Throwable $e) {
-    error_log('Exam access schema validation failed: ' . $e->getMessage());
-}
+    try {
+        ensureExamAccessTables($pdo);
+    } catch (Throwable $e) {
+        error_log('Exam access schema validation failed: ' . $e->getMessage());
+    }
 
-try {
-    ensureNotificationSupportTables($pdo);
-} catch (Throwable $e) {
-    error_log('Notification support schema validation failed: ' . $e->getMessage());
-}
+    try {
+        ensureNotificationSupportTables($pdo);
+    } catch (Throwable $e) {
+        error_log('Notification support schema validation failed: ' . $e->getMessage());
+    }
 
-try {
-    ensureSecurityTables($pdo);
-} catch (Throwable $e) {
-    error_log('Security schema validation failed: ' . $e->getMessage());
-}
+    try {
+        ensureSecurityTables($pdo);
+    } catch (Throwable $e) {
+        error_log('Security schema validation failed: ' . $e->getMessage());
+    }
 
-try {
-    ensureStudentEmailVerificationColumns($pdo);
-} catch (Throwable $e) {
-    error_log('Email verification schema validation failed: ' . $e->getMessage());
+    try {
+        ensureStudentEmailVerificationColumns($pdo);
+    } catch (Throwable $e) {
+        error_log('Email verification schema validation failed: ' . $e->getMessage());
+    }
 }
 
 function cleanText($value): string {
@@ -373,8 +388,10 @@ function renderRichText($value): string {
     return sanitizeRichText($value);
 }
 
-function safe($value) {
-    return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+if (!function_exists('safe')) {
+    function safe($value): string {
+        return htmlspecialchars((string)($value ?? ''), ENT_QUOTES, 'UTF-8');
+    }
 }
 
 function csrfToken(): string

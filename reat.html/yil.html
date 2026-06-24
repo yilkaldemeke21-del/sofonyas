@@ -1,0 +1,86 @@
+import React, { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { motion } from "framer-motion";
+
+const coursesData = [
+  { id: 1, title: "Web Development", description: "HTML, CSS, JS basics" },
+  { id: 2, title: "React JS", description: "Build modern UI apps" },
+  { id: 3, title: "Python", description: "Learn Python from scratch" },
+  { id: 4, title: "Database", description: "SQL and DBMS" },
+];
+
+export default function App() {
+  const [search, setSearch] = useState("");
+  const [enrolled, setEnrolled] = useState([]);
+
+  const handleEnroll = (course) => {
+    if (!enrolled.includes(course.id)) {
+      setEnrolled([...enrolled, course.id]);
+    }
+  };
+
+  const filteredCourses = coursesData.filter((course) =>
+    course.title.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="p-6 bg-gray-100 min-h-screen">
+      <motion.h1
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-3xl font-bold mb-6 text-center"
+      >
+        Online Learning Platform
+      </motion.h1>
+
+      <div className="mb-6 max-w-md mx-auto">
+        <Input
+          placeholder="Search courses..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredCourses.map((course) => (
+          <motion.div
+            key={course.id}
+            whileHover={{ scale: 1.05 }}
+          >
+            <Card className="rounded-2xl shadow-lg">
+              <CardContent className="p-4">
+                <h2 className="text-xl font-semibold mb-2">{course.title}</h2>
+                <p className="text-gray-600 mb-4">{course.description}</p>
+                <Button
+                  onClick={() => handleEnroll(course)}
+                  className="w-full"
+                >
+                  {enrolled.includes(course.id)
+                    ? "Enrolled"
+                    : "Enroll"}
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ))}
+      </div>
+
+      <div className="mt-10">
+        <h2 className="text-2xl font-bold mb-4">My Courses</h2>
+        {enrolled.length === 0 ? (
+          <p>No courses enrolled yet.</p>
+        ) : (
+          <ul className="list-disc pl-6">
+            {coursesData
+              .filter((c) => enrolled.includes(c.id))
+              .map((c) => (
+                <li key={c.id}>{c.title}</li>
+              ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}

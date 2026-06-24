@@ -11,6 +11,9 @@ $studentId = $_SESSION['student_id'];
 $stmt = $pdo->prepare('SELECT * FROM students WHERE student_id = :student_id');
 $stmt->execute([':student_id' => $studentId]);
 $student = $stmt->fetch();
+$student = is_array($student) ? $student : [];
+$studentName = $student['name'] ?? $student['student_name'] ?? 'ተማሪ';
+$studentEmail = $student['email'] ?? '';
 
 try {
     $pdo->exec('CREATE TABLE IF NOT EXISTS certificates (
@@ -218,8 +221,9 @@ try {
 } catch (PDOException $e) {}
 
 // Get student-specific notifications
+$studentEmail = $student['email'] ?? '';
 $stmt = $pdo->prepare('SELECT * FROM email_notifications WHERE recipient_email = :email ORDER BY sent_at DESC LIMIT 5');
-$stmt->execute([':email' => $student['email']]);
+$stmt->execute([':email' => $studentEmail]);
 $student_email_notifications = $stmt->fetchAll();
 
 $stmt = $pdo->query('SELECT cu.*, c.course_name FROM course_updates cu JOIN courses c ON cu.course_id = c.id ORDER BY cu.created_at DESC LIMIT 5');
@@ -275,8 +279,9 @@ try {
 } catch (PDOException $e) {}
 
 // Get student-specific notifications
+$studentEmail = $student['email'] ?? '';
 $stmt = $pdo->prepare('SELECT * FROM email_notifications WHERE recipient_email = :email ORDER BY sent_at DESC LIMIT 5');
-$stmt->execute([':email' => $student['email']]);
+$stmt->execute([':email' => $studentEmail]);
 $student_email_notifications = $stmt->fetchAll();
 
 $stmt = $pdo->query('SELECT cu.*, c.course_name FROM course_updates cu JOIN courses c ON cu.course_id = c.id ORDER BY cu.created_at DESC LIMIT 5');
@@ -375,7 +380,7 @@ if (empty($notifications)) {
         .grid-2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
         .grid-3 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
         .course-card, .mini-card { background: linear-gradient(135deg, var(--surface), var(--surface-3)); border: 1px solid var(--border); border-radius: 14px; padding: 14px; color: var(--text); }
-        .course-card img { width: 100%; border-radius: 50px; height: 410px; object-fit: cover; background: linear-gradient(135deg,#dbeafe,#c4b5fd); }
+        .course-card img { width: 220px; border-radius: 50px; height: 310px; object-fit: cover; background: linear-gradient(135deg,#dbeafe,#c4b5fd); }
         .course-card h3, .mini-card h3 { font-size: 20px; color: var(--text); margin: 10px 0 6px; font-weight: 800; line-height: 1.35; }
         .muted { color: var(--muted); font-size: 16px; line-height: 1.35; font-weight: 500; }
         .rich-content h1, .rich-content h2, .rich-content h3 { font-size: 16px; line-height: 1.35; margin: 0.35em 0; }
@@ -412,8 +417,8 @@ if (empty($notifications)) {
     <div class="header">
         <div>
             <div class="live-pill"><span class="dot"></span> የላይቭ ትምህርት• <span id="liveClock">--:--</span></div>
-            <h1>እንኳን በደህና መጡ, <?php echo safe($student['name']); ?></h1>
-            <p>የኢሜይልዎ: <?php echo safe($student['email']); ?> • በአሁኑ ጊዜ ኮርሶችዎን ቀጥለው እና እድገትዎን ተመልከቱ።</p>
+            <h1>እንኳን በደህና መጡ, <?php echo safe($studentName); ?></h1>
+            <p>የኢሜይልዎ: <?php echo safe($studentEmail); ?> • በአሁኑ ጊዜ ኮርሶችዎን ቀጥለው እና እድገትዎን ተመልከቱ።</p>
         </div>
         <div class="quick-actions">
             <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle theme">🌙 Dark</button>
@@ -507,7 +512,7 @@ if (empty($notifications)) {
             <?php else: ?>
                 <?php foreach (array_slice($registrations, 0, 3) as $row): ?>
                     <?php $courseName = $row['course'] ?: ($row['course_name'] ?? 'Course'); ?>
-                    <?php $courseThumb = !empty($row['thumbnail']) ? publicMediaUrl($row['thumbnail']) : 'https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=900&q=80'; ?>
+                    <?php $courseThumb = !empty($row['thumbnail']) ? publicMediaUrl($row['thumbnail']) : 'IMG_20241202_031425_251.jpg'; ?>
                     <?php $courseDesc = $row['short_description'] ?: $row['description'] ?: 'ይህ ኮርስ ለእርስዎ ተዘጋጅቷል።'; ?>
                     <?php $progressValue = (!empty($row['payment_status']) && $row['payment_status'] === 'paid') ? 65 : 35; ?>
                     <div class="course-card" style="margin-bottom: 12px;">
@@ -632,12 +637,12 @@ if (empty($notifications)) {
         <div class="card">
             <h2 class="section-title">👤 የተማሪዎች ፕሮፋይል</h2>
             <div class="profile-box">
-                <div class="avatar"><?php echo strtoupper(substr(safe($student['name']),0,1)); ?></div>
+                <div class="avatar"><?php echo strtoupper(substr(safe($studentName),0,1)); ?></div>
                 <div>
-                    <p style="margin:0; font-weight:800; color:#111827;"><?php echo safe($student['name']); ?></p>
-                    <p class="muted">ኢሜይል: <?php echo safe($student['email']); ?></p>
+                    <p style="margin:0; font-weight:800; color:#111827;"><?php echo safe($studentName); ?></p>
+                    <p class="muted">ኢሜይል: <?php echo safe($studentEmail); ?></p>
                     <p class="muted">ስ.ቁጥር: <?php echo safe($student['phone'] ?? 'N/A'); ?></p>
-                    <p class="muted">ሀገር: <?php echo safe($student['country'] ?? 'ኢትዮጵያ'); ?></p>
+                    <p class="muted">ሀገር: <?php echo safe($student['country'] ?? 'ኢትዮጵያዊ'); ?></p>
                 </div>
             </div>
         </div>

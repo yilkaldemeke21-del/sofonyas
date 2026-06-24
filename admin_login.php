@@ -8,14 +8,19 @@ if (isset($_SESSION['admin_id'])) {
     exit;
 }
 
-$error = '';
+if (!isset($error)) {
+    $error = '';
+}
 $csrfToken = csrfToken();
 $recaptchaSiteKey = getenv('RECAPTCHA_SITE_KEY') ?: '';
 $recaptchaSecret = getenv('RECAPTCHA_SECRET_KEY') ?: '';
 $maxAttempts = 5;
+$dbConnectionError = defined('DB_CONNECTION_ERROR') && DB_CONNECTION_ERROR !== '' ? DB_CONNECTION_ERROR : '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
+    if ($dbConnectionError !== '') {
+        $error = $dbConnectionError;
+    } elseif (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
         $error = 'ደህንነት ተሰርዟል። እባክዎ ገጹን እንደገና ይጫኑ።';
     } else {
         $username = trim($_POST['username'] ?? '');
@@ -24,11 +29,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($username !== '' && $password !== '') {
             $attemptKey = 'admin_login:' . strtolower($username) . ':' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
-            if (loginAttemptWindowCount($pdo, $attemptKey) >= $maxAttempts) {
+            if ($pdo instanceof PDO && loginAttemptWindowCount($pdo, $attemptKey) >= $maxAttempts) {
                 $error = 'ብዙ የመግቢያ ሙከራዎች ተደርገዋል። እባክዎ ከጥቂት ደቂቃዎች በኋላ እንደገና ይሞክሩ።';
-            } elseif ($recaptchaSiteKey !== '' && $recaptchaSecret !== '' && !verifyCaptchaResponse($captchaResponse, $recaptchaSecret)) {
+            } elseif ($pdo instanceof PDO && $recaptchaSiteKey !== '' && $recaptchaSecret !== '' && !verifyCaptchaResponse($captchaResponse, $recaptchaSecret)) {
                 $error = 'የማንኛውም ደህንነት ምልክት አልተሳካም። እባክዎ ዳግም ይሞክሩ።';
-            } else {
+            } elseif ($pdo instanceof PDO) {
                 $stmt = $pdo->prepare('SELECT * FROM admin_users WHERE username = :username');
                 $stmt->execute([':username' => $username]);
                 $admin = $stmt->fetch();
@@ -54,6 +59,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 recordLoginAttempt($pdo, $attemptKey);
                 $error = 'አገልግሎት ስም ወይም ይለፍ ቃል ትክክል አይደለም።';
+            } else {
+                $error = $dbConnectionError !== '' ? $dbConnectionError : 'Database connection is not available.';
             }
         } else {
             $error = 'እባክዎ ሁለቱንም መስኮች ይሙሉ።';
@@ -83,7 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class="login-card">
     <h1>አስተዳዳሪ ግባ</h1>
     
-    <?php if ($error): ?>
+    <?php if (!empty($error)): ?>
         <div class="error"><?php echo safe($error); ?></div>
     <?php endif; ?>
     

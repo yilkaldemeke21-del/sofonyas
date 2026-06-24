@@ -132,17 +132,17 @@ try {
     <div class="card">
       <h2>👩‍🎓 የተማሪ ዕይታ</h2>
       <p>ተማሪዎች ጥያቄዎችን ይጻፋሉ፣ አስተማሪዎች የኮርስ አስተያየት ይሰጣሉ እና አስተዳዳሪዎች የማህበራዊ ውይይቱን ይቆጣጠራሉ።</p>
-      <span class="pill">Student view</span>
+      <span class="pill">የተማሪዎች ዕይታ</span>
     </div>
     <div class="card">
       <h2>👩‍🏫 አስተማሪ / አስተዳዳሪ እይታ</h2>
       <p>የኮርስ ማስታወሻዎች፣ የጉዳይ መመሪያዎች እና የእድገት ምላሾችን እንደ ቁልፍ መልእክቶች ይከታተሉ።</p>
-      <span class="pill">Instructor & Admin</span>
+      <span class="pill">የአስተማሪዎች & አስተዳዳሪዎች እይታ</span>
     </div>
     <div class="card">
       <h2>🤝 ኮሚዩኒቲ ውይይት</h2>
       <p>እርስዎ እና ተማሪዎች ለመማር ሃሳብ፣ ለተግባር ማብራሪያ እና ለቅርብ እርዳታ ይገናኛሉ።</p>
-      <span class="pill">Community support</span>
+      <span class="pill">የጋራ ድጋፍ</span>
     </div>
   </div>
 
@@ -195,7 +195,7 @@ try {
                 <label for="reply-<?php echo (int)$post['id']; ?>" style="font-weight:700; color:#1e3a8a;">መልስ ይጻፉ</label>
                 <textarea id="reply-<?php echo (int)$post['id']; ?>" name="reply_message" placeholder="ለዚህ ውይይት አስተያየት ወይም መልስ ያስገቡ..."></textarea>
                 <div class="action-row">
-                  <span class="pill">Admin + Students can reply</span>
+                  <span class="pill">ለጥያቄዎች አድሚንም ይሁን ተማሪዎች መልስ መስጠት ይችላሉ።</span>
                   <button class="submit-btn" type="submit">Reply</button>
                 </div>
               </form>
@@ -204,7 +204,7 @@ try {
         <?php endif; ?>
       </div>
     </div>
-    <div class="card">
+  <div class="card">
       <h2>አሁን ለምን ይጠቅማል?</h2>
       <ul>
         <li>የተማሪዎች ጥያቄዎች እና ምላሾች</li>

@@ -242,8 +242,11 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
 <div class="navbar">
     <h1>🎓 ቤተ ገብርኤል - ዳሽቦርድ</h1>
     <div>
-        <span>እንኳን ደህና መጡ, <?php echo safe($_SESSION['admin_username']); ?>!</span>
-            <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle theme">🌙 Dark</button>
+        <span>እንኳን ደህና መጡ, <?php echo safe($_SESSION['admin_username'] ?? 'Admin'); ?>!</span>
+        <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle theme">🌙 Dark</button>
+    </div>
+</div>
+
 <div class="container">
     <h2 style="margin-bottom: 20px;">የዲያቆን ሶፎንያስ ዌቭሳይት ደመቀ(የቤተ ገብርኤል አጠቃላይ መረጃ) </h2>
     
