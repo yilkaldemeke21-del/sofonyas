@@ -108,9 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ':expires_at' => $verificationExpires,
                 ]);
 
-                $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-                $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-                $verifyUrl = $scheme . '://' . $host . '/verify_email.php?token=' . urlencode($verificationToken);
+                $verifyUrl = buildAppUrl('verify_email.php?token=' . urlencode($verificationToken));
 
                 $welcomeSubject = 'Welcome to Sofnyas';
                 $welcomeMessage = '<p>Dear ' . safe($name) . ',</p>'

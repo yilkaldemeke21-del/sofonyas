@@ -10,6 +10,12 @@ require_once 'admin_lang.php';
 
 $message = '';
 $editId = (int)($_GET['edit'] ?? 0);
+$students = [];
+
+try {
+    $studentStmt = $pdo->query('SELECT student_id, name, email FROM students ORDER BY name, student_id');
+    $students = $studentStmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {}
 
 try {
     $pdo->exec('CREATE TABLE IF NOT EXISTS exam_reminders (
@@ -31,6 +37,7 @@ if ($editId > 0) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $studentId = trim($_POST['student_id'] ?? '');
+    $studentId = $studentId === '' ? 'ALL' : $studentId;
     $examType = trim($_POST['exam_type'] ?? '');
     $examDate = trim($_POST['exam_date'] ?? '');
     $reminder = trim($_POST['reminder_message'] ?? '');
@@ -73,13 +80,23 @@ $reminders = $pdo->query('SELECT * FROM exam_reminders ORDER BY exam_date DESC, 
     <form method="post">
         <input type="hidden" name="id" value="<?php echo (int)($existing['id'] ?? 0); ?>">
         <label><?php echo admin_text('student_id_label'); ?></label>
-        <input type="text" name="student_id" value="<?php echo htmlspecialchars($existing['student_id'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" required>
+        <select name="student_id" required>
+            <option value="ALL" <?php echo (($existing['student_id'] ?? 'ALL') === 'ALL' ? 'selected' : ''); ?>><?php echo admin_text('all_students'); ?></option>
+            <?php foreach ($students as $student): ?>
+                <option value="<?php echo htmlspecialchars($student['student_id'], ENT_QUOTES, 'UTF-8'); ?>" <?php echo (($existing['student_id'] ?? '') === (string)$student['student_id'] ? 'selected' : ''); ?>><?php echo htmlspecialchars(($student['name'] ?: $student['student_id']) . ' (' . $student['student_id'] . ')', ENT_QUOTES, 'UTF-8'); ?></option>
+            <?php endforeach; ?>
+        </select>
         <label><?php echo admin_text('exam_type_label'); ?></label>
-        <input type="text" name="exam_type" value="<?php echo htmlspecialchars($existing['exam_type'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" required>
+        <select name="exam_type" required>
+            <option value="Mid Exam" <?php echo (($existing['exam_type'] ?? '') === 'Mid Exam' ? 'selected' : ''); ?>><?php echo admin_text('mid_exam'); ?></option>
+            <option value="Final Exam" <?php echo (($existing['exam_type'] ?? '') === 'Final Exam' ? 'selected' : ''); ?>><?php echo admin_text('final_exam'); ?></option>
+            <option value="Short Exam" <?php echo (($existing['exam_type'] ?? '') === 'Short Exam' ? 'selected' : ''); ?>><?php echo admin_text('short_exam'); ?></option>
+        </select>
         <label><?php echo admin_text('exam_date_label'); ?></label>
         <input type="datetime-local" name="exam_date" value="<?php echo htmlspecialchars($existing['exam_date'] ? date('Y-m-d\TH:i', strtotime($existing['exam_date'])) : '', ENT_QUOTES, 'UTF-8'); ?>" required>
         <label><?php echo admin_text('reminder_message_label'); ?></label>
-        <textarea name="reminder_message" required><?php echo htmlspecialchars($existing['reminder_message'] ?? '', ENT_QUOTES, 'UTF-8'); ?></textarea>
+        <textarea name="reminder_message" placeholder="<?php echo admin_text('reminder_placeholder'); ?>" required><?php echo htmlspecialchars($existing['reminder_message'] ?? '', ENT_QUOTES, 'UTF-8'); ?></textarea>
+        <p style="margin-top:8px;color:#64748b;font-size:13px;"><?php echo admin_text('reminder_hint'); ?></p>
         <button type="submit"><?php echo $editId > 0 ? admin_text('update_reminder') : admin_text('add_reminder'); ?></button>
     </form>
 
@@ -99,7 +116,7 @@ $reminders = $pdo->query('SELECT * FROM exam_reminders ORDER BY exam_date DESC, 
                 <tr><td colspan="5" style="text-align:center;"><?php echo admin_text('no_reminders'); ?></td></tr>
             <?php else: foreach ($reminders as $rem): ?>
                 <tr>
-                    <td><?php echo htmlspecialchars($rem['student_id'], ENT_QUOTES, 'UTF-8'); ?></td>
+                    <td><?php echo htmlspecialchars($rem['student_id'] === 'ALL' ? admin_text('all_students') : $rem['student_id'], ENT_QUOTES, 'UTF-8'); ?></td>
                     <td><?php echo htmlspecialchars($rem['exam_type'], ENT_QUOTES, 'UTF-8'); ?></td>
                     <td><?php echo htmlspecialchars(date('M d, Y H:i', strtotime($rem['exam_date'])), ENT_QUOTES, 'UTF-8'); ?></td>
                     <td><?php echo htmlspecialchars(substr($rem['reminder_message'], 0, 80), ENT_QUOTES, 'UTF-8'); ?><?php echo strlen($rem['reminder_message']) > 80 ? '...' : ''; ?></td>

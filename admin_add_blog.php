@@ -43,10 +43,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo admin_text('add_blog'); ?></title>
     <style>
-        body{font-family:Arial,sans-serif;background:#f5f7fb;margin:0;padding:0;color:#222}.
-        .wrap{max-width:760px;margin:40px auto;padding:24px;background:#fff;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.08)}
-        h1{margin-top:0;color:#7c3aed}label{display:block;margin-top:12px;font-weight:bold}input, textarea{width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;margin-top:6px}textarea{min-height:140px}button{margin-top:16px;background:#7c3aed;color:#fff;border:0;padding:10px 16px;border-radius:8px;cursor:pointer}a{display:inline-block;margin-top:16px;color:#7c3aed;text-decoration:none}
-        .msg{margin-top:12px;padding:10px 12px;border-radius:8px;background:#ecfdf3;color:#047857}
+        body{font-family:Arial,sans-serif;background:linear-gradient(135deg,#faf5ff,#fdf2f8);margin:0;padding:0;color:#0f172a}.
+        .wrap{max-width:780px;margin:40px auto;padding:28px;background:#fff;border-radius:18px;box-shadow:0 14px 36px rgba(15,23,42,.12)}
+        h1{margin-top:0;color:#7c3aed;font-size:28px}label{display:block;margin-top:16px;font-weight:700;color:#334155}input, textarea{width:100%;padding:12px 14px;border:1px solid #cbd5e1;border-radius:10px;margin-top:8px;font-size:15px;box-sizing:border-box}input:focus, textarea:focus{outline:none;border-color:#7c3aed;box-shadow:0 0 0 3px rgba(124,58,237,.15)}textarea{min-height:160px;resize:vertical}.hint{font-size:13px;color:#64748b;margin-top:6px}.actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:16px}button{background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:#fff;border:0;padding:12px 18px;border-radius:999px;cursor:pointer;font-weight:700;box-shadow:0 8px 18px rgba(124,58,237,.22)}button:hover{transform:translateY(-1px)}a{display:inline-block;margin-top:16px;color:#7c3aed;text-decoration:none;font-weight:600}.msg{margin-top:12px;padding:12px 14px;border-radius:10px;background:#ecfdf3;color:#047857;border:1px solid #a7f3d0}
     </style>
 </head>
 <body>
@@ -55,15 +54,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php if ($message): ?><div class="msg"><?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?></div><?php endif; ?>
     <form method="post">
         <label><?php echo admin_text('title_label'); ?></label>
-        <input type="text" name="title" required>
+        <input type="text" name="title" placeholder="በትክክል የብሎግ ርዕስ ያስገቡ" required>
+        <div class="hint">ብሎግዎን በአጭር እና የሚያስታውስ ርዕስ ላይ ይመርጡ።</div>
         <label><?php echo admin_text('content_label'); ?></label>
-        <textarea name="content" required></textarea>
+        <textarea name="content" placeholder="ብሎግ ይዘትዎን እዚህ ይጻፉ..." required></textarea>
         <label><?php echo admin_text('link_label'); ?></label>
-        <input type="text" name="link" placeholder="https://example.com">
-        <button type="submit"><?php echo admin_text('save_blog'); ?></button>
+        <input type="text" name="link" placeholder="https://example.com ወይም ተጨማሪ ሊንክ">
+        <div class="hint">ሊንክ ካለ እንደ ተጨማሪ መረጃ ይታያል።</div>
+        <div class="actions">
+            <button type="submit"><?php echo admin_text('save_blog'); ?></button>
+            <a href="admin_dashboard.php">← <?php echo admin_text('back'); ?></a>
+        </div>
     </form>
-    <a href="admin_dashboard.php">← <?php echo admin_text('back'); ?></a>
-    <a href="admin_lang.php?lang=<?php echo ($_SESSION['admin_lang'] ?? 'am') === 'am' ? 'en' : 'am'; ?>&redirect=admin_add_blog.php" style="margin-left:12px;"><?php echo admin_text('language_switch'); ?></a>
+    <a href="admin_lang.php?lang=<?php echo ($_SESSION['admin_lang'] ?? 'am') === 'am' ? 'en' : 'am'; ?>&redirect=admin_add_blog.php" style="margin-left:0;">🌐 <?php echo admin_text('language_switch'); ?></a>
 </div>
 </body>
 </html>

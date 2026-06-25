@@ -85,9 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ':expires_at' => $verificationExpires,
                 ]);
 
-                $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-                $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-                $verifyUrl = $scheme . '://' . $host . '/verify_email.php?token=' . urlencode($verificationToken);
+                $verifyUrl = buildAppUrl('verify_email.php?token=' . urlencode($verificationToken));
 
                 $welcomeSubject = 'Registration successful';
                 $welcomeMessage = '<p>Dear ' . safe($name) . ',</p>'
@@ -107,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['student_email'] = $email;
                 $_SESSION['student_name'] = $name;
 
-                header('Location: verify_email.php?token=' . urlencode($verificationToken));
+                header('Location: ' . buildAppUrl('verify_email.php?token=' . urlencode($verificationToken)));
                 exit;
             } catch (PDOException $e) {
                 $errors[] = 'ምዝገባው አልተሳካም። እባክዎ እንደገና ይሞክሩ።';

@@ -9,6 +9,19 @@ if (!in_array($admin_lang, ['am', 'en'], true)) {
 }
 $_SESSION['admin_lang'] = $admin_lang;
 
+$redirectTarget = trim($_GET['redirect'] ?? '');
+if ($redirectTarget !== '') {
+    $redirectTarget = ltrim($redirectTarget, '/');
+    $redirectTarget = str_replace('..', '', $redirectTarget);
+    if (preg_match('/\.(php|html?)$/i', $redirectTarget) === 1) {
+        header('Location: ' . $redirectTarget);
+        exit;
+    }
+}
+
+header('Location: admin_dashboard.php');
+exit;
+
 function admin_text($key, $lang = null) {
     static $translations = [
         'dashboard_title' => ['am' => 'አስተዳዳሪ ዳሽቦርድ', 'en' => 'Admin Dashboard'],
@@ -29,10 +42,16 @@ function admin_text($key, $lang = null) {
         'save' => ['am' => 'አስቀምጥ', 'en' => 'Save'],
         'edit_content' => ['am' => 'ይዘት አስተካክል', 'en' => 'Edit Content'],
         'date_label' => ['am' => 'ቀን', 'en' => 'Date'],
-        'student_id_label' => ['am' => 'የተማሪ መለያ / መለያ ቁጥር', 'en' => 'Student ID / Reference Number'],
+        'student_id_label' => ['am' => 'ተቀባይ ይምረጡ', 'en' => 'Choose Recipient'],
+        'all_students' => ['am' => 'ሁሉም ተማሪዎች', 'en' => 'All Students'],
         'exam_type_label' => ['am' => 'የፈተና አይነት', 'en' => 'Exam Type'],
+        'mid_exam' => ['am' => 'መካከለኛ ፈተና', 'en' => 'Mid Exam'],
+        'final_exam' => ['am' => 'ፍተሻ ፈተና', 'en' => 'Final Exam'],
+        'short_exam' => ['am' => 'አጭር ፈተና', 'en' => 'Short Exam'],
         'exam_date_label' => ['am' => 'የፈተና ቀን', 'en' => 'Exam Date'],
-        'reminder_message_label' => ['am' => 'ማስታወሻ መልእክት', 'en' => 'Reminder Message'],
+        'reminder_message_label' => ['am' => 'ማስታወሻ / መመሪያ', 'en' => 'Reminder / Instructions'],
+        'reminder_placeholder' => ['am' => 'ለተማሪዎች የፈተና መመሪያ ወይም ማስታወሻ ይጻፉ', 'en' => 'Write exam instructions or a reminder for students'],
+        'reminder_hint' => ['am' => 'ይህ መልእክት ተማሪዎች ዳሽቦርድ ላይ ይታያል።', 'en' => 'This message will appear on the student dashboard.'],
         'add_reminder' => ['am' => 'ማስታወሻ አክል', 'en' => 'Add Reminder'],
         'update_reminder' => ['am' => 'ማስታወሻ አስተካክል', 'en' => 'Update Reminder'],
         'existing_reminders' => ['am' => 'የተመዘገቡ ማስታወሻዎች', 'en' => 'Saved Reminders'],

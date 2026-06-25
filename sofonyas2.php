@@ -2,6 +2,35 @@
 session_start();
 require_once __DIR__ . '/db.php';
 
+try {
+    ensureSiteSettingsTable($pdo);
+} catch (Throwable $e) {
+    // ignore schema bootstrap issues
+}
+
+$siteSettings = getSiteSettings($pdo);
+$siteName = trim((string)($siteSettings['website_name'] ?? ''));
+if ($siteName === '') {
+    $siteName = 'Sofoniyas Website';
+}
+$siteLogo = trim((string)($siteSettings['logo'] ?? ''));
+$siteLogoUrl = publicMediaUrl($siteLogo);
+if ($siteLogoUrl === '') {
+    $siteLogoUrl = '10 .jpg';
+}
+$contactEmail = trim((string)($siteSettings['contact_email'] ?? ''));
+if ($contactEmail === '') {
+    $contactEmail = 'yilkaldemeke21@gmail.com';
+}
+$phoneNumber = trim((string)($siteSettings['phone_number'] ?? ''));
+if ($phoneNumber === '') {
+    $phoneNumber = '+251 927603731';
+}
+$footerText = trim((string)($siteSettings['footer_text'] ?? ''));
+if ($footerText === '') {
+    $footerText = 'Address: motta, Ethiopia';
+}
+
 $lang = getCurrentLanguage();
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['set_lang'])) {
     $lang = setCurrentLanguage($_POST['set_lang']);
@@ -47,8 +76,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
 <!DOCTYPE html>
 <html lang="<?php echo safe($lang); ?>">
 <head>
-    <?php echo renderSeoMeta(['title' => translateText('የሶፎንያስ ድር ገፅ', 'Sofoniyas Website Home'), 'description' => translateText('የሶፎንያስ የመማሪያ እና ኮሚዩኒቲ ዌብሳይት', 'Sofoniyas learning and community website')]); ?>
-    <title><?php echo safe(translateText('የሶፎንያስ ድር ገፅ', 'Sofoniyas Website Home')); ?></title>
+    <?php echo renderSeoMeta(['title' => $siteName . ' - ' . translateText('ድር ገፅ', 'Home'), 'description' => translateText('የሶፎንያስ የመማሪያ እና ኮሚዩኒቲ ዌብሳይት', 'Sofoniyas learning and community website')]); ?>
+    <title><?php echo safe($siteName); ?></title>
     <meta name="description" content="<?php echo safe(translateText('የሶፎንያስ የመማሪያ እና ኮሚዩኒቲ ዌብሳይት', 'Sofoniyas learning and community website')); ?>">
     <meta name="keywords" content="Sofoniyas, learning, church, community, education, Ethiopia">
     <meta name="theme-color" content="#0f172a">
@@ -63,6 +92,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         .toast-success { background: linear-gradient(135deg, #16a34a, #15803d); }
         .toast-error { background: linear-gradient(135deg, #dc2626, #b91c1c); }
         .toast-info { background: linear-gradient(135deg, #2563eb, #4f46e5); }
+
+        .reveal { opacity: 0; transform: translateY(24px); transition: all 0.7s ease; }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+
+        .hero-showcase { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 24px; align-items: center; margin: 24px 0; padding: 24px; background: linear-gradient(135deg, rgba(37,99,235,0.12), rgba(124,58,237,0.12)); border: 1px solid rgba(148,163,184,0.2); border-radius: 24px; overflow: hidden; }
+        .hero-copy h2 { font-size: clamp(1.8rem, 3vw, 2.7rem); margin: 10px 0 12px; color: #0f172a; }
+        .hero-copy p { color: #475569; line-height: 1.65; font-size: 1rem; }
+        .pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px; background: rgba(37,99,235,0.16); color: #1d4ed8; font-weight: 700; font-size: 0.84rem; }
+        .hero-stats { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
+        .hero-stats > div { background: #fff; padding: 12px 14px; border-radius: 14px; min-width: 120px; box-shadow: 0 12px 24px rgba(15,23,42,0.08); }
+        .hero-stats strong { display: block; font-size: 1.2rem; color: #111827; }
+        .hero-stats span { color: #64748b; font-size: 0.86rem; }
+        .hero-visual { position: relative; display: grid; gap: 16px; }
+        .floating-illustration { position: absolute; top: -12px; right: -10px; width: 150px; height: 150px; background: linear-gradient(135deg, #2563eb, #7c3aed); border-radius: 24px; box-shadow: 0 20px 40px rgba(37,99,235,0.24); z-index: 2; animation: float 3.4s ease-in-out infinite; padding: 12px; }
+        .floating-illustration .mini-card { background: rgba(255,255,255,0.96); border-radius: 18px; height: 100%; padding: 10px; display: flex; flex-direction: column; justify-content: center; gap: 8px; color: #1e293b; }
+        .floating-illustration .mini-card span { display: inline-block; width: 36px; height: 36px; text-align: center; line-height: 36px; border-radius: 50%; background: #dbeafe; color: #1d4ed8; font-weight: 700; }
+        .showcase-slider { background: #fff; border-radius: 24px; padding: 12px; box-shadow: 0 20px 35px rgba(15,23,42,0.1); border: 1px solid rgba(226,232,240,0.9); overflow: hidden; }
+        .showcase-track { position: relative; height: 280px; overflow: hidden; border-radius: 18px; }
+        .showcase-slide { position: absolute; inset: 0; opacity: 0; transform: scale(1.05); transition: all 0.6s ease; }
+        .showcase-slide.active { opacity: 1; transform: scale(1); }
+        .showcase-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .showcase-controls { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; gap: 10px; }
+        .showcase-nav { border: 0; width: 38px; height: 38px; border-radius: 50%; background: #eff6ff; color: #2563eb; font-size: 1.2rem; cursor: pointer; }
+        .showcase-dots { display: flex; gap: 6px; }
+        .showcase-dot { width: 10px; height: 10px; border-radius: 999px; border: 0; background: #cbd5e1; cursor: pointer; }
+        .showcase-dot.active { background: #2563eb; transform: scale(1.18); }
+
+        .section-heading { display: flex; justify-content: space-between; align-items: end; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+        .section-heading h2 { margin: 0; color: #0f172a; }
+        .section-heading p { margin: 0; color: #64748b; }
+        .course-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+        .course-card { border: 1px solid #e2e8f0; border-radius: 18px; overflow: hidden; background: #fff; box-shadow: 0 14px 30px rgba(15,23,42,0.06); transition: transform 0.24s ease, box-shadow 0.24s ease; }
+        .course-card:hover { transform: translateY(-6px) scale(1.01); box-shadow: 0 18px 34px rgba(15,23,42,0.12); }
+        .course-card img { width: 100%; height: 180px; object-fit: cover; transition: transform 0.35s ease; }
+        .course-card:hover img { transform: scale(1.08); }
+        .course-body { padding: 14px; }
+        .course-body h3 { margin: 0 0 8px; color: #111827; }
+        .course-body p { color: #64748b; line-height: 1.5; font-size: 0.95rem; }
+        .course-link { display: inline-block; margin-top: 8px; color: #2563eb; font-weight: 700; }
+
+        .testimonial-slider { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; }
+        .testimonial-nav { border: 0; width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, #2563eb, #7c3aed); color: #fff; cursor: pointer; font-size: 1.2rem; }
+        .testimonial-card { display: none; background: linear-gradient(135deg, #f8fbff, #eef2ff); border-radius: 18px; padding: 18px; border: 1px solid #dbeafe; box-shadow: inset 0 1px 0 rgba(255,255,255,0.7); }
+        .testimonial-card.active { display: block; }
+        .testimonial-card p { margin: 0 0 10px; color: #334155; line-height: 1.7; }
+        .testimonial-card strong { color: #111827; }
+        .testimonial-dots { display: flex; justify-content: center; gap: 6px; margin-top: 12px; }
+        .testimonial-dot { width: 10px; height: 10px; border-radius: 999px; border: 0; background: #cbd5e1; cursor: pointer; }
+        .testimonial-dot.active { background: #2563eb; }
+
+        @keyframes float { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
+
+        @media (max-width: 860px) { .hero-showcase { grid-template-columns: 1fr; } .floating-illustration { display: none; } }
     </style>
 </head>
 <body>
@@ -99,12 +181,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
 
     <header class="hero-section">
         <video class="hero-video" autoplay muted loop playsinline poster="10 .jpg">
-            <source src="https://www.w3schools.com/howto/rain.mp4" type="video/mp4">
+            <source src="sofi website hero section video.mp4">
         </video>
         <div class="hero-overlay"></div>
         <div class="hero-content">
             <div id="logo">
-                <img src="10 .jpg" alt="sofi" class="logo-img zoomable-img">
+                <img src="<?php echo safe($siteLogoUrl); ?>" alt="<?php echo safe($siteName); ?>" class="logo-img zoomable-img">
             </div>
             <h1 class="animate-title reveal" data-am="እንኳን ወደ ዲ/ን ሶፎንያስ ደመቀ ቤተ ገብርኤል ዌብሳይት በደህና መጡ!" data-en="Welcome to Dr. Sofoniyas Demeke's Church Community Website!">እንኳን ወደ ዲ/ን ሶፎንያስ ደመቀ ቤተ ገብርኤል ዌብሳይት በደህና መጡ!</h1>
             <p class="animate-subtitle reveal" data-am="ይህ የመማሪያ እና የእውቀት መንገድ በጥሩ እና በቀላሉ የሚያገኙ መረጃዎች ተዘጋጅቷል።" data-en="This learning and knowledge platform is prepared with clear, easy-to-access information for everyone.">ይህ የመማሪያ እና የእውቀት መንገድ በጥሩ እና በቀላሉ የሚያገኙ መረጃዎች ተዘጋጅቷል።</p>
@@ -114,6 +196,113 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
             </div>
         </div>
     </header>
+
+    <section class="hero-showcase reveal">
+        <div class="hero-copy">
+            <span class="pill" data-am="🌟 የመስመር ላይ ትምህርት ልምድ" data-en="🌟 Online Learning Experience">🌟 Online Learning Experience</span>
+            <h2 data-am="በተመጣጣኝ ድምፅ እና በሚያስደስት አካባቢ ተማሩ" data-en="Learn with confidence through beautiful lessons and guided support.">Learn with confidence through beautiful lessons and guided support.</h2>
+            <p data-am="ይህ ዌብሳይት ተማሪዎችን ለትምህርት፣ ፈተና፣ ማስተማር እና ማህበራዊ ትብብር ይደግፋል" data-en="This website brings together inspiring lessons, assessments, guidance, and community interaction in one place.">This website brings together inspiring lessons, assessments, guidance, and community interaction in one place.</p>
+            <div class="hero-stats">
+                <div>
+                    <strong>10k+</strong>
+                    <span data-am="ንቁ ተማሪዎች" data-en="Active learners">Active learners</span>
+                </div>
+                <div>
+                    <strong>24/7</strong>
+                    <span data-am="ድጋፍ" data-en="Support">Support</span>
+                </div>
+                <div>
+                    <strong>4.9★</strong>
+                    <span data-am="የተማሪ ደረጃ" data-en="Student rating">Student rating</span>
+                </div>
+            </div>
+        </div>
+        <div class="hero-visual">
+            <div class="floating-illustration">
+                <div class="mini-card">
+                    <span>✓</span>
+                    <strong data-am="የተማሪ መምህር መርሃ ግብር" data-en="Student-first learning">Student-first learning</strong>
+                    <small data-am="እርስዎን የሚያደርገው የድርጊት ትምህርት" data-en="A smooth path from first lesson to mastery.">A smooth path from first lesson to mastery.</small>
+                </div>
+            </div>
+            <div class="showcase-slider">
+                <div class="showcase-track">
+                    <div class="showcase-slide active"><img src="10 .jpg" alt="Community preview"></div>
+                    <div class="showcase-slide"><img src="sofi photo.jpg" alt="Sofoniyas learning community"></div>
+                    <div class="showcase-slide"><img src="motta sofi.jpg" alt="Students learning together"></div>
+                    <div class="showcase-slide"><img src="sofi2.jpg" alt="Community event"></div>
+                </div>
+                <div class="showcase-controls">
+                    <button type="button" class="showcase-nav prev" aria-label="Previous slide">‹</button>
+                    <div class="showcase-dots" role="tablist" aria-label="Hero slider controls"></div>
+                    <button type="button" class="showcase-nav next" aria-label="Next slide">›</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="card reveal">
+        <div class="section-heading">
+            <div>
+                <h2 data-am="ታዋቂ ኮርሶች" data-en="Popular Courses">Popular Courses</h2>
+                <p data-am="እንደ አዲስ እና እንደ ተሻሻለ መማር ልምድ" data-en="Beautiful visuals and a smooth learning journey.">Beautiful visuals and a smooth learning journey.</p>
+            </div>
+        </div>
+        <div class="course-grid">
+            <article class="course-card">
+                <img src="sofi photo.jpg" alt="Spiritual Teaching">
+                <div class="course-body">
+                    <h3 data-am="መንፈሳዊ ትምህርት" data-en="Spiritual Teaching">Spiritual Teaching</h3>
+                    <p data-am="የእምነት እና የህይወት ማስተማር በቀላሉ የሚከተሉ" data-en="Faith-filled lessons that are easy to follow and inspiring to revisit.">Faith-filled lessons that are easy to follow and inspiring to revisit.</p>
+                    <a href="tutorial.php" class="course-link" data-am="ኮርሱን ይመልከቱ" data-en="Explore course">Explore course</a>
+                </div>
+            </article>
+            <article class="course-card">
+                <img src="motta sofi.jpg" alt="Church Order">
+                <div class="course-body">
+                    <h3 data-am="የቤተ ክርስቲያን ሥርዓት" data-en="Church Order">Church Order</h3>
+                    <p data-am="ተማሪዎች በትክክል ያውቃሉ እና በሂደት በጥሩ አስተማር" data-en="Structured lessons that make church principles clear and practical.">Structured lessons that make church principles clear and practical.</p>
+                    <a href="tutorial.php" class="course-link" data-am="ኮርሱን ይመልከቱ" data-en="Explore course">Explore course</a>
+                </div>
+            </article>
+            <article class="course-card">
+                <img src="sofi2.jpg" alt="Anointing Message">
+                <div class="course-body">
+                    <h3 data-am="የቅባት መልእክት" data-en="Anointing Message">Anointing Message</h3>
+                    <p data-am="መልእክቱን በማንኛውም ሰአት በቀላሉ እንዲከተል የተዘጋጀ" data-en="Designed for reflection, growth, and convenient access whenever you need it.">Designed for reflection, growth, and convenient access whenever you need it.</p>
+                    <a href="tutorial.php" class="course-link" data-am="ኮርሱን ይመልከቱ" data-en="Explore course">Explore course</a>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <section class="card reveal">
+        <div class="section-heading">
+            <div>
+                <h2 data-am="ተማሪዎች የሚሉት" data-en="What learners say">What learners say</h2>
+                <p data-am="ከተማሪዎቻችን የተሰበሰቡ እውነተኛ አስተያየቶች" data-en="Real feedback from our growing learner community.">Real feedback from our growing learner community.</p>
+            </div>
+        </div>
+        <div class="testimonial-slider">
+            <button type="button" class="testimonial-nav prev" aria-label="Previous testimonial">‹</button>
+            <div style="width:100%;">
+                <div class="testimonial-card active">
+                    <p data-am="“በዚህ ዌብሳይት ውስጥ መማር በጣም ቀላል ነው፤ የእኔ ትምህርት በጣም ጠንካራ ሆኗል”" data-en="“Learning here feels simple and inspiring. My study journey has become much more focused.”">“Learning here feels simple and inspiring. My study journey has become much more focused.”</p>
+                    <strong data-am="— አለም ሰላም" data-en="— Selam H.">— Selam H.</strong>
+                </div>
+                <div class="testimonial-card">
+                    <p data-am="“እርስዎ የሚሰጡት ድጋፍ እንደ አስተማሪ ልምድ ነው፤ ሁልጊዜ እንደ ተመራማሪ እርዳታ ይሰጣል”" data-en="“The guidance feels personal and motivating, and I always know where to continue next.”">“The guidance feels personal and motivating, and I always know where to continue next.”</p>
+                    <strong data-am="— መርበብ ነጋ" data-en="— Meron N.">— Meron N.</strong>
+                </div>
+                <div class="testimonial-card">
+                    <p data-am="“የፈተናዎች እና የፕሮግራሙ ቅርጽ ጥሩ ነው፤ በቀላሉ እድገት አለመታየት ይቻላል”" data-en="“The exam flow and course structure are clear, and progress feels easy to track.”">“The exam flow and course structure are clear, and progress feels easy to track.”</p>
+                    <strong data-am="— ለማ ቤተሰብ" data-en="— Lemu B.">— Lemu B.</strong>
+                </div>
+            </div>
+            <button type="button" class="testimonial-nav next" aria-label="Next testimonial">›</button>
+        </div>
+        <div class="testimonial-dots"></div>
+    </section>
 
     <section class="card reveal slider-section" aria-label="Featured gallery">
         <h2 data-am="የተመረጡ ምስሎች" data-en="Featured Images">Featured Images</h2>
@@ -197,7 +386,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
 
     <div class="card reveal">
         <h2 data-am="እባክዎ ያነጋግሩኝ" data-en="Please contact me">እባክዎ ያነጋግሩኝ</h2>
-        <p data-am="ኢሜይል: yilkaldemeke21@gmail.com" data-en="Email: yilkaldemeke21@gmail.com">Email: yilkaldemeke21@gmail.com</p>
+        <p><?php echo safe($contactEmail); ?></p>
     </div>
 
     <section class="card reveal" aria-label="Live chat" style="background: linear-gradient(135deg, #f8fbff 0%, #f5f3ff 100%); border:1px solid #dbeafe;">
@@ -244,9 +433,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         <div style="max-width:1100px; margin:0 auto; display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); align-items:start;">
             <div>
                 <h3 style="margin:0 0 8px; color:#fff;" data-am="የእኛ አድራሻ" data-en="Contact Us">Contact Us</h3>
-                <p style="margin:4px 0;" data-am="ስልክ ቁጥር: +251 927603731" data-en="Phone: +251 927603731">Phone: +251 927603731</p>
-                <p style="margin:4px 0;"><a href="mailto:yilkaldemeke21@gmail.com" style="color:#bfdbfe; text-decoration:none;">Email: yilkaldemeke21@gmail.com</a></p>
-                <p style="margin:4px 0;" data-am="አድራሻ: ሞጣ/መቅደላ አምባ ዩኒቨርሲቲ፣ ኢትዮጵያ" data-en="Address: Addis Ababa, Ethiopia">Address: motta, Ethiopia</p>
+                <p style="margin:4px 0;">Phone: <?php echo safe($phoneNumber); ?></p>
+                <p style="margin:4px 0;"><a href="mailto:<?php echo safe($contactEmail); ?>" style="color:#bfdbfe; text-decoration:none;">Email: <?php echo safe($contactEmail); ?></a></p>
+                <p style="margin:4px 0;"><?php echo safe($footerText); ?></p>
             </div>
             <div>
                 <h3 style="margin:0 0 8px; color:#fff;" data-am="ማህበራዊ መረብ" data-en="Follow Us">Follow Us</h3>
@@ -288,7 +477,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         const form = document.getElementById('contactForm');
         const sliderImages = Array.from(document.querySelectorAll('.slider-frame .slide'));
         const dotsContainer = document.querySelector('.slider-dots');
+        const showcaseSlides = Array.from(document.querySelectorAll('.showcase-slide'));
+        const showcaseDotsContainer = document.querySelector('.showcase-dots');
+        const testimonialCards = Array.from(document.querySelectorAll('.testimonial-card'));
+        const testimonialDotsContainer = document.querySelector('.testimonial-dots');
         let currentSlide = 0;
+        let showcaseIndex = 0;
+        let testimonialIndex = 0;
 
         function applyLanguage(lang) {
             document.documentElement.lang = lang;
@@ -330,6 +525,76 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
                 currentSlide = (currentSlide + 1) % sliderImages.length;
                 showSlide(currentSlide);
             }, 5000);
+        }
+
+        function showShowcaseSlide(index) {
+            if (!showcaseSlides.length) return;
+            showcaseSlides.forEach((slide, slideIndex) => {
+                slide.classList.toggle('active', slideIndex === index);
+            });
+            if (showcaseDotsContainer) {
+                Array.from(showcaseDotsContainer.children).forEach((dot, dotIndex) => {
+                    dot.classList.toggle('active', dotIndex === index);
+                });
+            }
+        }
+
+        function startShowcaseSlider() {
+            if (!showcaseSlides.length || !showcaseDotsContainer) return;
+            showcaseSlides.forEach((_, index) => {
+                const dot = document.createElement('button');
+                dot.className = 'showcase-dot' + (index === 0 ? ' active' : '');
+                dot.type = 'button';
+                dot.setAttribute('aria-label', `Show showcase slide ${index + 1}`);
+                dot.addEventListener('click', () => {
+                    showcaseIndex = index;
+                    showShowcaseSlide(showcaseIndex);
+                });
+                showcaseDotsContainer.appendChild(dot);
+            });
+            setInterval(() => {
+                showcaseIndex = (showcaseIndex + 1) % showcaseSlides.length;
+                showShowcaseSlide(showcaseIndex);
+            }, 4500);
+        }
+
+        function showTestimonial(index) {
+            if (!testimonialCards.length) return;
+            testimonialCards.forEach((card, cardIndex) => {
+                card.classList.toggle('active', cardIndex === index);
+            });
+            if (testimonialDotsContainer) {
+                Array.from(testimonialDotsContainer.children).forEach((dot, dotIndex) => {
+                    dot.classList.toggle('active', dotIndex === index);
+                });
+            }
+        }
+
+        function startTestimonialSlider() {
+            if (!testimonialCards.length || !testimonialDotsContainer) return;
+            testimonialCards.forEach((_, index) => {
+                const dot = document.createElement('button');
+                dot.className = 'testimonial-dot' + (index === 0 ? ' active' : '');
+                dot.type = 'button';
+                dot.setAttribute('aria-label', `Show testimonial ${index + 1}`);
+                dot.addEventListener('click', () => {
+                    testimonialIndex = index;
+                    showTestimonial(testimonialIndex);
+                });
+                testimonialDotsContainer.appendChild(dot);
+            });
+            const navButtons = document.querySelectorAll('.testimonial-nav');
+            navButtons.forEach((button) => {
+                button.addEventListener('click', () => {
+                    const direction = button.classList.contains('next') ? 1 : -1;
+                    testimonialIndex = (testimonialIndex + direction + testimonialCards.length) % testimonialCards.length;
+                    showTestimonial(testimonialIndex);
+                });
+            });
+            setInterval(() => {
+                testimonialIndex = (testimonialIndex + 1) % testimonialCards.length;
+                showTestimonial(testimonialIndex);
+            }, 6000);
         }
 
         function revealOnScroll() {
@@ -379,6 +644,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
             setTimeout(() => loader.remove(), 400);
             applyLanguage('am');
             startSlider();
+            startShowcaseSlider();
+            startTestimonialSlider();
             revealOnScroll();
         });
 

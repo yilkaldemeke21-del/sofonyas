@@ -80,6 +80,11 @@ $ui = [
         'recent_questions_title' => 'የቅርብ ጊዜ ጥያቄዎች',
         'recent_questions_desc' => 'በእያንዳንዱ ክፍል ላይ የተጨመሩትን የቅርብ ጊዜ ጥያቄዎች ይመልከቱ።',
         'empty_questions' => 'እስካሁን ምንም ጥያቄ አልተጨመረም። መጀመሪያ ጥያቄ ይፍጠሩ።',
+        'show_more' => 'ተጨማሪ አሳይ',
+        'edit_question' => 'ጥያቄ አስተካከል',
+        'question_type_label' => 'አይነት',
+        'options_label' => 'አማራጮች',
+        'correct_label' => 'ትክክለኛ መልስ',
         'unassigned' => 'ያልተመደበ',
         'sections' => 'ክፍሎች',
         'questions' => 'ጥያቄዎች',
@@ -142,6 +147,11 @@ $ui = [
         'recent_questions_title' => 'Recent Questions',
         'recent_questions_desc' => 'See the latest questions added to each section.',
         'empty_questions' => 'No questions yet. Create your first question to populate this area.',
+        'show_more' => 'Show More',
+        'edit_question' => 'Edit Question',
+        'question_type_label' => 'Type',
+        'options_label' => 'Options',
+        'correct_label' => 'Correct Answer',
         'unassigned' => 'Unassigned',
         'sections' => 'Sections',
         'questions' => 'Questions',
@@ -361,6 +371,12 @@ $recentQuestions = $stmt->fetchAll(PDO::FETCH_ASSOC);
         .list-item { border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; background: #fbfdff; }
         .list-item strong { display: block; margin-bottom: 4px; color: #0f172a; }
         .muted { color: #64748b; font-size: 13px; }
+        .list-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+        .mini-btn { display: inline-block; padding: 7px 10px; border-radius: 999px; text-decoration: none; font-size: 13px; font-weight: 700; border: 1px solid #cbd5e1; background: white; color: #334155; cursor: pointer; }
+        .mini-btn.primary { background: linear-gradient(135deg, #2563eb, #4f46e5); color: white; border-color: #2563eb; }
+        .mini-btn.secondary { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+        .question-extra { display: none; margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: #f8fafc; border: 1px solid #e2e8f0; font-size: 13px; color: #334155; line-height: 1.6; }
+        .question-extra.show { display: block; }
         @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -511,6 +527,19 @@ $recentQuestions = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <div class="list-item">
                                 <strong><?php echo safe($question['question_text'] ?? ''); ?></strong>
                                 <div class="muted"><?php echo safe($txt['sections'] . ': ' . ($question['section_title'] ?: $txt['unassigned'])); ?> • <?php echo safe($txt['questions'] . ': ' . ($question['question_type'] ?? 'multiple_choice')); ?></div>
+                                <div class="list-actions">
+                                    <button type="button" class="mini-btn secondary" onclick="toggleQuestionDetails('q-<?php echo (int)$question['id']; ?>')"><?php echo safe($txt['show_more']); ?></button>
+                                    <a href="admin_edit_question.php?id=<?php echo (int)$question['id']; ?>" class="mini-btn primary"><?php echo safe($txt['edit_question']); ?></a>
+                                </div>
+                                <div id="q-<?php echo (int)$question['id']; ?>" class="question-extra">
+                                    <div><strong><?php echo safe($txt['question_type_label']); ?>:</strong> <?php echo safe($question['question_type'] ?? 'multiple_choice'); ?></div>
+                                    <?php if (($question['question_type'] ?? 'multiple_choice') === 'short_answer' || ($question['question_type'] ?? 'multiple_choice') === 'fill_in_blank'): ?>
+                                        <div><strong><?php echo safe($txt['correct_label']); ?>:</strong> <?php echo safe($question['correct_answer'] ?: $question['option_a']); ?></div>
+                                    <?php else: ?>
+                                        <div><strong><?php echo safe($txt['options_label']); ?>:</strong> A. <?php echo safe($question['option_a'] ?? ''); ?> • B. <?php echo safe($question['option_b'] ?? ''); ?><?php if (($question['option_c'] ?? '') !== ''): ?> • C. <?php echo safe($question['option_c'] ?? ''); ?><?php endif; ?><?php if (($question['option_d'] ?? '') !== ''): ?> • D. <?php echo safe($question['option_d'] ?? ''); ?><?php endif; ?></div>
+                                        <div><strong><?php echo safe($txt['correct_label']); ?>:</strong> <?php echo safe($question['correct_answer'] ?? ''); ?></div>
+                                    <?php endif; ?>
+                                </div>
                             </div>
                         <?php endforeach; ?>
                     </div>
@@ -522,6 +551,13 @@ $recentQuestions = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
 </div>
 <script>
+function toggleQuestionDetails(id) {
+    const panel = document.getElementById(id);
+    if (panel) {
+        panel.classList.toggle('show');
+    }
+}
+
 function toggleQuestionType(type) {
     const mcq = document.getElementById('mcqFields');
     const shortAnswer = document.getElementById('shortAnswerFields');

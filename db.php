@@ -252,8 +252,38 @@ function ensureSecurityTables(PDO $pdo): void
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 }
 
-function loginAttemptWindowCount(PDO $pdo, string $key, int $windowSeconds = 900): int
+function ensureSiteSettingsTable(PDO $pdo): void
 {
+    $pdo->exec('CREATE TABLE IF NOT EXISTS site_settings (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        setting_key VARCHAR(100) NOT NULL UNIQUE,
+        setting_value TEXT DEFAULT NULL,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+}
+
+function getSiteSettings(PDO $pdo): array
+{
+    $stmt = $pdo->query('SELECT setting_key, setting_value FROM site_settings');
+    $settings = [];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $settings[$row['setting_key']] = $row['setting_value'];
+    }
+    return $settings;
+}
+
+function getSiteSetting(PDO $pdo, string $key, string $default = ''): string
+{
+    $settings = getSiteSettings($pdo);
+    return isset($settings[$key]) ? (string)$settings[$key] : $default;
+}
+
+function loginAttemptWindowCount(?PDO $pdo, string $key, int $windowSeconds = 900): int
+{
+    if (!$pdo instanceof PDO) {
+        return 0;
+    }
+
     $stmt = $pdo->prepare('SELECT COUNT(*) FROM login_attempts WHERE key_identifier = :key_identifier AND created_at >= DATE_SUB(NOW(), INTERVAL :window SECOND)');
     $stmt->execute([
         ':key_identifier' => $key,
@@ -262,14 +292,22 @@ function loginAttemptWindowCount(PDO $pdo, string $key, int $windowSeconds = 900
     return (int)$stmt->fetchColumn();
 }
 
-function recordLoginAttempt(PDO $pdo, string $key): void
+function recordLoginAttempt(?PDO $pdo, string $key): void
 {
+    if (!$pdo instanceof PDO) {
+        return;
+    }
+
     $stmt = $pdo->prepare('INSERT INTO login_attempts (key_identifier, created_at) VALUES (:key_identifier, NOW())');
     $stmt->execute([':key_identifier' => $key]);
 }
 
-function clearLoginAttempts(PDO $pdo, string $key): void
+function clearLoginAttempts(?PDO $pdo, string $key): void
 {
+    if (!$pdo instanceof PDO) {
+        return;
+    }
+
     $stmt = $pdo->prepare('DELETE FROM login_attempts WHERE key_identifier = :key_identifier');
     $stmt->execute([':key_identifier' => $key]);
 }
@@ -362,6 +400,12 @@ if ($pdo instanceof PDO) {
         ensureSecurityTables($pdo);
     } catch (Throwable $e) {
         error_log('Security schema validation failed: ' . $e->getMessage());
+    }
+
+    try {
+        ensureSiteSettingsTable($pdo);
+    } catch (Throwable $e) {
+        error_log('Site settings schema validation failed: ' . $e->getMessage());
     }
 
     try {
@@ -511,4 +555,25 @@ function publicMediaUrl($value): string
     }
 
     return $path;
+}
+
+function buildAppUrl(string $path = ''): string
+{
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $basePath = '';
+
+    if (!empty($_SERVER['SCRIPT_NAME'])) {
+        $scriptDir = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/');
+        if ($scriptDir !== '' && $scriptDir !== '.' && $scriptDir !== '/') {
+            $basePath = $scriptDir;
+        }
+    }
+
+    $relativePath = ltrim($path, '/');
+    if ($relativePath === '') {
+        return $scheme . '://' . $host . $basePath . '/';
+    }
+
+    return $scheme . '://' . $host . $basePath . '/' . $relativePath;
 }

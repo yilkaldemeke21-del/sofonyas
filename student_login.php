@@ -26,8 +26,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'እባክዎ ኢሜይልና የይለፍ ቃል ያስገቡ።';
         } else {
             $attemptKey = 'student_login:' . strtolower($email) . ':' . ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
-            if (loginAttemptWindowCount($pdo, $attemptKey) >= $maxAttempts) {
-                $error = 'ብዙ የመግቢያ ሙከራዎች ተደርገዋል። እባክዎ ከጥቂት ደቂቃዎች በኋላ እንደገና ይሞክሩ።';
+            if (!($pdo instanceof PDO)) {
+                $error = 'የመግቢያ አገልግሎት በጊዜው አይገኝም። እባክዎ ከጥቂት ደቂቃዎች በኋማ እንደገና ይሞክሩ።';
+            } elseif (loginAttemptWindowCount($pdo, $attemptKey) >= $maxAttempts) {
+                $error = 'ብዙ የመግቢያ ሙከራዎች ተደርገዋል። እባክዎ ከጥቂቃዎች በኋላ እንደገና ይሞክሩ።';
             } elseif ($recaptchaSiteKey !== '' && $recaptchaSecret !== '' && !verifyCaptchaResponse($captchaResponse, $recaptchaSecret)) {
                 $error = 'የማንኛውም ደህንነት ምልክት አልተሳካም። እባክዎ ዳግም ይሞክሩ።';
             } else {

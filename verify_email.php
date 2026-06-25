@@ -6,7 +6,7 @@ require_once __DIR__ . '/mail_config.php';
 $errors = [];
 $success = '';
 $token = trim($_GET['token'] ?? '');
-$emailToResend = trim($_GET['email'] ?? '');
+$emailToResend = trim($_GET['email'] ?? ($_SESSION['student_email'] ?? ''));
 
 if ($token === '') {
     if ($emailToResend !== '' && filter_var($emailToResend, FILTER_VALIDATE_EMAIL)) {
@@ -50,9 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['resend_email'])) {
                 ':expires_at' => $verificationExpires,
             ]);
 
-            $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-            $verifyUrl = $scheme . '://' . $host . '/verify_email.php?token=' . urlencode($verificationToken);
+            $verifyUrl = buildAppUrl('verify_email.php?token=' . urlencode($verificationToken));
 
             $mailSent = sendAppEmail(
                 $emailToResend,

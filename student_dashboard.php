@@ -253,7 +253,7 @@ $student_email_notifications = $stmt->fetchAll();
 $stmt = $pdo->query('SELECT cu.*, c.course_name FROM course_updates cu JOIN courses c ON cu.course_id = c.id ORDER BY cu.created_at DESC LIMIT 5');
 $student_course_updates = $stmt->fetchAll();
 
-$stmt = $pdo->prepare('SELECT * FROM exam_reminders WHERE student_id = :student_id ORDER BY created_at DESC LIMIT 5');
+$stmt = $pdo->prepare('SELECT * FROM exam_reminders WHERE student_id = :student_id OR student_id = "ALL" ORDER BY created_at DESC LIMIT 5');
 $stmt->execute([':student_id' => $studentId]);
 $student_exam_reminders = $stmt->fetchAll();
 
@@ -311,7 +311,7 @@ $student_email_notifications = $stmt->fetchAll();
 $stmt = $pdo->query('SELECT cu.*, c.course_name FROM course_updates cu JOIN courses c ON cu.course_id = c.id ORDER BY cu.created_at DESC LIMIT 5');
 $student_course_updates = $stmt->fetchAll();
 
-$stmt = $pdo->prepare('SELECT * FROM exam_reminders WHERE student_id = :student_id ORDER BY created_at DESC LIMIT 5');
+$stmt = $pdo->prepare('SELECT * FROM exam_reminders WHERE student_id = :student_id OR student_id = "ALL" ORDER BY created_at DESC LIMIT 5');
 $stmt->execute([':student_id' => $studentId]);
 $student_exam_reminders = $stmt->fetchAll();
 
@@ -575,16 +575,44 @@ if (empty($notifications)) {
             <p class="muted">ሌሰን ፍጻሜ %: <?php echo min(100, $progress_percentage + 10); ?>%</p>
         </div>
         <div class="card">
-            <h2 class="section-title">📝የፈተና ዉጤት</h2>
-            <p class="section-sub">ነጥብ፣ሁኔታ እና ያለፈው የፈተና ዉጤት መረጃ</p>
-            <?php foreach ($quiz_results as $quiz): ?>
-                <div class="mini-card" style="margin-bottom: 10px;">
-                    <h3><?php echo safe($quiz['quiz_name']); ?></h3>
-                    <p class="muted">Score: <?php echo (int)($quiz['score'] ?? 0); ?> / <?php echo (int)($quiz['total_questions'] ?? 100); ?></p>
-                    <span class="pill <?php echo ((string)($quiz['status'] ?? 'Passed') === 'Passed' || (int)($quiz['score'] ?? 0) >= 50) ? 'success' : 'warning'; ?>"><?php echo safe($quiz['status'] ?? 'Passed'); ?></span>
-                    <p class="muted" style="margin-top:8px;">Date: <?php echo date('M d, Y', strtotime($quiz['created_at'] ?? date('Y-m-d H:i:s'))); ?></p>
-                </div>
-            <?php endforeach; ?>
+            <h2 class="section-title">📝 የተማሪ ውጤቶች</h2>
+            <p class="section-sub">Quiz Name · Date · Taken Score · Percentage · Status · View · Details · Print Result</p>
+            <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse; font-size:14px;">
+                    <thead>
+                        <tr style="border-bottom:1px solid #e2e8f0;">
+                            <th style="text-align:left; padding:8px 6px;">Quiz Name</th>
+                            <th style="text-align:left; padding:8px 6px;">Date</th>
+                            <th style="text-align:left; padding:8px 6px;">Taken Score</th>
+                            <th style="text-align:left; padding:8px 6px;">Percentage</th>
+                            <th style="text-align:left; padding:8px 6px;">Status</th>
+                            <th style="text-align:left; padding:8px 6px;">View</th>
+                            <th style="text-align:left; padding:8px 6px;">Details</th>
+                            <th style="text-align:left; padding:8px 6px;">Print</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($quiz_results)): ?>
+                            <tr><td colspan="8" class="muted" style="padding:10px 6px;">No results yet.</td></tr>
+                        <?php else: ?>
+                            <?php foreach ($quiz_results as $quiz): ?>
+                                <?php $score = (int)($quiz['score'] ?? 0); $total = max(1, (int)($quiz['total_questions'] ?? 100)); $percentage = (int)round(($score / $total) * 100); $status = (string)($quiz['status'] ?? 'Passed'); $statusClass = ($status === 'Passed' || $score >= 50) ? 'success' : 'warning'; ?>
+                                <tr style="border-bottom:1px solid #f1f5f9;">
+                                    <td style="padding:8px 6px;"><strong><?php echo safe($quiz['quiz_name']); ?></strong></td>
+                                    <td style="padding:8px 6px;"><?php echo date('M d, Y', strtotime($quiz['created_at'] ?? date('Y-m-d H:i:s'))); ?></td>
+                                    <td style="padding:8px 6px;"><?php echo $score; ?> / <?php echo $total; ?></td>
+                                    <td style="padding:8px 6px;"><?php echo $percentage; ?>%</td>
+                                    <td style="padding:8px 6px;"><span class="pill <?php echo $statusClass; ?>"><?php echo safe($status); ?></span></td>
+                                    <td style="padding:8px 6px;"><a class="button secondary" href="results.php?view=<?php echo (int)($quiz['id'] ?? 0); ?>">View</a></td>
+                                    <td style="padding:8px 6px;"><a class="button secondary" href="results.php?details=<?php echo (int)($quiz['id'] ?? 0); ?>">Details</a></td>
+                                    <td style="padding:8px 6px;"><a class="button" href="results.php?print=<?php echo (int)($quiz['id'] ?? 0); ?>">Print</a></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+            <a class="button" href="results.php" style="margin-top:12px;">Open Full Results</a>
         </div>
         <div class="card">
             <h2 class="section-title">🧾 ሠርተፊኬቶች</h2>
@@ -649,6 +677,7 @@ if (empty($notifications)) {
                     <div class="mini-card" style="margin-bottom:10px;">
                         <h3><?php echo safe($reminder['exam_type']); ?></h3>
                         <p class="muted">Exam Date: <?php echo date('M d, Y H:i', strtotime($reminder['exam_date'])); ?></p>
+                        <p class="muted" style="margin-top:6px; white-space:pre-wrap;"><?php echo nl2br(safe($reminder['reminder_message'])); ?></p>
                     </div>
                 <?php endforeach; ?>
             <?php else: ?>

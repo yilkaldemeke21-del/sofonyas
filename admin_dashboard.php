@@ -209,6 +209,46 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
             font-weight: 700;
             margin-left: 12px;
         }
+        .actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .action-btn {
+            display: block;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: var(--surface);
+            color: var(--text);
+            text-decoration: none;
+            font-weight: 700;
+            border: 1px solid var(--border);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+            transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+        }
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 18px rgba(0,0,0,0.12);
+        }
+        .action-btn.featured {
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            box-shadow: 0 10px 22px rgba(37, 99, 235, 0.24);
+        }
+        .action-btn.featured:hover {
+            box-shadow: 0 14px 28px rgba(37, 99, 235, 0.28);
+        }
+        .action-btn.featured.news {
+            background: linear-gradient(135deg, #0f766e 0%, #2563eb 100%);
+        }
+        .action-btn.featured.blog {
+            background: linear-gradient(135deg, #9333ea 0%, #7c3aed 100%);
+        }
+        .action-btn.featured.announcement {
+            background: linear-gradient(135deg, #dc2626 0%, #f97316 100%);
+        }
         body[data-theme="dark"] .theme-toggle {
             background: rgba(15, 23, 42, 0.7);
             border-color: var(--border);
@@ -366,9 +406,10 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
 
     <h2 style="margin-bottom: 20px;">ድርጊቶች</h2>
     <div class="actions">
-        <a href="admin_add_news.php" class="action-btn">📰 አዲስ ዜና ጨምር</a>
-        <a href="admin_add_blog.php" class="action-btn">📝 ብሎግ ጨምር</a>
-        <a href="admin_add_announcement.php" class="action-btn">📢 ማስታወቂያ ጨምር</a>
+        <a href="admin_add_news.php" class="action-btn featured news">📰 አዲስ ዜና ጨምር</a>
+        <a href="admin_add_blog.php" class="action-btn featured blog">📝 ብሎግ ጨምር</a>
+        <a href="admin_add_announcement.php" class="action-btn featured announcement">📢 ማስታወቂያ ጨምር</a>
+        <a href="admin_website_settings.php" class="action-btn">⚙️ Website Settings</a>
         <a href="admin_course_builder.php" class="action-btn">🛠️ ኮርስ ብሉደር ክፈት</a>
         <a href="admin_courses.php" class="action-btn">📹 ቪዲዮዎችን ጨምር</a>
         <a href="admin_add_question.php?view=sections" class="action-btn">🧩 Manage Sections</a>
@@ -387,6 +428,7 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
         <a href="admin_questions.php" class="action-btn">🧠 ጥያቄዎችን አስተዳድር</a>
         <a href="admin_registrations.php" class="action-btn">📝 ምዝገቦችን አስተዳድር</a>
         <a href="admin_exam_results.php" class="action-btn">📊 የፈተና ውጤቶች</a>
+        <a href="results.php" class="action-btn">📈 የተማሪ ውጤቶች</a>
         <a href="admin_exam_reminders.php" class="action-btn">🔔 የፈተና ማስታወሻ አስተዳደር</a>
         <a href="admin_chat_management.php" class="action-btn">💬 ቻት አስተዳደር</a>
     </div>
