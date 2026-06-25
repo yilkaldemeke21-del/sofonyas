@@ -21,17 +21,32 @@ $submissions = $stmt->fetchAll();
         body { font-family: Arial, sans-serif; background: #f5f7fa; color: #1f2937; margin: 0; }
         .wrap { max-width: 1200px; margin: 24px auto; padding: 0 18px; }
         .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+        .header-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+        .print-btn { background: #16a34a; color: white; padding: 10px 14px; border-radius: 6px; text-decoration: none; border: 0; cursor: pointer; }
+        .print-btn:hover { background: #15803d; }
         table { width: 100%; border-collapse: collapse; }
         th, td { border-bottom: 1px solid #e5e7eb; padding: 10px; text-align: left; vertical-align: top; }
         th { background: #eef2ff; }
         a { color: #2563eb; text-decoration: none; }
+        @media print {
+            body { background: #fff; }
+            .card { box-shadow: none; border: 1px solid #ddd; }
+            .no-print { display: none !important; }
+        }
     </style>
 </head>
 <body>
 <div class="wrap">
     <div class="card">
-        <h2>የፈተና ውጤቶች</h2>
-        <p>ተማሪዎች የሰጡትን ፈተና ውጤት እዚህ ማየት ይችላሉ።</p>
+        <div class="header-row">
+            <div>
+                <h2>የፈተና ውጤቶች</h2>
+                <p>ተማሪዎች የሰጡትን ፈተና ውጤት እዚህ ማየት ይችላሉ።</p>
+            </div>
+            <div class="no-print">
+                <button type="button" class="print-btn" onclick="window.print()">🖨️ ውጤቶች አትም</button>
+            </div>
+        </div>
         <table>
             <thead>
                 <tr>

@@ -10,6 +10,9 @@ if (!isset($_SESSION['admin_id'])) {
 $message = '';
 $error = '';
 
+$page = max(1, (int)($_GET['page'] ?? 1));
+$perPage = 8;
+
 function is_youtube_url($url) {
     return preg_match('/(?:youtube\.com\/watch\?v=|youtu\.be\/)/i', $url) === 1;
 }
@@ -32,9 +35,17 @@ if (isset($_GET['delete'])) {
     $message = 'ኮርስ ሰርሷል።';
 }
 
-// Get all courses
+// Get paginated courses
 try {
-    $stmt = $pdo->query('SELECT * FROM courses ORDER BY created_at DESC');
+    $totalCourses = (int)$pdo->query('SELECT COUNT(*) FROM courses')->fetchColumn();
+    $totalPages = max(1, (int)ceil($totalCourses / $perPage));
+    $page = min($page, $totalPages);
+    $offset = ($page - 1) * $perPage;
+
+    $stmt = $pdo->prepare('SELECT * FROM courses ORDER BY created_at DESC LIMIT :limit OFFSET :offset');
+    $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $stmt->execute();
     $courses = $stmt->fetchAll();
 } catch (PDOException $e) {
     $courses = [];
@@ -327,6 +338,7 @@ try {
                 <p>ምንም ኮርስ የለም። <a href="admin_courses.php">አሁን ጨምር</a></p>
             </div>
         <?php else: ?>
+            <div style="margin-bottom: 12px; color:#475569;">Showing <?php echo count($courses); ?> of <?php echo $totalCourses; ?> courses</div>
             <div class="table-shell">
             <table>
                 <thead>
@@ -425,6 +437,15 @@ try {
                     <?php endforeach; ?>
                 </tbody>
             </table>
+            </div>
+            <div style="margin-top: 16px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:flex-end;">
+                <?php if ($page > 1): ?>
+                    <a href="admin_view_courses.php?page=<?php echo max(1, $page - 1); ?>" class="action-btn edit-btn">◀ ቀዳሚ</a>
+                <?php endif; ?>
+                <span style="color:#475569;">Page <?php echo $page; ?> of <?php echo $totalPages; ?></span>
+                <?php if ($page < $totalPages): ?>
+                    <a href="admin_view_courses.php?page=<?php echo min($totalPages, $page + 1); ?>" class="action-btn edit-btn">ቀጣይ ▶</a>
+                <?php endif; ?>
             </div>
         <?php endif; ?>
         </div>

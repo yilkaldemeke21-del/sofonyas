@@ -225,6 +225,14 @@ if (isset($_GET['download'])) {
         .btn { display: inline-block; padding: 7px 10px; border-radius: 6px; text-decoration: none; font-size: 12px; }
         .btn.issue { background: #667eea; color: white; }
         .btn.del { background: #e74c3c; color: white; }
+        .print-btn { display: inline-block; padding: 8px 12px; border-radius: 6px; background: #16a34a; color: white; text-decoration: none; border: 0; cursor: pointer; }
+        .print-btn:hover { background: #15803d; }
+        .header-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+        @media print {
+            .topbar, .no-print, .btn, .msg { display: none !important; }
+            body { background: #fff; }
+            .card { box-shadow: none; border: 1px solid #ddd; }
+        }
     </style>
 </head>
 <body>
@@ -234,9 +242,16 @@ if (isset($_GET['download'])) {
 </div>
 <div class="wrap">
     <div class="card">
-        <h3>እንዴት ይሰራል</h3>
-        <p>ከፈተና ውጤቶች ውስጥ የሚገኙትን ተማሪዎች በአንድ ጠቅላላ ቁጥር ሰርቲፊኬት ለመስጠት እዚህ ይቆጣጠሩ። እንዲሁም የተሰጡትን ሰርቲፊኬቶች እዚህ ማስተካከል ወይም መሰረዝ ይችላሉ።</p>
-        <p><strong>የአሁኑ ሰርቲፊኬት ቆጣሪ:</strong> <?php echo $dashboard_certificate_count; ?></p>
+        <div class="header-row">
+            <div>
+                <h3>እንዴት ይሰራል</h3>
+                <p>ከፈተና ውጤቶች ውስጥ የሚገኙትን ተማሪዎች በአንድ ጠቅላላ ቁጥር ሰርቲፊኬት ለመስጠት እዚህ ይቆጣጠሩ። እንዲሁም የተሰጡትን ሰርቲፊኬቶች እዚህ ማስተካከል ወይም መሰረዝ ይችላሉ።</p>
+                <p><strong>የአሁኑ ሰርቲፊኬት ቆጣሪ:</strong> <?php echo $dashboard_certificate_count; ?></p>
+            </div>
+            <div class="no-print">
+                <button type="button" class="print-btn" onclick="window.print()">🖨️ ሰርቲፊኬቶች አትም</button>
+            </div>
+        </div>
         <?php if ($message): ?><div class="msg ok"><?php echo safe($message); ?></div><?php endif; ?>
         <?php if ($error): ?><div class="msg err"><?php echo safe($error); ?></div><?php endif; ?>
     </div>

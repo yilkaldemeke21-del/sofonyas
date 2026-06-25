@@ -231,4 +231,135 @@ html {
             padding: 30px 10px 10px;
             color: #334155;
         }
+        .page-loader {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.95);
+            display: grid;
+            place-items: center;
+            z-index: 999;
+            transition: opacity 0.4s ease, visibility 0.4s ease;
+        }
+        .page-loader.hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+        .loader-ring {
+            width: 58px;
+            height: 58px;
+            border: 4px solid rgba(255,255,255,0.25);
+            border-top-color: #38bdf8;
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+        }
+        .hero-section {
+            position: relative;
+            isolation: isolate;
+        }
+        .hero-video {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -2;
+            filter: brightness(0.45);
+        }
+        .hero-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(120deg, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.45));
+            z-index: -1;
+        }
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 1080px;
+            margin: 0 auto;
+            padding: 70px 20px 90px;
+        }
+        .hero-actions {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 18px;
+        }
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.7s ease, transform 0.7s ease;
+        }
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .zoomable-img,
+        .slide img {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .zoomable-img:hover,
+        .slide img:hover {
+            transform: scale(1.03);
+            box-shadow: 0 16px 36px rgba(15, 23, 42, 0.2);
+        }
+        .slider-frame {
+            max-width: 1000px;
+            margin: 14px auto 0;
+        }
+        .slider-track {
+            position: relative;
+            min-height: 360px;
+            border-radius: 16px;
+            overflow: hidden;
+            background: #e2e8f0;
+        }
+        .slide {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            transition: opacity 0.6s ease;
+        }
+        .slide.active {
+            opacity: 1;
+        }
+        .slide img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .slider-dots {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .slider-dot {
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+            border: none;
+            background: #cbd5e1;
+            cursor: pointer;
+            padding: 0;
+        }
+        .slider-dot.active {
+            background: #2563eb;
+            transform: scale(1.12);
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 22px 45px rgba(15, 23, 42, 0.16);
+        }
+        .card {
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        .button, .lang-btn, nav a, .slider-dot {
+            transition: transform 0.24s ease, box-shadow 0.24s ease, background-color 0.24s ease;
+        }
+        @media (max-width: 640px) {
+            .hero-content { padding: 56px 16px 72px; }
+            .slider-track { min-height: 240px; }
+        }
     

@@ -62,6 +62,7 @@ if (isset($_SESSION['admin_id'])) {
 <!DOCTYPE html>
 <html lang="am">
 <head>
+    <?php echo renderSeoMeta(['title' => 'Library Dashboard', 'description' => 'Search courses, lessons, and study resources from the Sofoniyas learning platform.']); ?>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Library Dashboard</title>

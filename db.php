@@ -369,10 +369,31 @@ if ($pdo instanceof PDO) {
     } catch (Throwable $e) {
         error_log('Email verification schema validation failed: ' . $e->getMessage());
     }
+
+    try {
+        ensureSiteChatTables($pdo);
+    } catch (Throwable $e) {
+        error_log('Site chat schema validation failed: ' . $e->getMessage());
+    }
 }
 
 function cleanText($value): string {
     return trim((string)($value ?? ''));
+}
+
+function ensureSiteChatTables(PDO $pdo): void
+{
+    $pdo->exec('CREATE TABLE IF NOT EXISTS site_chat_messages (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        sender_type VARCHAR(30) NOT NULL DEFAULT "guest",
+        sender_name VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        reply_message TEXT DEFAULT NULL,
+        status VARCHAR(30) NOT NULL DEFAULT "new",
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_site_chat_created_at (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 }
 
 function sanitizeRichText($value): string {
@@ -414,6 +435,63 @@ function validateCsrfToken(string $token): bool
     }
 
     return hash_equals($_SESSION['csrf_token'] ?? '', $token);
+}
+
+function getCurrentLanguage(string $fallback = 'am'): string
+{
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    $lang = $_GET['lang'] ?? $_POST['lang'] ?? ($_SESSION['app_lang'] ?? ($_COOKIE['app_lang'] ?? ''));
+    if ($lang === 'en') {
+        return 'en';
+    }
+
+    return $fallback === 'en' ? 'am' : 'am';
+}
+
+function setCurrentLanguage(string $lang): string
+{
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    $lang = $lang === 'en' ? 'en' : 'am';
+    $_SESSION['app_lang'] = $lang;
+    setcookie('app_lang', $lang, time() + 60 * 60 * 24 * 365, '/');
+    return $lang;
+}
+
+function translateText(string $am, string $en, ?string $lang = null): string
+{
+    $lang = $lang ?? getCurrentLanguage();
+    return $lang === 'en' ? $en : $am;
+}
+
+function renderSeoMeta(array $options = []): string
+{
+    $title = $options['title'] ?? 'Sofoniyas Learning Platform';
+    $description = $options['description'] ?? 'A professional learning platform for courses, exams, certificates, and community communication.';
+    $canonical = $options['canonical'] ?? '';
+    $lang = $options['lang'] ?? getCurrentLanguage();
+
+    $meta = [];
+    $meta[] = '<meta charset="UTF-8">';
+    $meta[] = '<meta name="viewport" content="width=device-width, initial-scale=1.0">';
+    $meta[] = '<meta name="description" content="' . safe($description) . '">';
+    $meta[] = '<meta name="keywords" content="sofonyas, learning, courses, exams, certificates, amharic education">';
+    $meta[] = '<meta property="og:title" content="' . safe($title) . '">';
+    $meta[] = '<meta property="og:description" content="' . safe($description) . '">';
+    $meta[] = '<meta property="og:type" content="website">';
+    $meta[] = '<meta name="robots" content="index, follow">';
+    $meta[] = '<meta http-equiv="Content-Language" content="' . safe($lang) . '">';
+
+    if ($canonical !== '') {
+        $meta[] = '<link rel="canonical" href="' . safe($canonical) . '">';
+    }
+
+    return implode("\n", $meta);
 }
 
 function publicMediaUrl($value): string

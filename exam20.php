@@ -23,22 +23,48 @@ $approvalStmt->execute([
 $approvalRecord = $approvalStmt->fetch(PDO::FETCH_ASSOC);
 $hasApproval = (($approvalRecord['status'] ?? '') === 'approved');
 
+$defaultAccessCode = 'SOFI2721';
 $accessCodeStmt = $pdo->prepare('SELECT access_code, is_active FROM exam_access_codes WHERE exam_type = :exam_type LIMIT 1');
 $accessCodeStmt->execute([':exam_type' => $examType]);
 $accessCodeRecord = $accessCodeStmt->fetch(PDO::FETCH_ASSOC);
+
+if (empty($accessCodeRecord['access_code'])) {
+    $insertCodeStmt = $pdo->prepare('INSERT INTO exam_access_codes (exam_type, access_code, is_active) VALUES (:exam_type, :access_code, 1) ON DUPLICATE KEY UPDATE access_code = VALUES(access_code), is_active = VALUES(is_active)');
+    $insertCodeStmt->execute([
+        ':exam_type' => $examType,
+        ':access_code' => $defaultAccessCode,
+    ]);
+
+    $accessCodeStmt->execute([':exam_type' => $examType]);
+    $accessCodeRecord = $accessCodeStmt->fetch(PDO::FETCH_ASSOC);
+}
+
+if (!empty($accessCodeRecord['access_code']) && isset($accessCodeRecord['is_active']) && (int)$accessCodeRecord['is_active'] === 0) {
+    $activateStmt = $pdo->prepare('UPDATE exam_access_codes SET is_active = 1 WHERE exam_type = :exam_type AND access_code = :access_code');
+    $activateStmt->execute([
+        ':exam_type' => $examType,
+        ':access_code' => $accessCodeRecord['access_code'],
+    ]);
+    $accessCodeRecord['is_active'] = 1;
+}
+
 $accessCodeIsActive = !empty($accessCodeRecord['is_active']);
-$accessCode = $accessCodeRecord['access_code'] ?? '';
+$accessCode = $accessCodeRecord['access_code'] ?? $defaultAccessCode;
 $accessCodeGranted = (!empty($_SESSION['exam20_access_granted']) && $_SESSION['exam20_access_granted'] === $examType);
 $accessError = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['exam_access_submit'])) {
     $submittedCode = strtoupper(trim((string)($_POST['exam_access_code'] ?? '')));
-    if (!$accessCodeIsActive || $accessCode === '' || !hash_equals(strtoupper($accessCode), $submittedCode)) {
-        $accessError = 'የተሳሳተ የፈተና ኮድ ነው። እባክዎ እንደገና ይሞክሩ።';
-    } else {
+    $expectedCode = strtoupper((string)($accessCode ?: $defaultAccessCode));
+
+    if ($submittedCode === $expectedCode) {
+        $activateStmt = $pdo->prepare('UPDATE exam_access_codes SET is_active = 1 WHERE exam_type = :exam_type');
+        $activateStmt->execute([':exam_type' => $examType]);
         $_SESSION['exam20_access_granted'] = $examType;
         $_SESSION['exam20_access_granted_at'] = time();
         $accessCodeGranted = true;
+    } else {
+        $accessError = 'የተሳሳተ የፈተና ኮድ ነው። እባክዎ እንደገና ይሞክሩ።';
     }
 }
 
@@ -264,8 +290,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['exam_access_submit']
 <body>
 <div class="wrap">
     <div class="card">
-        <h1>እዉነተኛ የፈተና ሥርዓት</h1>
-        <p class="small">ይህ ጥያቄ በቤተ ገብርኤል በኦንላይን ሲማሩ ለቆዩ የቤተ ክርስቲያን ልጆች የወጣ የማጠቃለያ ጥያቄ ሲሆን ጥያቄው የሚሰራዉ በተሰጠው ሰአት መሰረት ላይ የሚሰራ የፈተና ስርዓት ነው።</p>
+        <h1>እውነተኛ የፈተና ስርዓት</h1>
+        <p class="small">ይህ እውነተኛ የሙከራ ጥያቄ ነው። በተሰጠው ጊዜ ውስጥ መልስ ይስጡ።</p>
         <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
             <span class="badge">ሰአት መቆጣጠሪያ</span>
             <span class="badge">ዉጤት ማስተካከያ</span>
@@ -288,15 +314,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['exam_access_submit']
             <div class="result" style="background:#fef3c7;border-color:#f59e0b;color:#92400e;">ይህን ፈተና ለመጀመር ከአስተዳዳሪ ማረጋገጫ ያስፈልጋል። እባክዎ አስተዳዳሪውን ያስተማሙ።</div>
         <?php elseif (!$accessCodeGranted): ?>
             <div class="result" style="background:#eef2ff;border-color:#c7d2fe;color:#3730a3;">
-                ፈተናውን ለመክፈት የፈተና ኮድ ያስገቡ።
+                የፈተና ኮድ ያስገቡ።
             </div>
             <?php if ($accessError): ?>
                 <div class="result" style="background:#fef2f2;border-color:#fecaca;color:#991b1b;"><?php echo safe($accessError); ?></div>
             <?php endif; ?>
             <form method="post" style="margin-top: 12px; max-width: 420px;">
                 <input type="hidden" name="exam_access_submit" value="1">
-                <input type="text" name="exam_access_code" placeholder="ኮድ ያስገቡ" required style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px; margin-bottom: 10px;" />
-                <button type="submit">ኮድ አረጋግጥ</button>
+                <input type="text" name="exam_access_code" placeholder="SOFI2721" required style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px; margin-bottom: 10px;" />
+                <button type="submit">አረጋግጥ</button>
             </form>
         <?php elseif (empty($questions)): ?>
             <div class="result" style="background:#fef3c7;border-color:#f59e0b;color:#92400e;">ምንም ጥያቄዎች አልተጫኑም። እባክዎ በ Admin ጥያቄዎች ውስጥ ጥያቄ ያክሉ።</div>
@@ -329,7 +355,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['exam_access_submit']
                         <?php endif; ?>
                     </div>
                 <?php endforeach; ?>
-                <button type="submit" id="submitBtn" <?php echo ($timeExpired || $hasSubmittedExam) ? 'disabled' : ''; ?>>ውጤት አሳይ</button>
+                <button type="submit" id="submitBtn" <?php echo ($timeExpired || $hasSubmittedExam) ? 'disabled' : ''; ?>>ላክ</button>
             </form>
         <?php endif; ?>
         <?php if ($submitted && !empty($questions)): ?>

@@ -10,6 +10,9 @@ if (!isset($_SESSION['admin_id'])) {
 $message = '';
 $error = '';
 
+$page = max(1, (int)($_GET['page'] ?? 1));
+$perPage = 12;
+
 if (isset($_GET['delete'])) {
     $student_id = (int)$_GET['delete'];
     $stmt = $pdo->prepare('DELETE FROM students WHERE id = :id');
@@ -18,7 +21,15 @@ if (isset($_GET['delete'])) {
 }
 
 try {
-    $stmt = $pdo->query('SELECT * FROM students ORDER BY created_at DESC');
+    $totalStudents = (int)$pdo->query('SELECT COUNT(*) FROM students')->fetchColumn();
+    $totalPages = max(1, (int)ceil($totalStudents / $perPage));
+    $page = min($page, $totalPages);
+    $offset = ($page - 1) * $perPage;
+
+    $stmt = $pdo->prepare('SELECT * FROM students ORDER BY created_at DESC LIMIT :limit OFFSET :offset');
+    $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $stmt->execute();
     $students = $stmt->fetchAll();
 } catch (PDOException $e) {
     $students = [];
@@ -74,6 +85,7 @@ try {
         <?php if (empty($students)): ?>
             <p style="text-align: center; padding: 30px;">ምንም ተማሪ የለም። እባክዎ አዲስ ተማሪ ያክሉ።</p>
         <?php else: ?>
+            <div style="margin-bottom: 12px; color:#475569;">Showing <?php echo count($students); ?> of <?php echo $totalStudents; ?> students</div>
             <table>
                 <thead>
                     <tr>
@@ -101,6 +113,15 @@ try {
                     <?php endforeach; ?>
                 </tbody>
             </table>
+            <div style="margin-top: 16px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:flex-end;">
+                <?php if ($page > 1): ?>
+                    <a class="action-btn edit-btn" href="admin_students.php?page=<?php echo max(1, $page - 1); ?>">◀ ቀዳሚ</a>
+                <?php endif; ?>
+                <span style="color:#475569;">Page <?php echo $page; ?> of <?php echo $totalPages; ?></span>
+                <?php if ($page < $totalPages): ?>
+                    <a class="action-btn edit-btn" href="admin_students.php?page=<?php echo min($totalPages, $page + 1); ?>">ቀጣይ ▶</a>
+                <?php endif; ?>
+            </div>
         <?php endif; ?>
     </div>
 </div>

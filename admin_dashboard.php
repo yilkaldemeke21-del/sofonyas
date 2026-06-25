@@ -96,6 +96,18 @@ $recent_course_updates = $pdo->query('SELECT cu.*, c.course_name FROM course_upd
 $recent_exam_reminders = $pdo->query('SELECT * FROM exam_reminders ORDER BY created_at DESC LIMIT 5')->fetchAll();
 $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_date DESC LIMIT 5')->fetchAll();
 
+$success_message = '';
+if (isset($_GET['success']) && $_GET['success'] == '1') {
+    $section = $_GET['section'] ?? '';
+    $section_labels = [
+        'news' => 'ዜና',
+        'blog' => 'ብሎግ',
+        'announcement' => 'ማስታወቂያ',
+    ];
+    $label = $section_labels[$section] ?? 'ይዘት';
+    $success_message = $label . ' በተሳካ ሁኔታ ታክሏል።';
+}
+
 // Create notifications tables if they don't exist
 try {
     $pdo->exec('CREATE TABLE IF NOT EXISTS email_notifications (
@@ -226,6 +238,16 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
         .actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }
         .action-btn { background: var(--surface); padding: 15px; border-radius: 8px; text-align: center; cursor: pointer; border: 2px solid var(--primary); transition: all 0.3s; text-decoration: none; color: var(--primary); font-weight: bold; }
         .action-btn:hover { background: var(--primary); color: white; }
+        .report-section { background: var(--surface); padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); color: var(--text); margin-bottom: 30px; }
+        .report-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+        .report-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+        .report-card { border: 1px solid var(--border); border-radius: 10px; padding: 12px; background: var(--surface-muted); }
+        .report-title { font-weight: 700; margin-bottom: 8px; }
+        .report-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+        .report-action { display: inline-block; padding: 6px 10px; border: 1px solid var(--primary); border-radius: 999px; background: var(--surface); color: var(--primary); font-size: 12px; font-weight: 700; text-decoration: none; }
+        .report-action:hover { background: var(--primary); color: white; }
+        .report-action.secondary { border-color: #64748b; color: #475569; }
+        .report-action.secondary:hover { background: #64748b; color: white; }
         .table-section { background: var(--surface); padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); color: var(--text); }
         table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
@@ -336,8 +358,17 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
         </div>
     </div>
 
+    <?php if ($success_message): ?>
+    <div style="margin-bottom: 20px; padding: 12px 14px; border-radius: 8px; background: #ecfdf3; color: #047857; border: 1px solid #a7f3d0;">
+        <?php echo htmlspecialchars($success_message, ENT_QUOTES, 'UTF-8'); ?>
+    </div>
+    <?php endif; ?>
+
     <h2 style="margin-bottom: 20px;">ድርጊቶች</h2>
     <div class="actions">
+        <a href="admin_add_news.php" class="action-btn">📰 አዲስ ዜና ጨምር</a>
+        <a href="admin_add_blog.php" class="action-btn">📝 ብሎግ ጨምር</a>
+        <a href="admin_add_announcement.php" class="action-btn">📢 ማስታወቂያ ጨምር</a>
         <a href="admin_course_builder.php" class="action-btn">🛠️ ኮርስ ብሉደር ክፈት</a>
         <a href="admin_courses.php" class="action-btn">📹 ቪዲዮዎችን ጨምር</a>
         <a href="admin_questions.php" class="action-btn">🧪Quizzes ጨምር </a>
@@ -355,6 +386,105 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
         <a href="admin_questions.php" class="action-btn">🧠 ጥያቄዎችን አስተዳድር</a>
         <a href="admin_registrations.php" class="action-btn">📝 ምዝገቦችን አስተዳድር</a>
         <a href="admin_exam_results.php" class="action-btn">📊 የፈተና ውጤቶች</a>
+        <a href="admin_exam_reminders.php" class="action-btn">🔔 የፈተና ማስታወሻ አስተዳደር</a>
+        <a href="admin_chat_management.php" class="action-btn">💬 ቻት አስተዳደር</a>
+    </div>
+
+    <div class="report-section">
+        <div class="report-header">
+            <h3>🧾 ፕሮፌሽናል ሪፖርት ማዕከል</h3>
+            <p style="margin: 0; color: var(--muted);">በአስተዳዳሪ ዳሽቦርድ ውስጥ የሚታይ ሪፖርት እርምጃዎች</p>
+        </div>
+        <div class="report-grid">
+            <div class="report-card">
+                <div class="report-title">👨‍🎓 የተማሪ ዝርዝር</div>
+                <div class="report-actions">
+                    <a href="admin_students.php" class="report-action">View</a>
+                    <a href="admin_edit_student.php" class="report-action">Edit</a>
+                    <a href="admin_students.php" class="report-action secondary">Delete</a>
+                    <a href="admin_reports.php?type=students&print=1" class="report-action">Print</a>
+                    <a href="admin_reports.php?type=students" class="report-action">Export PDF</a>
+                    <a href="admin_reports.php?type=students" class="report-action">Export Excel</a>
+                </div>
+            </div>
+            <div class="report-card">
+                <div class="report-title">📚 የኮርስ ዝርዝር</div>
+                <div class="report-actions">
+                    <a href="admin_view_courses.php" class="report-action">View</a>
+                    <a href="admin_edit_course.php" class="report-action">Edit</a>
+                    <a href="admin_view_courses.php" class="report-action secondary">Delete</a>
+                    <a href="admin_reports.php?type=courses&print=1" class="report-action">Print</a>
+                    <a href="admin_reports.php?type=courses" class="report-action">Export PDF</a>
+                    <a href="admin_reports.php?type=courses" class="report-action">Export Excel</a>
+                </div>
+            </div>
+            <div class="report-card">
+                <div class="report-title">🧪 የኩዊዝ ውጤቶች</div>
+                <div class="report-actions">
+                    <a href="admin_exam_results.php" class="report-action">View</a>
+                    <a href="admin_exam_results.php" class="report-action">Edit</a>
+                    <a href="admin_exam_results.php" class="report-action secondary">Delete</a>
+                    <a href="admin_reports.php?type=quiz_results&print=1" class="report-action">Print</a>
+                    <a href="admin_reports.php?type=quiz_results" class="report-action">Export PDF</a>
+                    <a href="admin_reports.php?type=quiz_results" class="report-action">Export Excel</a>
+                </div>
+            </div>
+            <div class="report-card">
+                <div class="report-title">📜 ሰርቲፊኬት</div>
+                <div class="report-actions">
+                    <a href="admin_certificate.php" class="report-action">View</a>
+                    <a href="admin_certificate.php" class="report-action">Edit</a>
+                    <a href="admin_certificate.php" class="report-action secondary">Delete</a>
+                    <a href="admin_reports.php?type=certificates&print=1" class="report-action">Print</a>
+                    <a href="admin_reports.php?type=certificates" class="report-action">Export PDF</a>
+                    <a href="admin_reports.php?type=certificates" class="report-action">Export Excel</a>
+                </div>
+            </div>
+            <div class="report-card">
+                <div class="report-title">📩 የእውቂያ መልእክቶች</div>
+                <div class="report-actions">
+                    <a href="admin_reports.php?type=contact_messages" class="report-action">View</a>
+                    <a href="admin_reports.php?type=contact_messages" class="report-action">Edit</a>
+                    <a href="admin_reports.php?type=contact_messages" class="report-action secondary">Delete</a>
+                    <a href="admin_reports.php?type=contact_messages&print=1" class="report-action">Print</a>
+                    <a href="admin_reports.php?type=contact_messages" class="report-action">Export PDF</a>
+                    <a href="admin_reports.php?type=contact_messages" class="report-action">Export Excel</a>
+                </div>
+            </div>
+            <div class="report-card">
+                <div class="report-title">📢 ማስታወቂያዎች</div>
+                <div class="report-actions">
+                    <a href="admin_reports.php?type=announcements" class="report-action">View</a>
+                    <a href="admin_reports.php?type=announcements" class="report-action">Edit</a>
+                    <a href="admin_reports.php?type=announcements" class="report-action secondary">Delete</a>
+                    <a href="admin_reports.php?type=announcements&print=1" class="report-action">Print</a>
+                    <a href="admin_reports.php?type=announcements" class="report-action">Export PDF</a>
+                    <a href="admin_reports.php?type=announcements" class="report-action">Export Excel</a>
+                </div>
+            </div>
+            <div class="report-card">
+                <div class="report-title">📝 ብሎግ ፖስቶች</div>
+                <div class="report-actions">
+                    <a href="admin_reports.php?type=blog_posts" class="report-action">View</a>
+                    <a href="admin_reports.php?type=blog_posts" class="report-action">Edit</a>
+                    <a href="admin_reports.php?type=blog_posts" class="report-action secondary">Delete</a>
+                    <a href="admin_reports.php?type=blog_posts&print=1" class="report-action">Print</a>
+                    <a href="admin_reports.php?type=blog_posts" class="report-action">Export PDF</a>
+                    <a href="admin_reports.php?type=blog_posts" class="report-action">Export Excel</a>
+                </div>
+            </div>
+            <div class="report-card">
+                <div class="report-title">🧾 የምዝገባ ሪፖርት</div>
+                <div class="report-actions">
+                    <a href="admin_registrations.php" class="report-action">View</a>
+                    <a href="admin_registrations.php" class="report-action">Edit</a>
+                    <a href="admin_registrations.php" class="report-action secondary">Delete</a>
+                    <a href="admin_reports.php?type=enrollment_reports&print=1" class="report-action">Print</a>
+                    <a href="admin_reports.php?type=enrollment_reports" class="report-action">Export PDF</a>
+                    <a href="admin_reports.php?type=enrollment_reports" class="report-action">Export Excel</a>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="table-section">
@@ -541,6 +671,7 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
                     <th>ፍጥረታዊ ርዕስ</th>
                     <th>መግለጫ</th>
                     <th>ፍጥረታዊ ቀን</th>
+                    <th>እርምጃ</th>
                 </tr>
             </thead>
             <tbody>
@@ -552,6 +683,7 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
                             <td><?php echo safe($event['event_title']); ?></td>
                             <td><?php echo substr(safe($event['event_description']), 0, 50) . '...'; ?></td>
                             <td><?php echo date('M d, Y H:i', strtotime($event['event_date'])); ?></td>
+                            <td><a href="admin_edit_content.php?id=<?php echo (int)$event['id']; ?>&type=announcement" style="color:#2563eb;text-decoration:none;">✏️ አስተካክል</a></td>
                         </tr>
                     <?php endforeach; ?>
                 <?php endif; ?>

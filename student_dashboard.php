@@ -15,6 +15,30 @@ $student = is_array($student) ? $student : [];
 $studentName = $student['name'] ?? $student['student_name'] ?? 'ተማሪ';
 $studentEmail = $student['email'] ?? '';
 
+$chatMessageText = '';
+$chatMessageError = '';
+$chatSuccessMessage = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['chat_message'])) {
+    $chatMessageText = trim((string)$_POST['chat_message']);
+
+    if ($chatMessageText !== '') {
+        $stmt = $pdo->prepare('INSERT INTO site_chat_messages (sender_type, sender_name, message, status) VALUES (:sender_type, :sender_name, :message, :status)');
+        $stmt->execute([
+            ':sender_type' => 'student',
+            ':sender_name' => $studentName,
+            ':message' => $chatMessageText,
+            ':status' => 'new',
+        ]);
+        $chatSuccessMessage = 'የእርስዎ መልእክት ተላከ። አስተዳዳሪ በቅርቡ ይመልሳል።';
+    } else {
+        $chatMessageError = 'እባክዎ መልእክት ያስገቡ።';
+    }
+}
+
+$stmt = $pdo->query('SELECT * FROM site_chat_messages ORDER BY created_at DESC LIMIT 8');
+$chatMessages = $stmt->fetchAll();
+
 try {
     $pdo->exec('CREATE TABLE IF NOT EXISTS certificates (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -696,6 +720,45 @@ if (empty($notifications)) {
                     <h3>ምንም ሴቭ የተደረገ ዝርዝር የለም</h3>
                     <p class="muted">ከዚህ ሴቭ ተደርገው የተቀመጡ የትምህርት ክፍሎችን የገጽ ማስታወሽ በተን ተጠቀም.</p>
                 </div>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom: 24px;">
+        <h2 class="section-title">💬 የቻት አስተዳደር</h2>
+        <p class="section-sub">እዚህ ከተማሪዎች የሚላክ መልእክት በተመሳሳይ ዳታቤዝ ላይ ወደ admin_chat_management.php ይቀርባል።</p>
+        <?php if ($chatSuccessMessage !== ''): ?>
+            <div style="margin-bottom: 12px; padding: 10px 12px; border-radius: 10px; background: #ecfdf5; color: #166534; border: 1px solid #a7f3d0; font-weight: 700;">
+                <?php echo safe($chatSuccessMessage); ?>
+            </div>
+        <?php endif; ?>
+        <?php if ($chatMessageError !== ''): ?>
+            <div style="margin-bottom: 12px; padding: 10px 12px; border-radius: 10px; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; font-weight: 700;">
+                <?php echo safe($chatMessageError); ?>
+            </div>
+        <?php endif; ?>
+        <form method="post" style="display:flex; flex-direction:column; gap:10px;">
+            <textarea name="chat_message" rows="4" maxlength="1000" required placeholder="ስለ ኮርስዎ፣ እድገትዎ ወይም ማንኛውንም ጥያቄ ይጻፉ..." style="padding: 12px 14px; border: 1px solid #cbd5e1; border-radius: 12px; resize: vertical;"></textarea>
+            <button class="button" type="submit">📤 መልእክት ላክ</button>
+        </form>
+        <div style="margin-top: 16px; display:flex; flex-direction:column; gap:10px;">
+            <?php if (empty($chatMessages)): ?>
+                <div class="mini-card"><p class="muted">እስካሁን ምንም የቻት መልእክት የለም።</p></div>
+            <?php else: ?>
+                <?php foreach ($chatMessages as $chatItem): ?>
+                    <div class="mini-card" style="border-left: 4px solid <?php echo ($chatItem['reply_message'] !== null && $chatItem['reply_message'] !== '') ? '#8b5cf6' : '#2563eb'; ?>;">
+                        <div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:6px;">
+                            <strong><?php echo safe($chatItem['sender_name']); ?></strong>
+                            <span class="pill <?php echo ($chatItem['status'] === 'replied') ? 'success' : 'info'; ?>"><?php echo safe($chatItem['status']); ?></span>
+                        </div>
+                        <p class="muted" style="margin:0 0 8px;"><?php echo safe($chatItem['message']); ?></p>
+                        <?php if (!empty($chatItem['reply_message'])): ?>
+                            <div style="padding: 10px 12px; border-radius: 10px; background: #f5f3ff; color: #5b21b6; border-left: 3px solid #8b5cf6;">
+                                <strong>Admin reply:</strong> <?php echo safe($chatItem['reply_message']); ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                <?php endforeach; ?>
             <?php endif; ?>
         </div>
     </div>

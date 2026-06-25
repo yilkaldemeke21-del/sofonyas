@@ -15,6 +15,9 @@ if (isset($_SESSION['admin_id'])) {
     $dashboardLabel = 'Student Dashboard';
 }
 
+$page = max(1, (int)($_GET['page'] ?? 1));
+$perPage = 8;
+
 $statusMessage = '';
 $statusType = '';
 if (isset($_GET['status'])) {
@@ -51,7 +54,15 @@ try {
         FOREIGN KEY (post_id) REFERENCES discussion_posts(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 
-    $postStmt = $pdo->query('SELECT * FROM discussion_posts ORDER BY id DESC LIMIT 25');
+    $totalPosts = (int)$pdo->query('SELECT COUNT(*) FROM discussion_posts')->fetchColumn();
+    $totalPages = max(1, (int)ceil($totalPosts / $perPage));
+    $page = min($page, $totalPages);
+    $offset = ($page - 1) * $perPage;
+
+    $postStmt = $pdo->prepare('SELECT * FROM discussion_posts ORDER BY id DESC LIMIT :limit OFFSET :offset');
+    $postStmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+    $postStmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $postStmt->execute();
     $posts = $postStmt->fetchAll();
 
     foreach ($posts as &$post) {
@@ -167,6 +178,7 @@ try {
     <div class="card" style="grid-column: 1 / -1;">
       <h2>📣 እስካሁን የተሰቀሉ ውይይቶች</h2>
       <p>ከታች የሚታዩት ልጥፎች ተማሪዎችና አስተዳዳሪዎች መልስ እንዲሰጡበት ተቀምጠዋል።</p>
+      <div style="margin-bottom: 12px; color:#475569;">Showing <?php echo count($posts); ?> of <?php echo $totalPosts; ?> discussions</div>
       <div class="forum-feed">
         <?php if ($posts === []): ?>
           <div class="post-card">ምንም ውይይት አሁን አልተመዘገበም። አዲስ ርዕስ በትክክል ይጫኑ።</div>
@@ -201,6 +213,15 @@ try {
               </form>
             </article>
           <?php endforeach; ?>
+        <?php endif; ?>
+      </div>
+      <div style="margin-top: 16px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:flex-end;">
+        <?php if ($page > 1): ?>
+          <a class="btn" href="discussion_forum.php?page=<?php echo max(1, $page - 1); ?>">◀ Previous</a>
+        <?php endif; ?>
+        <span style="color:#475569;">Page <?php echo $page; ?> of <?php echo $totalPages; ?></span>
+        <?php if ($page < $totalPages): ?>
+          <a class="btn" href="discussion_forum.php?page=<?php echo min($totalPages, $page + 1); ?>">Next ▶</a>
         <?php endif; ?>
       </div>
     </div>

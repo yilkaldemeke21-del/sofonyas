@@ -86,12 +86,21 @@ try {
         .delete-btn:hover { background: #c0392b; }
         .add-btn { background: #667eea; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; }
         .add-btn:hover { background: #764ba2; }
+        .print-btn { background: #16a34a; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; border: 0; cursor: pointer; }
+        .print-btn:hover { background: #15803d; }
+        @media print {
+            .navbar, .no-print, .action-btn, .message { display: none !important; }
+            body { background: #fff; }
+            .card { box-shadow: none; border: 1px solid #ddd; }
+            table { font-size: 12px; }
+        }
     </style>
 </head>
 <body>
 <div class="navbar">
     <h2>የጥያቄ አስተዳደር</h2>
-    <div>
+    <div class="no-print">
+        <button type="button" class="print-btn" onclick="window.print()">🖨️ ጥያቄዎች አትም</button>
         <a href="admin_add_question.php" class="add-btn">➕ ጥያቄ ጨምር</a>
         <a href="admin_dashboard.php">ዳሽቦርድ</a>
     </div>

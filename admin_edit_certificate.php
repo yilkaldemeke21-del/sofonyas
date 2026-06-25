@@ -83,12 +83,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         button { background: #667eea; color: white; border: none; cursor: pointer; font-weight: bold; }
         .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .field { margin-bottom: 12px; }
-        .preview { border: 1px solid #e5e7eb; border-radius: 14px; padding: 16px; background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%); margin-bottom: 16px; box-shadow: 0 12px 30px rgba(124,58,237,0.10); }
+        .preview { border: 1px solid #e5e7eb; border-radius: 18px; padding: 18px; background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%); margin-bottom: 16px; box-shadow: 0 16px 40px rgba(124,58,237,0.12); border: 2px solid #d8b4fe; }
+        .preview-frame { border: 8px solid #8b5cf6; border-radius: 28px; padding: 18px 20px; background: linear-gradient(180deg, #ffffff 0%, #f5f3ff 100%); }
         .logo-chip { display: inline-flex; align-items: center; gap: 10px; font-weight: bold; color: #5b21b6; font-size: 14px; }
-        .logo-box { width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, #7c3aed, #a78bfa); color: white; display: grid; place-items: center; font-weight: bold; box-shadow: 0 8px 16px rgba(124,58,237,0.25); }
-        .preview h3 { margin: 8px 0 8px; font-size: 20px; color: #111827; }
-        .mini { color: #475569; font-size: 13px; line-height: 1.5; }
+        .logo-box { width: 44px; height: 44px; border-radius: 14px; background: linear-gradient(135deg, #7c3aed, #a78bfa); color: white; display: grid; place-items: center; font-weight: bold; box-shadow: 0 10px 20px rgba(124,58,237,0.25); }
+        .preview h3 { margin: 10px 0 8px; font-size: 22px; color: #111827; }
+        .mini { color: #475569; font-size: 13px; line-height: 1.6; }
         .mini strong { color: #111827; }
+        .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+        .print-btn { display: inline-block; padding: 10px 14px; border-radius: 6px; background: #16a34a; color: white; text-decoration: none; border: 0; cursor: pointer; }
+        .print-btn:hover { background: #15803d; }
+        @media print {
+            .topbar, .no-print, .msg { display: none !important; }
+            body { background: #fff; }
+            .card { box-shadow: none; border: 1px solid #ddd; }
+            .preview-frame { border-color: #7c3aed; }
+        }
     </style>
 </head>
 <body>
@@ -102,14 +112,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php if ($success): ?><div class="msg ok"><?php echo safe($success); ?></div><?php endif; ?>
 
         <div class="preview">
-            <div class="logo-chip"><span class="logo-box">ሶፊ</span>ዲ/ን ሶፎንያስ(ቤተ ገብርኤል) ኦንላይን መንፈሳዊ የቤ/ክ ዌቭሣይት</div>
-            <h3>Certificate Preview</h3>
-            <p class="mini">የተማሪ ስም: <strong><?php echo safe($student_name ?: 'student name'); ?></strong></p>
-            <p class="mini">የፈተናው አይነት: <strong><?php echo safe($exam_type ?: 'Exam Type'); ?></strong></p>
-            <p class="mini">ያመጣው ነጥብ: <strong><?php echo (int)$score; ?> / <?php echo (int)$total_questions; ?></strong></p>
-            <p class="mini">የተሰጠበት ቀን: <strong><?php echo safe(date('Y-m-d H:i', strtotime($issued_at))); ?></strong></p>
-            <p class="mini">ይህንን በpdf መልኩ የሚታየዉን የሠርተፊኬት ዉጤት ማዉረድ ይቻላል።</p>
+            <div class="preview-frame">
+                <div class="logo-chip"><span class="logo-box">ሶፊ</span>ዲ/ን ሶፎንያስ(ቤተ ገብርኤል) ኦንላይን መንፈሳዊ የቤ/ክ ዌቭሣይት</div>
+                <h3>Certificate Preview</h3>
+                <p class="mini">የተማሪ ስም: <strong><?php echo safe($student_name ?: 'student name'); ?></strong></p>
+                <p class="mini">የፈተናው አይነት: <strong><?php echo safe($exam_type ?: 'Exam Type'); ?></strong></p>
+                <p class="mini">ያመጣው ነጥብ: <strong><?php echo (int)$score; ?> / <?php echo (int)$total_questions; ?></strong></p>
+                <p class="mini">የተሰጠበት ቀን: <strong><?php echo safe(date('Y-m-d H:i', strtotime($issued_at))); ?></strong></p>
+                <p class="mini">ይህንን በpdf መልኩ የሚታየዉን የሠርተፊኬት ዉጤት ማዉረድ ይቻላል።</p>
+            </div>
+            <div class="actions no-print">
+                <button type="submit" form="certificate-form">💾 ሰርቲፊኬት አስተካክል</button>
+                <button type="button" class="print-btn" onclick="window.print()">🖨️ ሰርቲፊኬት አትም</button>
+            </div>
         </div>
+
+        <form id="certificate-form" method="post">
 
         <form method="post">
             <div class="field">
