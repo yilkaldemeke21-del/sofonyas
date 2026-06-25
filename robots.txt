@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: http://localhost/sofonyas/sitemap.xml

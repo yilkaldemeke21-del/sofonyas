@@ -49,7 +49,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
 <head>
     <?php echo renderSeoMeta(['title' => translateText('የሶፎንያስ ድር ገፅ', 'Sofoniyas Website Home'), 'description' => translateText('የሶፎንያስ የመማሪያ እና ኮሚዩኒቲ ዌብሳይት', 'Sofoniyas learning and community website')]); ?>
     <title><?php echo safe(translateText('የሶፎንያስ ድር ገፅ', 'Sofoniyas Website Home')); ?></title>
+    <meta name="description" content="<?php echo safe(translateText('የሶፎንያስ የመማሪያ እና ኮሚዩኒቲ ዌብሳይት', 'Sofoniyas learning and community website')); ?>">
+    <meta name="keywords" content="Sofoniyas, learning, church, community, education, Ethiopia">
+    <meta name="theme-color" content="#0f172a">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="icon.svg">
     <link rel="stylesheet" href="sofonyas (1).css">
+    <link rel="sitemap" type="application/xml" href="sitemap.xml">
+    <style>
+        .toast { position: fixed; right: 20px; top: 20px; max-width: 360px; padding: 14px 16px; border-radius: 12px; color: #fff; box-shadow: 0 16px 35px rgba(15,23,42,0.2); z-index: 9999; opacity: 0; transform: translateY(-8px); pointer-events: none; transition: all 0.3s ease; }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast-success { background: linear-gradient(135deg, #16a34a, #15803d); }
+        .toast-error { background: linear-gradient(135deg, #dc2626, #b91c1c); }
+        .toast-info { background: linear-gradient(135deg, #2563eb, #4f46e5); }
+    </style>
 </head>
 <body>
     <div class="page-loader" id="pageLoader" aria-hidden="true">
@@ -63,6 +77,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
             <li><a href="student_login.php" data-am="የተማሪ ማዕከል" data-en="Student Center">exam center</a></li>
             <li><a href="#view" data-am="እይታ" data-en="View">View</a></li>
             <li><a href="contact.html" data-am="እናግራ" data-en="Contact">Contact</a></li>
+             <li><a href="dashboard.php">Dashboard</a></li>
+            <li><a href="exam20.php">exam portal</a></li>
+            <li><a href="tutorial.php">Courses</a></li>
+            <li><a href="discussion_forum.php">Forum</a></li>
+            <li><a href="library.php">Library</a></li>
+            <li><a href="student_login.php">Student Login</a></li>
+            <li><a href="admin_login.php">Admin Login</a></li>
+            <li><a href="student_register.php">Register</a></li>
         </ul>
     </nav>
 
@@ -119,6 +141,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
             <li data-am="ነገረ ቅባት" data-en="The message of anointing">ነገረ ቅባት</li>
         </ul>
     </div>
+
+    <section class="card reveal" style="background:linear-gradient(135deg,#f8fbff 0%,#eef2ff 100%); border:1px solid #dbeafe;">
+        <h2 data-am="የLMS ደረጃ ባህሪያት" data-en="Professional LMS Features">Professional LMS Features</h2>
+        <div style="display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); margin-top:12px;">
+            <div style="background:#fff; border-radius:12px; padding:14px; box-shadow:0 8px 20px rgba(15,23,42,0.05);">
+                <strong data-am="ጨዋታ ማበረታቻ" data-en="Gamification">Gamification</strong>
+                <p style="margin:6px 0 0; color:#475569;" data-am="እንቅስቃሴዎችን ለመከታተል እና ለማበረታታት ተግባራዊ ስርዓት" data-en="Track progress and motivate learner engagement with a structured reward system.">Track progress and motivate learner engagement with a structured reward system.</p>
+            </div>
+            <div style="background:#fff; border-radius:12px; padding:14px; box-shadow:0 8px 20px rgba(15,23,42,0.05);">
+                <strong data-am="የመማሪያ መንገድ" data-en="Learning Path">Learning Path</strong>
+                <p style="margin:6px 0 0; color:#475569;" data-am="ተማሪዎች በአቅጣጫ የተዘጋጀ የመማር ፍሰት ውስጥ እንዲሄዱ ያስችላል" data-en="Guide learners through a clear and structured study journey.">Guide learners through a clear and structured study journey.</p>
+            </div>
+            <div style="background:#fff; border-radius:12px; padding:14px; box-shadow:0 8px 20px rgba(15,23,42,0.05);">
+                <strong data-am="የሰርተፊኬት ማረጋገጫ" data-en="Certificate Verification">Certificate Verification</strong>
+                <p style="margin:6px 0 0; color:#475569;" data-am="የተሰጡ ሰርተፊኬቶች በውስጥ በቀላሉ ሊፈተሹ ይችላሉ" data-en="Allow completed certificates to be validated quickly and reliably.">Allow completed certificates to be validated quickly and reliably.</p>
+            </div>
+            <div style="background:#fff; border-radius:12px; padding:14px; box-shadow:0 8px 20px rgba(15,23,42,0.05);">
+                <strong data-am="አለም አቀፍ ፍለጋ" data-en="Global Search">Global Search</strong>
+                <p style="margin:6px 0 0; color:#475569;" data-am="በአጭሩ የእርስዎን መረጃ የሚያገኙበት የፍለጋ ስርዓት" data-en="Provide a fast search experience so learners can instantly find the information they need.">Provide a fast search experience so learners can instantly find the information they need.</p>
+            </div>
+            <div style="background:#fff; border-radius:12px; padding:14px; box-shadow:0 8px 20px rgba(15,23,42,0.05);">
+                <strong data-am="PWA ድጋፍ" data-en="PWA Support">PWA Support</strong>
+                <p style="margin:6px 0 0; color:#475569;" data-am="እንደ ሞባይል አፕ የሚጫኑ እና ከመስመር ውጭ የሚሰሩ ባህሪያት" data-en="Support installable mobile app experiences with offline-friendly access.">Support installable mobile app experiences with offline-friendly access.</p>
+            </div>
+            <div style="background:#fff; border-radius:12px; padding:14px; box-shadow:0 8px 20px rgba(15,23,42,0.05);">
+                <strong data-am="ሳምንታዊ እንቅስቃሴ ሪፖርት" data-en="Weekly Activity Reports">Weekly Activity Reports</strong>
+                <p style="margin:6px 0 0; color:#475569;" data-am="ተማሪዎች እና አስተዳዳሪዎች ሳምንታዊ ተመሳሳይ መረጃ እንዲያገኙ ያስችላል" data-en="Help students and administrators stay informed with weekly engagement reports.">Help students and administrators stay informed with weekly engagement reports.</p>
+            </div>
+        </div>
+    </section>
 
     <section class="card contact-form reveal">
         <h3 data-am="እንኳን ወደ ቤተ ገብርኤል በደህና መጡ!" data-en="Welcome to the Community!">እንኳን ወደ ቤተ ገብርኤል በደህና መጡ!</h3>
@@ -183,12 +235,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         </div>
     </section>
 
-    <footer>
-        <p><b data-am="ይህ ዌቭሳይት የተሰራው በዲ/ን ሶፎንያስ ደመቀ (ወ/ጊዮርጊስ) ነው።" data-en="This website was created by Dr. Sofoniyas Demeke (W/Georgis).">ይህ ዌቭሳይት የተሰራው በዲ/ን ሶፎንያስ ደመቀ (ወ/ጊዮርጊስ) ነው።</b></p>
+    <div id="welcomeToast" class="toast toast-success" role="status" aria-live="polite">
+        <strong><?php echo safe(translateText('እንኳን ደህና መጡ!', 'Welcome!')); ?></strong>
+        <div style="margin-top:4px; font-size:14px;"><?php echo safe(translateText('ይህ ዌብሳይት ለእርስዎ በቀላሉ እና በጥሩ ቅርጸት መረጃ ይሰጣል።', 'This website provides clear and easy-to-follow information for you.')); ?></div>
+    </div>
+
+    <footer style="background:#0f172a; color:#e2e8f0; padding:24px 20px 32px; margin-top:24px;">
+        <div style="max-width:1100px; margin:0 auto; display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); align-items:start;">
+            <div>
+                <h3 style="margin:0 0 8px; color:#fff;" data-am="የእኛ አድራሻ" data-en="Contact Us">Contact Us</h3>
+                <p style="margin:4px 0;" data-am="ስልክ ቁጥር: +251 927603731" data-en="Phone: +251 927603731">Phone: +251 927603731</p>
+                <p style="margin:4px 0;"><a href="mailto:yilkaldemeke21@gmail.com" style="color:#bfdbfe; text-decoration:none;">Email: yilkaldemeke21@gmail.com</a></p>
+                <p style="margin:4px 0;" data-am="አድራሻ: ሞጣ/መቅደላ አምባ ዩኒቨርሲቲ፣ ኢትዮጵያ" data-en="Address: Addis Ababa, Ethiopia">Address: motta, Ethiopia</p>
+            </div>
+            <div>
+                <h3 style="margin:0 0 8px; color:#fff;" data-am="ማህበራዊ መረብ" data-en="Follow Us">Follow Us</h3>
+                <div style="display:flex; flex-wrap:wrap; gap:10px;">
+                    <a href="https://t.me/sophonyasbetmichael" style="color:#bfdbfe; text-decoration:none;" data-am="ቴሌግራም" data-en="Telegram">Telegram</a>
+                    <a href="https://www.facebook.com/" style="color:#bfdbfe; text-decoration:none;" data-am="ፌስቡክ" data-en="Facebook">Facebook</a>
+                    <a href="https://www.instagram.com/" style="color:#bfdbfe; text-decoration:none;" data-am="Instagram" data-en="Instagram">Instagram</a>
+                </div>
+            </div>
+            <div>
+                <h3 style="margin:0 0 8px; color:#fff;" data-am="ህጋዊ መረጃ" data-en="Legal">Legal</h3>
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                    <a href="terms.php" style="color:#bfdbfe; text-decoration:none;" data-am="የአገልግሎት ውል" data-en="Terms and Conditions">Terms and Conditions</a>
+                    <a href="privacy.php" style="color:#bfdbfe; text-decoration:none;" data-am="የግላዊነት ፖሊሲ" data-en="Privacy Policy">Privacy Policy</a>
+                    <a href="cookie_policy.php" style="color:#bfdbfe; text-decoration:none;" data-am="የኩኪ ፖሊሲ" data-en="Cookie Policy">Cookie Policy</a>
+                </div>
+                <p style="margin-top:12px;"><b data-am="ይህ ዌቭሳይት የተሰራው በዲ/ን ሶፎንያስ ደመቀ (ወ/ጊዮርጊስ) ነው።" data-en="This website was created by Dr. Sofoniyas Demeke (W/Georgis).">ይህ ዌቭሳይት የተሰራው በዲ/ን ሶፎንያስ ደመቀ (ወ/ጊዮርጊስ) ነው።</b></p>
+            </div>
+        </div>
     </footer>
 
     <script>
         const langButtons = document.querySelectorAll('.lang-btn');
+        const welcomeToast = document.getElementById('welcomeToast');
+
+        function showToast(message, type = 'info', timeout = 4200) {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.innerHTML = `<div>${message}</div>`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 50);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 250);
+            }, timeout);
+        }
         const translatable = document.querySelectorAll('[data-am][data-en]');
         const loader = document.getElementById('pageLoader');
         const form = document.getElementById('contactForm');
@@ -251,6 +345,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
             button.addEventListener('click', () => applyLanguage(button.getAttribute('data-lang')));
         });
 
+        if (welcomeToast) {
+            setTimeout(() => {
+                welcomeToast.classList.add('show');
+                setTimeout(() => {
+                    welcomeToast.classList.remove('show');
+                }, 3800);
+            }, 250);
+        }
+
         if (form) {
             form.addEventListener('submit', () => {
                 const submitBtn = form.querySelector('button[type="submit"]');
@@ -262,6 +365,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
                 if (spinner) {
                     spinner.style.display = 'inline-block';
                 }
+            });
+        }
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js').catch(() => {});
             });
         }
 

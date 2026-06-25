@@ -81,18 +81,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         h1 { margin-top: 0; }
         input, textarea { width: 100%; padding: 10px; margin-top: 6px; margin-bottom: 14px; border: 1px solid #cbd5e1; border-radius: 8px; }
         button { background: #2563eb; color: #fff; border: none; padding: 12px 16px; border-radius: 8px; cursor: pointer; font-weight: 700; }
-        .error { background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 8px; margin-bottom: 14px; }
-        .success { background: #e0fce9; color: #166534; padding: 12px; border-radius: 8px; margin-bottom: 14px; }
+        .toast { position: fixed; right: 20px; top: 20px; max-width: 360px; padding: 14px 16px; border-radius: 12px; color: #fff; box-shadow: 0 16px 35px rgba(0,0,0,0.16); z-index: 9999; opacity: 0; transform: translateY(-8px); pointer-events: none; transition: all 0.3s ease; }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast-error { background: linear-gradient(135deg, #dc2626, #b91c1c); }
+        .toast-success { background: linear-gradient(135deg, #16a34a, #15803d); }
+        .toast ul { margin: 8px 0 0 16px; padding: 0; }
     </style>
 </head>
 <body>
 <div class="card">
     <h1>Contact Us</h1>
     <?php if (!empty($errors)): ?>
-        <div class="error"><ul><?php foreach ($errors as $error) { echo '<li>' . safe($error) . '</li>'; } ?></ul></div>
+        <div class="toast toast-error show" role="alert">
+            <strong>Notice</strong>
+            <ul><?php foreach ($errors as $error) { echo '<li>' . safe($error) . '</li>'; } ?></ul>
+        </div>
     <?php endif; ?>
     <?php if ($success !== ''): ?>
-        <div class="success"><?php echo safe($success); ?></div>
+        <div class="toast toast-success show" role="status"><?php echo safe($success); ?></div>
     <?php endif; ?>
     <form method="post">
         <input type="hidden" name="csrf_token" value="<?php echo safe($csrfToken); ?>">
@@ -109,5 +115,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <button type="submit">Send Message</button>
     </form>
 </div>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.toast').forEach((toast, index) => {
+            setTimeout(() => toast.classList.add('show'), 60 + index * 80);
+            setTimeout(() => toast.classList.remove('show'), 4200);
+        });
+    });
+</script>
 </body>
 </html>
