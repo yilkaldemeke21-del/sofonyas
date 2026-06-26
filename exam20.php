@@ -181,7 +181,7 @@ function buildExamOptions(array $question): array
     ];
 }
 
-$stmt = $pdo->query('SELECT * FROM questions ORDER BY created_at DESC LIMIT 30');
+$stmt = $pdo->query('SELECT * FROM questions ORDER BY created_at DESC LIMIT 80');
 $questions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $questionChunks = array_chunk($questions, 10);
 $totalSections = count($questionChunks);
@@ -281,8 +281,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['exam_access_submit']
         .question { margin-bottom: 16px; padding: 14px; border-radius: 14px; border: 1px solid #e2e8f0; background: #fcfdff; transition: transform 0.2s ease, box-shadow 0.2s ease; }
         .question:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(15,23,42,0.05); }
         .question p { font-weight: 700; margin-bottom: 8px; }
-        label { display: block; margin: 6px 0; cursor: pointer; font-size: 14px; padding: 8px 10px; border-radius: 10px; background: #f8fafc; border: 1px solid transparent; }
-        label:hover { border-color: #c7d2fe; background: #f5f7ff; }
+        label { display: block; margin: 6px 0; cursor: pointer; font-size: 14px; padding: 8px 10px; border-radius: 10px; background: #f8fafc; border: 1px solid transparent; transition: all 0.2s ease; }
+        label:hover { border-color: #c7d2fe; background: #f5f7ff; transform: translateY(-1px); }
+        .answer-option.selected { background: #eff6ff; border-color: #93c5fd; box-shadow: 0 8px 16px rgba(59,130,246,0.12); }
+        .answer-option input { accent-color: #4f46e5; }
+        .answer-text { width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:10px; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+        .answer-text:focus { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79,70,229,0.12); outline: none; }
+        .submit-btn { background: linear-gradient(135deg, #4f46e5, #2563eb); color: white; border: none; padding: 12px 18px; border-radius: 999px; font-size: 15px; cursor: pointer; box-shadow: 0 10px 20px rgba(79,70,229,0.18); transition: transform 0.2s ease, opacity 0.2s ease; }
+        .submit-btn:hover { transform: translateY(-1px); }
+        .submit-btn.submitting { opacity: 0.8; transform: scale(0.98); }
         input[type="radio"], input[type="text"] { accent-color: #4f46e5; }
         button { background: linear-gradient(135deg, #4f46e5, #2563eb); color: white; border: none; padding: 12px 18px; border-radius: 999px; font-size: 15px; cursor: pointer; box-shadow: 0 10px 20px rgba(79,70,229,0.18); }
         button:hover { transform: translateY(-1px); }
@@ -376,13 +383,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['exam_access_submit']
                                 <?php $options = buildExamOptions($item); ?>
                                 <?php if (!empty($options)): ?>
                                     <?php foreach ($options as $option): ?>
-                                        <label>
+                                        <label class="answer-option">
                                             <input type="radio" name="q<?php echo (int)($item['id'] ?? $globalIndex); ?>" value="<?php echo safe((string)($option['label'] ?? '')); ?>" />
                                             <?php echo safe($option['label'] . '. ' . $option['text']); ?>
                                         </label>
                                     <?php endforeach; ?>
                                 <?php else: ?>
-                                    <input type="text" name="q<?php echo (int)($item['id'] ?? $globalIndex); ?>" value="<?php echo safe($_POST['q' . ($item['id'] ?? $globalIndex)] ?? ''); ?>" placeholder="መልስዎን ይተይቡ" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;" />
+                                    <input type="text" class="answer-text" name="q<?php echo (int)($item['id'] ?? $globalIndex); ?>" value="<?php echo safe($_POST['q' . ($item['id'] ?? $globalIndex)] ?? ''); ?>" placeholder="መልስዎን ይተይቡ" style="width:100%;padding:10px;border:1px solid #cbd5e1;border-radius:8px;" />
                                 <?php endif; ?>
                                 <?php if ($submitted): ?>
                                     <?php $selected = trim((string)($_POST['q' . ($item['id'] ?? $globalIndex)] ?? '')); ?>
@@ -403,7 +410,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['exam_access_submit']
                 <div class="nav-row">
                     <button type="button" class="nav-btn ghost" id="prevBtn" style="display:none;">Previous</button>
                     <button type="button" class="nav-btn" id="nextBtn">Next</button>
-                    <button type="submit" class="nav-btn" id="submitBtn" style="display:none;" <?php echo ($timeExpired || $hasSubmittedExam) ? 'disabled' : ''; ?>>Submit</button>
+                    <button type="submit" class="nav-btn submit-btn" id="submitBtn" style="display:none;" <?php echo ($timeExpired || $hasSubmittedExam) ? 'disabled' : ''; ?>>Submit</button>
                 </div>
             </form>
         <?php endif; ?>
@@ -455,6 +462,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['exam_access_submit']
         });
 
         updateNav();
+
+        document.querySelectorAll('.answer-option input').forEach((input) => {
+            const option = input.closest('.answer-option');
+            const setSelected = () => {
+                document.querySelectorAll('.answer-option').forEach((item) => item.classList.toggle('selected', item === option && input.checked));
+            };
+            input.addEventListener('change', setSelected);
+            input.addEventListener('focus', () => option.classList.add('selected'));
+            input.addEventListener('blur', () => {
+                if (!input.checked) {
+                    option.classList.remove('selected');
+                }
+            });
+            setSelected();
+        });
+
+        document.querySelectorAll('.answer-text').forEach((input) => {
+            input.addEventListener('focus', () => input.classList.add('focused'));
+            input.addEventListener('blur', () => input.classList.remove('focused'));
+        });
+
+        if (examForm && submitBtn) {
+            examForm.addEventListener('submit', () => {
+                submitBtn.classList.add('submitting');
+                submitBtn.textContent = 'Submitting...';
+            });
+        }
 
         function updateTimer() {
             const now = Date.now();

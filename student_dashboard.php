@@ -103,6 +103,35 @@ $student_certificates = $stmt->fetchAll();
 $stmt = $pdo->query('SELECT * FROM courses ORDER BY created_at DESC LIMIT 6');
 $available_courses = $stmt->fetchAll();
 
+$pdo->exec('CREATE TABLE IF NOT EXISTS question_sections (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    instruction TEXT DEFAULT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+
+$pdo->exec('CREATE TABLE IF NOT EXISTS questions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    question_type VARCHAR(30) NOT NULL DEFAULT "multiple_choice",
+    question_text TEXT NOT NULL,
+    option_a VARCHAR(255) NOT NULL DEFAULT "",
+    option_b VARCHAR(255) NOT NULL DEFAULT "",
+    option_c VARCHAR(255) NOT NULL DEFAULT "",
+    option_d VARCHAR(255) NOT NULL DEFAULT "",
+    correct_answer VARCHAR(255) NOT NULL DEFAULT "",
+    section_id INT DEFAULT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_questions_section (section_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+
+try {
+    $pdo->exec('ALTER TABLE questions ADD COLUMN section_id INT DEFAULT NULL');
+} catch (PDOException $e) {
+}
+
+$stmt = $pdo->query('SELECT qs.id, qs.title, qs.instruction, COUNT(q.id) AS question_count FROM question_sections qs LEFT JOIN questions q ON q.section_id = qs.id GROUP BY qs.id, qs.title, qs.instruction ORDER BY qs.created_at DESC LIMIT 8');
+$exam_sections = $stmt->fetchAll();
+
 $completed_courses = count($student_certificates);
 $in_progress_courses = max(0, $enrolled_courses - $completed_courses);
 
@@ -462,6 +491,29 @@ if (empty($notifications)) {
         <div class="card"><h2>የተገኙ ሰርተፊኬት</h2><p><?php echo $certificates; ?></p></div>
         <div class="card"><h2>የQuiz አማካይ ውጤት</h2><p><?php echo $avg_quiz_score; ?>%</p></div>
         <div class="card"><h2>የትምህርት የእድገት ማሽሽያ (%)</h2><p><?php echo $progress_percentage; ?>%</p></div>
+    </div>
+
+    <div class="card" style="margin-bottom: 24px;">
+        <h2 class="section-title">🧩 Exam Sections</h2>
+        <p class="section-sub">ከአድሚኑ የተጨመሩት ጥያቄዎች እና ክፍሎች እዚህ ይታያሉ። ወደ ሚድ እና ፋይናል ፈተና ለመጀመር ይጠቀሙ።</p>
+        <?php if (empty($exam_sections)): ?>
+            <p class="muted">እስካሁን ምንም የፈተና ክፍሎች አልተጨመሩም።</p>
+        <?php else: ?>
+            <div class="grid-3">
+                <?php foreach ($exam_sections as $section): ?>
+                    <div class="mini-card">
+                        <span class="pill info">Section</span>
+                        <h3><?php echo safe($section['title'] ?? 'Section'); ?></h3>
+                        <p class="muted" style="margin-top:6px;"><?php echo safe($section['instruction'] ?: 'No instruction provided.'); ?></p>
+                        <p class="muted"><strong><?php echo (int)($section['question_count'] ?? 0); ?></strong> questions</p>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
+            <a class="button" href="mid_exam.php">Start Mid Exam</a>
+            <a class="button secondary" href="final_exam.php">Start Final Exam</a>
+        </div>
     </div>
 
     <div class="card" style="margin-bottom: 24px;">
