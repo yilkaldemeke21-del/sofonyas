@@ -87,64 +87,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
     <link rel="stylesheet" href="sofonyas (1).css">
     <link rel="sitemap" type="application/xml" href="sitemap.xml">
     <style>
+        :root { color-scheme: light; }
+        body { background: linear-gradient(135deg, #f8fbff 0%, #eef2ff 100%); color: #0f172a; }
         .toast { position: fixed; right: 20px; top: 20px; max-width: 360px; padding: 14px 16px; border-radius: 12px; color: #fff; box-shadow: 0 16px 35px rgba(15,23,42,0.2); z-index: 9999; opacity: 0; transform: translateY(-8px); pointer-events: none; transition: all 0.3s ease; }
         .toast.show { opacity: 1; transform: translateY(0); }
         .toast-success { background: linear-gradient(135deg, #16a34a, #15803d); }
         .toast-error { background: linear-gradient(135deg, #dc2626, #b91c1c); }
         .toast-info { background: linear-gradient(135deg, #2563eb, #4f46e5); }
-
-        .reveal { opacity: 0; transform: translateY(24px); transition: all 0.7s ease; }
+        .hero-section { position: relative; overflow: hidden; border-radius: 28px; min-height: 560px; margin: 24px 0 28px; background: linear-gradient(135deg, rgba(15,23,42,0.92), rgba(30,41,59,0.82)); box-shadow: 0 25px 45px rgba(15,23,42,0.18); }
+        .hero-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.25; filter: blur(2px); }
+        .hero-overlay { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(2,6,23,0.86), rgba(15,23,42,0.35)); }
+        .hero-content { position: relative; z-index: 2; display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 24px; padding: 48px 36px; align-items: center; }
+        .hero-copy { color: #fff; max-width: 620px; }
+        .hero-copy h1 { font-size: clamp(2rem, 4vw, 3.2rem); line-height: 1.1; margin-bottom: 14px; }
+        .hero-copy p { font-size: 1.05rem; color: #e2e8f0; line-height: 1.7; }
+        .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
+        .button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: linear-gradient(135deg, #2563eb, #4f46e5); color: white; text-decoration: none; padding: 12px 18px; border-radius: 999px; font-weight: 700; box-shadow: 0 12px 24px rgba(37,99,235,0.25); }
+        .button.secondary { background: rgba(255,255,255,0.16); box-shadow: none; border: 1px solid rgba(255,255,255,0.2); }
+        .hero-stats { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+        .hero-stat { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.16); border-radius: 14px; padding: 10px 12px; font-size: 0.95rem; backdrop-filter: blur(8px); }
+        .hero-visual { position: relative; }
+        .hero-card { background: rgba(255,255,255,0.96); border-radius: 24px; padding: 16px; box-shadow: 0 18px 35px rgba(2,6,23,0.25); }
+        .hero-slide { display: none; animation: fadeIn 0.6s ease; }
+        .hero-slide.active { display: block; }
+        .hero-slide img { width: 100%; height: 280px; object-fit: cover; border-radius: 18px; }
+        .hero-slider-dots { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
+        .hero-slider-dots button { width: 10px; height: 10px; border-radius: 999px; border: none; background: #cbd5e1; cursor: pointer; }
+        .hero-slider-dots button.active { background: #2563eb; transform: scale(1.2); }
+        .floating-card { position: absolute; right: -18px; bottom: -18px; background: linear-gradient(135deg, #0f172a, #334155); color: white; border-radius: 18px; padding: 14px 16px; max-width: 220px; box-shadow: 0 18px 30px rgba(15,23,42,0.22); animation: floatUp 3.2s ease-in-out infinite; }
+        .floating-card strong { display:block; margin-bottom:6px; }
+        .card { background: rgba(255,255,255,0.9); border: 1px solid #e2e8f0; border-radius: 20px; padding: 20px; box-shadow: 0 12px 30px rgba(15,23,42,0.06); margin-bottom: 22px; }
+        .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.8s ease, transform 0.8s ease; }
         .reveal.visible { opacity: 1; transform: translateY(0); }
-
-        .hero-showcase { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 24px; align-items: center; margin: 24px 0; padding: 24px; background: linear-gradient(135deg, rgba(37,99,235,0.12), rgba(124,58,237,0.12)); border: 1px solid rgba(148,163,184,0.2); border-radius: 24px; overflow: hidden; }
-        .hero-copy h2 { font-size: clamp(1.8rem, 3vw, 2.7rem); margin: 10px 0 12px; color: #0f172a; }
-        .hero-copy p { color: #475569; line-height: 1.65; font-size: 1rem; }
-        .pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 999px; background: rgba(37,99,235,0.16); color: #1d4ed8; font-weight: 700; font-size: 0.84rem; }
-        .hero-stats { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 18px; }
-        .hero-stats > div { background: #fff; padding: 12px 14px; border-radius: 14px; min-width: 120px; box-shadow: 0 12px 24px rgba(15,23,42,0.08); }
-        .hero-stats strong { display: block; font-size: 1.2rem; color: #111827; }
-        .hero-stats span { color: #64748b; font-size: 0.86rem; }
-        .hero-visual { position: relative; display: grid; gap: 16px; }
-        .floating-illustration { position: absolute; top: -12px; right: -10px; width: 150px; height: 150px; background: linear-gradient(135deg, #2563eb, #7c3aed); border-radius: 24px; box-shadow: 0 20px 40px rgba(37,99,235,0.24); z-index: 2; animation: float 3.4s ease-in-out infinite; padding: 12px; }
-        .floating-illustration .mini-card { background: rgba(255,255,255,0.96); border-radius: 18px; height: 100%; padding: 10px; display: flex; flex-direction: column; justify-content: center; gap: 8px; color: #1e293b; }
-        .floating-illustration .mini-card span { display: inline-block; width: 36px; height: 36px; text-align: center; line-height: 36px; border-radius: 50%; background: #dbeafe; color: #1d4ed8; font-weight: 700; }
-        .showcase-slider { background: #fff; border-radius: 24px; padding: 12px; box-shadow: 0 20px 35px rgba(15,23,42,0.1); border: 1px solid rgba(226,232,240,0.9); overflow: hidden; }
-        .showcase-track { position: relative; height: 280px; overflow: hidden; border-radius: 18px; }
-        .showcase-slide { position: absolute; inset: 0; opacity: 0; transform: scale(1.05); transition: all 0.6s ease; }
-        .showcase-slide.active { opacity: 1; transform: scale(1); }
-        .showcase-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
-        .showcase-controls { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; gap: 10px; }
-        .showcase-nav { border: 0; width: 38px; height: 38px; border-radius: 50%; background: #eff6ff; color: #2563eb; font-size: 1.2rem; cursor: pointer; }
-        .showcase-dots { display: flex; gap: 6px; }
-        .showcase-dot { width: 10px; height: 10px; border-radius: 999px; border: 0; background: #cbd5e1; cursor: pointer; }
-        .showcase-dot.active { background: #2563eb; transform: scale(1.18); }
-
-        .section-heading { display: flex; justify-content: space-between; align-items: end; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
-        .section-heading h2 { margin: 0; color: #0f172a; }
-        .section-heading p { margin: 0; color: #64748b; }
-        .course-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
-        .course-card { border: 1px solid #e2e8f0; border-radius: 18px; overflow: hidden; background: #fff; box-shadow: 0 14px 30px rgba(15,23,42,0.06); transition: transform 0.24s ease, box-shadow 0.24s ease; }
-        .course-card:hover { transform: translateY(-6px) scale(1.01); box-shadow: 0 18px 34px rgba(15,23,42,0.12); }
-        .course-card img { width: 100%; height: 180px; object-fit: cover; transition: transform 0.35s ease; }
+        .course-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 16px; }
+        .course-card { background: #fff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 10px 20px rgba(15,23,42,0.05); transition: transform 0.25s ease, box-shadow 0.25s ease; }
+        .course-card:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 16px 32px rgba(15,23,42,0.12); }
+        .course-card img { width: 100%; height: 150px; object-fit: cover; transition: transform 0.35s ease; }
         .course-card:hover img { transform: scale(1.08); }
-        .course-body { padding: 14px; }
-        .course-body h3 { margin: 0 0 8px; color: #111827; }
-        .course-body p { color: #64748b; line-height: 1.5; font-size: 0.95rem; }
-        .course-link { display: inline-block; margin-top: 8px; color: #2563eb; font-weight: 700; }
-
-        .testimonial-slider { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; }
-        .testimonial-nav { border: 0; width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, #2563eb, #7c3aed); color: #fff; cursor: pointer; font-size: 1.2rem; }
-        .testimonial-card { display: none; background: linear-gradient(135deg, #f8fbff, #eef2ff); border-radius: 18px; padding: 18px; border: 1px solid #dbeafe; box-shadow: inset 0 1px 0 rgba(255,255,255,0.7); }
-        .testimonial-card.active { display: block; }
-        .testimonial-card p { margin: 0 0 10px; color: #334155; line-height: 1.7; }
-        .testimonial-card strong { color: #111827; }
-        .testimonial-dots { display: flex; justify-content: center; gap: 6px; margin-top: 12px; }
-        .testimonial-dot { width: 10px; height: 10px; border-radius: 999px; border: 0; background: #cbd5e1; cursor: pointer; }
-        .testimonial-dot.active { background: #2563eb; }
-
-        @keyframes float { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
-
-        @media (max-width: 860px) { .hero-showcase { grid-template-columns: 1fr; } .floating-illustration { display: none; } }
+        .course-card .content { padding: 12px 14px; }
+        .testimonial-slider { position: relative; overflow: hidden; margin-top: 16px; }
+        .testimonial-track { display: flex; transition: transform 0.45s ease; }
+        .testimonial-card { min-width: 100%; background: linear-gradient(135deg, #ffffff, #f8fafc); border-radius: 18px; border: 1px solid #e2e8f0; padding: 18px; box-shadow: 0 8px 18px rgba(15,23,42,0.05); }
+        .testimonial-nav { display:flex; justify-content:center; gap:10px; margin-top:12px; }
+        .testimonial-nav button { border:none; width: 36px; height: 36px; border-radius: 999px; background:#e2e8f0; color:#0f172a; cursor:pointer; }
+        .testimonial-nav button.active { background:#2563eb; color:white; }
+        .zoomable-img { transition: transform 0.3s ease; }
+        .zoomable-img:hover { transform: scale(1.04); }
+        @keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+        @keyframes floatUp { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        @media (max-width: 900px) { .hero-content { grid-template-columns: 1fr; padding: 28px 20px; } .floating-card { position: relative; right:auto; bottom:auto; margin-top:12px; } }
     </style>
 </head>
 <body>
@@ -181,128 +172,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
 
     <header class="hero-section">
         <video class="hero-video" autoplay muted loop playsinline poster="10 .jpg">
-            <source src="sofi website hero section video.mp4">
+            <source src="sofi website hero section video.mp4" type="video/mp4">
         </video>
         <div class="hero-overlay"></div>
         <div class="hero-content">
-            <div id="logo">
-                <img src="<?php echo safe($siteLogoUrl); ?>" alt="<?php echo safe($siteName); ?>" class="logo-img zoomable-img">
+            <div class="hero-copy">
+                <div id="logo">
+                    <img src="<?php echo safe($siteLogoUrl); ?>" alt="<?php echo safe($siteName); ?>" class="logo-img zoomable-img">
+                </div>
+                <h1 class="animate-title reveal" data-am="እንኳን ወደ ዲ/ን ሶፎንያስ ደመቀ ቤተ ገብርኤል ዌብሳይት በደህና መጡ!" data-en="Welcome to Dr. Sofoniyas Demeke's Church Community Website!">እንኳን ወደ ዲ/ን ሶፎንያስ ደመቀ ቤተ ገብርኤል ዌብሳይት በደህና መጡ!</h1>
+                <p class="animate-subtitle reveal" data-am="ይህ የመማሪያ እና የእውቀት መንገድ በጥሩ እና በቀላሉ የሚያገኙ መረጃዎች ተዘጋጅቷል።" data-en="This learning and knowledge platform is prepared with clear, easy-to-access information for everyone.">ይህ የመማሪያ እና የእውቀት መንገድ በጥሩ እና በቀላሉ የሚያገኙ መረጃዎች ተዘጋጅቷል።</p>
+                <div class="hero-actions reveal">
+                    <a class="button" href="student_login.php" data-am="የተማሪ ግባ" data-en="Student Access">Student Access</a>
+                    <a class="button secondary" href="#about" data-am="ተጨማሪ ይወቁ" data-en="Learn More">Learn More</a>
+                </div>
+                <div class="hero-stats reveal">
+                    <div class="hero-stat">📚 100+ Lessons</div>
+                    <div class="hero-stat">🎯 Live Exams</div>
+                    <div class="hero-stat">🏅 Certificates</div>
+                </div>
             </div>
-            <h1 class="animate-title reveal" data-am="እንኳን ወደ ዲ/ን ሶፎንያስ ደመቀ ቤተ ገብርኤል ዌብሳይት በደህና መጡ!" data-en="Welcome to Dr. Sofoniyas Demeke's Church Community Website!">እንኳን ወደ ዲ/ን ሶፎንያስ ደመቀ ቤተ ገብርኤል ዌብሳይት በደህና መጡ!</h1>
-            <p class="animate-subtitle reveal" data-am="ይህ የመማሪያ እና የእውቀት መንገድ በጥሩ እና በቀላሉ የሚያገኙ መረጃዎች ተዘጋጅቷል።" data-en="This learning and knowledge platform is prepared with clear, easy-to-access information for everyone.">ይህ የመማሪያ እና የእውቀት መንገድ በጥሩ እና በቀላሉ የሚያገኙ መረጃዎች ተዘጋጅቷል።</p>
-            <div class="hero-actions reveal">
-                <a class="button" href="student_login.php" data-am="የተማሪ ግባ" data-en="Student Access">Student Access</a>
-                <a class="button secondary" href="#about" data-am="ተጨማሪ ይወቁ" data-en="Learn More">Learn More</a>
+            <div class="hero-visual reveal">
+                <div class="hero-card">
+                    <div class="hero-slide active">
+                        <img src="sofi photo.jpg" alt="Community preview">
+                    </div>
+                    <div class="hero-slide">
+                        <img src="sofi photo.jpg" alt="Sofoniyas community photo">
+                    </div>
+                    <div class="hero-slide">
+                        <img src="motta sofi.jpg" alt="Students learning">
+                    </div>
+                    <div class="hero-slider-dots" id="heroSliderDots"></div>
+                </div>
+                <div class="floating-card">
+                    <strong>✨ Student Favorite</strong>
+                    <span>Interactive lessons, guided exams, and community support in one place.</span>
+                </div>
             </div>
         </div>
     </header>
-
-    <section class="hero-showcase reveal">
-        <div class="hero-copy">
-            <span class="pill" data-am="🌟 የመስመር ላይ ትምህርት ልምድ" data-en="🌟 Online Learning Experience">🌟 Online Learning Experience</span>
-            <h2 data-am="በተመጣጣኝ ድምፅ እና በሚያስደስት አካባቢ ተማሩ" data-en="Learn with confidence through beautiful lessons and guided support.">Learn with confidence through beautiful lessons and guided support.</h2>
-            <p data-am="ይህ ዌብሳይት ተማሪዎችን ለትምህርት፣ ፈተና፣ ማስተማር እና ማህበራዊ ትብብር ይደግፋል" data-en="This website brings together inspiring lessons, assessments, guidance, and community interaction in one place.">This website brings together inspiring lessons, assessments, guidance, and community interaction in one place.</p>
-            <div class="hero-stats">
-                <div>
-                    <strong>10k+</strong>
-                    <span data-am="ንቁ ተማሪዎች" data-en="Active learners">Active learners</span>
-                </div>
-                <div>
-                    <strong>24/7</strong>
-                    <span data-am="ድጋፍ" data-en="Support">Support</span>
-                </div>
-                <div>
-                    <strong>4.9★</strong>
-                    <span data-am="የተማሪ ደረጃ" data-en="Student rating">Student rating</span>
-                </div>
-            </div>
-        </div>
-        <div class="hero-visual">
-            <div class="floating-illustration">
-                <div class="mini-card">
-                    <span>✓</span>
-                    <strong data-am="የተማሪ መምህር መርሃ ግብር" data-en="Student-first learning">Student-first learning</strong>
-                    <small data-am="እርስዎን የሚያደርገው የድርጊት ትምህርት" data-en="A smooth path from first lesson to mastery.">A smooth path from first lesson to mastery.</small>
-                </div>
-            </div>
-            <div class="showcase-slider">
-                <div class="showcase-track">
-                    <div class="showcase-slide active"><img src="10 .jpg" alt="Community preview"></div>
-                    <div class="showcase-slide"><img src="sofi photo.jpg" alt="Sofoniyas learning community"></div>
-                    <div class="showcase-slide"><img src="motta sofi.jpg" alt="Students learning together"></div>
-                    <div class="showcase-slide"><img src="sofi2.jpg" alt="Community event"></div>
-                </div>
-                <div class="showcase-controls">
-                    <button type="button" class="showcase-nav prev" aria-label="Previous slide">‹</button>
-                    <div class="showcase-dots" role="tablist" aria-label="Hero slider controls"></div>
-                    <button type="button" class="showcase-nav next" aria-label="Next slide">›</button>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section class="card reveal">
-        <div class="section-heading">
-            <div>
-                <h2 data-am="ታዋቂ ኮርሶች" data-en="Popular Courses">Popular Courses</h2>
-                <p data-am="እንደ አዲስ እና እንደ ተሻሻለ መማር ልምድ" data-en="Beautiful visuals and a smooth learning journey.">Beautiful visuals and a smooth learning journey.</p>
-            </div>
-        </div>
-        <div class="course-grid">
-            <article class="course-card">
-                <img src="sofi photo.jpg" alt="Spiritual Teaching">
-                <div class="course-body">
-                    <h3 data-am="መንፈሳዊ ትምህርት" data-en="Spiritual Teaching">Spiritual Teaching</h3>
-                    <p data-am="የእምነት እና የህይወት ማስተማር በቀላሉ የሚከተሉ" data-en="Faith-filled lessons that are easy to follow and inspiring to revisit.">Faith-filled lessons that are easy to follow and inspiring to revisit.</p>
-                    <a href="tutorial.php" class="course-link" data-am="ኮርሱን ይመልከቱ" data-en="Explore course">Explore course</a>
-                </div>
-            </article>
-            <article class="course-card">
-                <img src="motta sofi.jpg" alt="Church Order">
-                <div class="course-body">
-                    <h3 data-am="የቤተ ክርስቲያን ሥርዓት" data-en="Church Order">Church Order</h3>
-                    <p data-am="ተማሪዎች በትክክል ያውቃሉ እና በሂደት በጥሩ አስተማር" data-en="Structured lessons that make church principles clear and practical.">Structured lessons that make church principles clear and practical.</p>
-                    <a href="tutorial.php" class="course-link" data-am="ኮርሱን ይመልከቱ" data-en="Explore course">Explore course</a>
-                </div>
-            </article>
-            <article class="course-card">
-                <img src="sofi2.jpg" alt="Anointing Message">
-                <div class="course-body">
-                    <h3 data-am="የቅባት መልእክት" data-en="Anointing Message">Anointing Message</h3>
-                    <p data-am="መልእክቱን በማንኛውም ሰአት በቀላሉ እንዲከተል የተዘጋጀ" data-en="Designed for reflection, growth, and convenient access whenever you need it.">Designed for reflection, growth, and convenient access whenever you need it.</p>
-                    <a href="tutorial.php" class="course-link" data-am="ኮርሱን ይመልከቱ" data-en="Explore course">Explore course</a>
-                </div>
-            </article>
-        </div>
-    </section>
-
-    <section class="card reveal">
-        <div class="section-heading">
-            <div>
-                <h2 data-am="ተማሪዎች የሚሉት" data-en="What learners say">What learners say</h2>
-                <p data-am="ከተማሪዎቻችን የተሰበሰቡ እውነተኛ አስተያየቶች" data-en="Real feedback from our growing learner community.">Real feedback from our growing learner community.</p>
-            </div>
-        </div>
-        <div class="testimonial-slider">
-            <button type="button" class="testimonial-nav prev" aria-label="Previous testimonial">‹</button>
-            <div style="width:100%;">
-                <div class="testimonial-card active">
-                    <p data-am="“በዚህ ዌብሳይት ውስጥ መማር በጣም ቀላል ነው፤ የእኔ ትምህርት በጣም ጠንካራ ሆኗል”" data-en="“Learning here feels simple and inspiring. My study journey has become much more focused.”">“Learning here feels simple and inspiring. My study journey has become much more focused.”</p>
-                    <strong data-am="— አለም ሰላም" data-en="— Selam H.">— Selam H.</strong>
-                </div>
-                <div class="testimonial-card">
-                    <p data-am="“እርስዎ የሚሰጡት ድጋፍ እንደ አስተማሪ ልምድ ነው፤ ሁልጊዜ እንደ ተመራማሪ እርዳታ ይሰጣል”" data-en="“The guidance feels personal and motivating, and I always know where to continue next.”">“The guidance feels personal and motivating, and I always know where to continue next.”</p>
-                    <strong data-am="— መርበብ ነጋ" data-en="— Meron N.">— Meron N.</strong>
-                </div>
-                <div class="testimonial-card">
-                    <p data-am="“የፈተናዎች እና የፕሮግራሙ ቅርጽ ጥሩ ነው፤ በቀላሉ እድገት አለመታየት ይቻላል”" data-en="“The exam flow and course structure are clear, and progress feels easy to track.”">“The exam flow and course structure are clear, and progress feels easy to track.”</p>
-                    <strong data-am="— ለማ ቤተሰብ" data-en="— Lemu B.">— Lemu B.</strong>
-                </div>
-            </div>
-            <button type="button" class="testimonial-nav next" aria-label="Next testimonial">›</button>
-        </div>
-        <div class="testimonial-dots"></div>
-    </section>
 
     <section class="card reveal slider-section" aria-label="Featured gallery">
         <h2 data-am="የተመረጡ ምስሎች" data-en="Featured Images">Featured Images</h2>
@@ -324,11 +233,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
 
     <div class="card reveal">
         <h2 data-am="በዚህ ዌቭሳይት የሚካተቱ ትምህርቶች" data-en="Courses Included on This Website">በዚህ ዌቭሳይት የሚካተቱ ትምህርቶች</h2>
-        <ul>
-            <li data-am="ነገረ ሃይማኖት" data-en="Religious teachings">ነገረ ሃይማኖት</li>
-            <li data-am="ስርዓተ ቤተ ክርስቲያን" data-en="Church order">ስርዓተ ቤተ ክርስቲያን</li>
-            <li data-am="ነገረ ቅባት" data-en="The message of anointing">ነገረ ቅባት</li>
-        </ul>
+        <div class="course-grid">
+            <div class="course-card">
+                <img src="10 .jpg" alt="Religious teachings">
+                <div class="content">
+                    <h3 data-am="ነገረ ሃይማኖት" data-en="Religious teachings">ነገረ ሃይማኖት</h3>
+                    <p data-am="የእምነት ትምህርት እና ማብራሪያ" data-en="Faith-based teachings and guidance">Faith-based teachings and guidance</p>
+                </div>
+            </div>
+            <div class="course-card">
+                <img src="sofi photo.jpg" alt="Church order">
+                <div class="content">
+                    <h3 data-am="ስርዓተ ቤተ ክርስቲያን" data-en="Church order">ስርዓተ ቤተ ክርስቲያን</h3>
+                    <p data-am="በአስተዳደር እና ሥነ ምግባር ላይ ትምህርት" data-en="Structured guidance on church order and ethics">Structured guidance on church order and ethics</p>
+                </div>
+            </div>
+            <div class="course-card">
+                <img src="motta sofi.jpg" alt="The message of anointing">
+                <div class="content">
+                    <h3 data-am="ነገረ ቅባት" data-en="The message of anointing">ነገረ ቅባት</h3>
+                    <p data-am="ብልጥ የትምህርት እና ልምድ እድል" data-en="Deep learning experiences and practical insight">Deep learning experiences and practical insight</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <section class="card reveal" style="background:linear-gradient(135deg,#f8fbff 0%,#eef2ff 100%); border:1px solid #dbeafe;">
@@ -358,6 +285,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
                 <strong data-am="ሳምንታዊ እንቅስቃሴ ሪፖርት" data-en="Weekly Activity Reports">Weekly Activity Reports</strong>
                 <p style="margin:6px 0 0; color:#475569;" data-am="ተማሪዎች እና አስተዳዳሪዎች ሳምንታዊ ተመሳሳይ መረጃ እንዲያገኙ ያስችላል" data-en="Help students and administrators stay informed with weekly engagement reports.">Help students and administrators stay informed with weekly engagement reports.</p>
             </div>
+        </div>
+    </section>
+
+    <section class="card reveal">
+        <h2 data-am="ተማሪዎች ምን ይላሉ" data-en="What students say">ተማሪዎች ምን ይላሉ</h2>
+        <div class="testimonial-slider">
+            <div class="testimonial-track" id="testimonialTrack">
+                <div class="testimonial-card">
+                    <p>“The platform is easy to use, inspiring, and full of practical learning content.”</p>
+                    <strong>— Selam, Student</strong>
+                </div>
+                <div class="testimonial-card">
+                    <p>“The course experience feels modern and organized. I can learn at my own pace.”</p>
+                    <strong>— Henok, Learner</strong>
+                </div>
+                <div class="testimonial-card">
+                    <p>“I love the live guidance, the beautiful design, and the simple navigation.”</p>
+                    <strong>— Meron, Community Member</strong>
+                </div>
+            </div>
+            <div class="testimonial-nav" id="testimonialNav"></div>
         </div>
     </section>
 
@@ -477,12 +425,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         const form = document.getElementById('contactForm');
         const sliderImages = Array.from(document.querySelectorAll('.slider-frame .slide'));
         const dotsContainer = document.querySelector('.slider-dots');
-        const showcaseSlides = Array.from(document.querySelectorAll('.showcase-slide'));
-        const showcaseDotsContainer = document.querySelector('.showcase-dots');
-        const testimonialCards = Array.from(document.querySelectorAll('.testimonial-card'));
-        const testimonialDotsContainer = document.querySelector('.testimonial-dots');
+        const heroSlides = Array.from(document.querySelectorAll('.hero-slide'));
+        const heroDotsContainer = document.getElementById('heroSliderDots');
+        const testimonialTrack = document.getElementById('testimonialTrack');
+        const testimonialNav = document.getElementById('testimonialNav');
         let currentSlide = 0;
-        let showcaseIndex = 0;
+        let heroSlideIndex = 0;
         let testimonialIndex = 0;
 
         function applyLanguage(lang) {
@@ -527,73 +475,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
             }, 5000);
         }
 
-        function showShowcaseSlide(index) {
-            if (!showcaseSlides.length) return;
-            showcaseSlides.forEach((slide, slideIndex) => {
-                slide.classList.toggle('active', slideIndex === index);
-            });
-            if (showcaseDotsContainer) {
-                Array.from(showcaseDotsContainer.children).forEach((dot, dotIndex) => {
-                    dot.classList.toggle('active', dotIndex === index);
-                });
-            }
-        }
-
-        function startShowcaseSlider() {
-            if (!showcaseSlides.length || !showcaseDotsContainer) return;
-            showcaseSlides.forEach((_, index) => {
+        function startHeroSlider() {
+            if (!heroSlides.length || !heroDotsContainer) return;
+            heroSlides.forEach((_, index) => {
                 const dot = document.createElement('button');
-                dot.className = 'showcase-dot' + (index === 0 ? ' active' : '');
                 dot.type = 'button';
-                dot.setAttribute('aria-label', `Show showcase slide ${index + 1}`);
+                dot.className = index === 0 ? 'active' : '';
                 dot.addEventListener('click', () => {
-                    showcaseIndex = index;
-                    showShowcaseSlide(showcaseIndex);
+                    heroSlideIndex = index;
+                    heroSlides.forEach((slide, slideIndex) => slide.classList.toggle('active', slideIndex === heroSlideIndex));
+                    Array.from(heroDotsContainer.children).forEach((button, buttonIndex) => button.classList.toggle('active', buttonIndex === heroSlideIndex));
                 });
-                showcaseDotsContainer.appendChild(dot);
+                heroDotsContainer.appendChild(dot);
             });
             setInterval(() => {
-                showcaseIndex = (showcaseIndex + 1) % showcaseSlides.length;
-                showShowcaseSlide(showcaseIndex);
-            }, 4500);
-        }
-
-        function showTestimonial(index) {
-            if (!testimonialCards.length) return;
-            testimonialCards.forEach((card, cardIndex) => {
-                card.classList.toggle('active', cardIndex === index);
-            });
-            if (testimonialDotsContainer) {
-                Array.from(testimonialDotsContainer.children).forEach((dot, dotIndex) => {
-                    dot.classList.toggle('active', dotIndex === index);
-                });
-            }
+                heroSlideIndex = (heroSlideIndex + 1) % heroSlides.length;
+                heroSlides.forEach((slide, slideIndex) => slide.classList.toggle('active', slideIndex === heroSlideIndex));
+                Array.from(heroDotsContainer.children).forEach((button, buttonIndex) => button.classList.toggle('active', buttonIndex === heroSlideIndex));
+            }, 5000);
         }
 
         function startTestimonialSlider() {
-            if (!testimonialCards.length || !testimonialDotsContainer) return;
-            testimonialCards.forEach((_, index) => {
-                const dot = document.createElement('button');
-                dot.className = 'testimonial-dot' + (index === 0 ? ' active' : '');
-                dot.type = 'button';
-                dot.setAttribute('aria-label', `Show testimonial ${index + 1}`);
-                dot.addEventListener('click', () => {
+            if (!testimonialTrack || !testimonialNav) return;
+            const testimonials = Array.from(testimonialTrack.children);
+            testimonials.forEach((_, index) => {
+                const navButton = document.createElement('button');
+                navButton.type = 'button';
+                navButton.className = index === 0 ? 'active' : '';
+                navButton.addEventListener('click', () => {
                     testimonialIndex = index;
-                    showTestimonial(testimonialIndex);
+                    testimonialTrack.style.transform = `translateX(-${testimonialIndex * 100}%)`;
+                    Array.from(testimonialNav.children).forEach((button, buttonIndex) => button.classList.toggle('active', buttonIndex === testimonialIndex));
                 });
-                testimonialDotsContainer.appendChild(dot);
-            });
-            const navButtons = document.querySelectorAll('.testimonial-nav');
-            navButtons.forEach((button) => {
-                button.addEventListener('click', () => {
-                    const direction = button.classList.contains('next') ? 1 : -1;
-                    testimonialIndex = (testimonialIndex + direction + testimonialCards.length) % testimonialCards.length;
-                    showTestimonial(testimonialIndex);
-                });
+                testimonialNav.appendChild(navButton);
             });
             setInterval(() => {
-                testimonialIndex = (testimonialIndex + 1) % testimonialCards.length;
-                showTestimonial(testimonialIndex);
+                testimonialIndex = (testimonialIndex + 1) % testimonials.length;
+                testimonialTrack.style.transform = `translateX(-${testimonialIndex * 100}%)`;
+                Array.from(testimonialNav.children).forEach((button, buttonIndex) => button.classList.toggle('active', buttonIndex === testimonialIndex));
             }, 6000);
         }
 
@@ -644,7 +563,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
             setTimeout(() => loader.remove(), 400);
             applyLanguage('am');
             startSlider();
-            startShowcaseSlider();
+            startHeroSlider();
             startTestimonialSlider();
             revealOnScroll();
         });

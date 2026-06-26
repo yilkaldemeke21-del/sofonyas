@@ -417,7 +417,7 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
         <a href="admin_exam_results.php" class="action-btn">📊 ሪፖርቶችን ተመልከት</a>
         <a href="admin_certificate.php" class="action-btn">📜 ሰርቲፊኬት አስተዳድር</a>
         <a href="admin_exam_access.php" class="action-btn">🔐 ፈተና ኮድ እና ማረጋገጫ</a>
-        <a href="live_class.php" class="action-btn">📡 ላይቭ ክላስ</a>
+        <a href="live_class.php" class="action-btn">📡 Join Live Class</a>
         <a href="discussion_forum.php" class="action-btn">💬 ዲስኬሽን ፎርም</a>
         <a href="library.php" class="action-btn">📚 ላይበራሪ ዳሽቦርድ</a>
         <a href="admin_course_builder.php" class="action-btn">➕ ኮርስ ብሉደር / ፋብሪካ ስራ</a>

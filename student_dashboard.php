@@ -448,7 +448,7 @@ if (empty($notifications)) {
             <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle theme">🌙 Dark</button>
             <a class="button" href="sofonyas%20(2).html">መጀመሪያ</a>
             <a class="button" href="tutorial.php">ኮርሶች</a>
-            <a class="button" href="live_class.php">Live Class</a>
+            <a class="button" href="live_class.php">Join Live Class</a>
             <a class="button" href="discussion_forum.php">ፎርም</a>
             <a class="button" href="library.php">ላይብራሪ</a>
             <a class="button secondary" href="student_logout.php">ውጣ</a>

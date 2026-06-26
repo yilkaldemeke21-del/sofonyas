@@ -176,6 +176,7 @@ if (!empty($sessions)) {
         .btn { display: inline-block; padding: 10px 12px; background: #2563eb; color: #fff; text-decoration: none; border-radius: 8px; font-weight: bold; }
         .btn.secondary { background: #7c3aed; }
         .btn.outline { background: #fff; color: #2563eb; border: 1px solid #bfdbfe; }
+        .btn.join-now { background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%); box-shadow: 0 10px 20px rgba(79,70,229,0.18); }
         .session-card { margin-top: 16px; border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px; }
         .session-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
         .session-meta { color: #475569; font-size: 14px; }
@@ -196,7 +197,7 @@ if (!empty($sessions)) {
         <h3 style="margin-top:0;">Welcome, <?php echo safe($user_name); ?></h3>
         <p style="margin: 8px 0 0; color: #475569;">Join your live session, watch the stream, open Zoom or Google Meet links, and use the Q&A panel for questions.</p>
         <p style="margin-top: 10px;">
-            <a href="#live-session" class="btn">Join Live Class</a>
+            <a href="#live-session" class="btn join-now">Join Live Class Now</a>
         </p>
     </div>
 
@@ -257,6 +258,12 @@ if (!empty($sessions)) {
                         <p style="margin: 8px 0; color:#475569;"><?php echo safe($session['description']); ?></p>
                     <?php endif; ?>
                     <div class="session-actions">
+                        <?php $primaryJoinUrl = !empty($session['room_url']) ? (string)$session['room_url'] : (!empty($session['stream_url']) ? (string)$session['stream_url'] : ''); ?>
+                        <?php if ($primaryJoinUrl !== ''): ?>
+                            <a class="btn join-now" href="<?php echo safe($primaryJoinUrl); ?>" target="_blank" rel="noopener">
+                                <?php echo safe(labelForLink($primaryJoinUrl, 'Join Now')); ?>
+                            </a>
+                        <?php endif; ?>
                         <?php if (!empty($session['stream_url'])): ?>
                             <a class="btn" href="<?php echo safe($session['stream_url']); ?>" target="_blank" rel="noopener">
                                 <?php echo safe(labelForLink((string)$session['stream_url'], 'Open Stream Link')); ?>

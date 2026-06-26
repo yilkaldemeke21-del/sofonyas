@@ -336,25 +336,27 @@ $recentQuestions = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <title><?php echo safe($txt['page_title']); ?></title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #f5f7ff 0%, #eef4ff 100%); color: #0f172a; }
-        .navbar { background: linear-gradient(135deg, #4f46e5 0%, #2563eb 100%); color: white; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+        body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #f8fbff 0%, #eef2ff 100%); color: #0f172a; }
+        .navbar { background: linear-gradient(135deg, #4f46e5 0%, #2563eb 100%); color: white; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; gap: 12px; box-shadow: 0 10px 24px rgba(79, 70, 229, 0.16); }
         .navbar a { color: white; text-decoration: none; margin-right: 14px; }
         .lang-switch { display: inline-flex; gap: 8px; align-items: center; }
         .lang-switch a { background: rgba(255,255,255,0.16); padding: 6px 10px; border-radius: 999px; font-size: 13px; }
         .lang-switch a.active { background: white; color: #2563eb; }
         .container { max-width: 1200px; margin: 24px auto; padding: 0 20px 40px; }
-        .hero { background: white; border-radius: 18px; padding: 24px; box-shadow: 0 16px 35px rgba(15, 23, 42, 0.08); margin-bottom: 18px; }
+        .hero { background: linear-gradient(135deg, #ffffff, #f8fbff); border-radius: 22px; padding: 24px; box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08); margin-bottom: 18px; border: 1px solid #dbeafe; }
         .hero h1 { color: #1d4ed8; margin-bottom: 6px; }
         .hero p { color: #475569; line-height: 1.7; }
+        .hero-badges { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 12px; }
         .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 18px 0 22px; }
-        .summary-card { background: #f8fbff; border: 1px solid #dbeafe; border-radius: 14px; padding: 14px; }
+        .summary-card { background: linear-gradient(135deg, #eff6ff, #f8fafc); border: 1px solid #dbeafe; border-radius: 16px; padding: 14px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.5); }
         .summary-card h3 { font-size: 13px; color: #64748b; margin-bottom: 6px; }
         .summary-card .value { font-size: 26px; font-weight: 800; color: #2563eb; }
         .tabs { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
         .tab-btn { display: inline-block; padding: 10px 14px; border-radius: 999px; background: #e2e8f0; color: #334155; text-decoration: none; font-weight: 700; }
         .tab-btn.active { background: #2563eb; color: white; }
         .grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 18px; }
-        .panel-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06); }
+        .panel-card { background: white; border-radius: 18px; padding: 20px; box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06); border: 1px solid #e2e8f0; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .panel-card:hover { transform: translateY(-2px); box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08); }
         .panel-card h2 { margin-bottom: 12px; color: #1e3a8a; font-size: 20px; }
         .panel-card p { color: #64748b; margin-bottom: 14px; line-height: 1.6; }
         .form-group { margin-bottom: 14px; }
@@ -375,7 +377,10 @@ $recentQuestions = $stmt->fetchAll(PDO::FETCH_ASSOC);
         .mini-btn { display: inline-block; padding: 7px 10px; border-radius: 999px; text-decoration: none; font-size: 13px; font-weight: 700; border: 1px solid #cbd5e1; background: white; color: #334155; cursor: pointer; }
         .mini-btn.primary { background: linear-gradient(135deg, #2563eb, #4f46e5); color: white; border-color: #2563eb; }
         .mini-btn.secondary { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+        .mini-btn:hover { transform: translateY(-1px); }
         .question-extra { display: none; margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: #f8fafc; border: 1px solid #e2e8f0; font-size: 13px; color: #334155; line-height: 1.6; }
+        .section-pill { display: inline-block; padding: 6px 10px; border-radius: 999px; font-size: 12px; background: #dbeafe; color: #1d4ed8; font-weight: 700; margin-bottom: 8px; }
+        .ordinal-badge { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 999px; background: linear-gradient(135deg, #2563eb, #4f46e5); color: white; font-size: 12px; font-weight: 800; margin-right: 8px; }
         .question-extra.show { display: block; }
         @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
     </style>
@@ -395,6 +400,10 @@ $recentQuestions = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="hero">
         <h1><?php echo safe($txt['hero_title']); ?></h1>
         <p><?php echo safe($txt['hero_text']); ?></p>
+        <div class="hero-badges">
+            <span class="section-pill">🛠️ Admin Question Studio</span>
+            <span class="section-pill">📚 Section-based workflow</span>
+        </div>
         <div class="summary-grid">
             <div class="summary-card">
                 <h3><?php echo safe($txt['summary_sections']); ?></h3>
@@ -442,9 +451,13 @@ $recentQuestions = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <p><?php echo safe($txt['sections_list_desc']); ?></p>
                 <?php if (!empty($sections)): ?>
                     <div class="list">
-                        <?php foreach ($sections as $section): ?>
+                        <?php foreach ($sections as $index => $section): ?>
                             <div class="list-item">
-                                <strong><?php echo safe($section['title'] ?? ''); ?></strong>
+                                <span class="section-pill">Section <?php echo (int)($index + 1); ?></span>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span class="ordinal-badge"><?php echo (int)($index + 1); ?></span>
+                                    <strong><?php echo safe($section['title'] ?? ''); ?></strong>
+                                </div>
                                 <div class="muted"><?php echo safe($section['instruction'] ?: ($lang === 'am' ? 'ምንም መመሪያ አልተሰጠም።' : 'No instruction provided.')); ?></div>
                             </div>
                         <?php endforeach; ?>
@@ -523,9 +536,12 @@ $recentQuestions = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <p><?php echo safe($txt['recent_questions_desc']); ?></p>
                 <?php if (!empty($recentQuestions)): ?>
                     <div class="list">
-                        <?php foreach ($recentQuestions as $question): ?>
+                        <?php foreach ($recentQuestions as $index => $question): ?>
                             <div class="list-item">
-                                <strong><?php echo safe($question['question_text'] ?? ''); ?></strong>
+                                <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+                                    <span class="ordinal-badge"><?php echo (int)($index + 1); ?></span>
+                                    <strong><?php echo safe($question['question_text'] ?? ''); ?></strong>
+                                </div>
                                 <div class="muted"><?php echo safe($txt['sections'] . ': ' . ($question['section_title'] ?: $txt['unassigned'])); ?> • <?php echo safe($txt['questions'] . ': ' . ($question['question_type'] ?? 'multiple_choice')); ?></div>
                                 <div class="list-actions">
                                     <button type="button" class="mini-btn secondary" onclick="toggleQuestionDetails('q-<?php echo (int)$question['id']; ?>')"><?php echo safe($txt['show_more']); ?></button>
