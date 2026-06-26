@@ -158,13 +158,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <?php foreach ($chunk as $item): ?>
                         <div class="question">
-                            <p><?php echo $globalIndex + 1; ?>. <?php echo htmlspecialchars($item['question']); ?></p>
-                            <?php foreach ($item['options'] as $option): ?>
-                                <label class="answer-option">
-                                    <input type="radio" name="q<?php echo $globalIndex; ?>" value="<?php echo htmlspecialchars($option); ?>" />
-                                    <?php echo htmlspecialchars($option); ?>
-                                </label>
-                            <?php endforeach; ?>
+                            <p><?php echo $globalIndex + 1; ?>. <?php echo htmlspecialchars((string)($item['question_text'] ?? '')); ?></p>
+                            <?php $options = buildExamOptions($item); ?>
+                            <?php if (!empty($options)): ?>
+                                <?php foreach ($options as $option): ?>
+                                    <label class="answer-option">
+                                        <input type="radio" name="q<?php echo $globalIndex; ?>" value="<?php echo htmlspecialchars((string)($option['label'] ?? '')); ?>" />
+                                        <?php echo htmlspecialchars((string)($option['label'] ?? '') . '. ' . (string)($option['text'] ?? '')); ?>
+                                    </label>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <input type="text" class="answer-text" name="q<?php echo $globalIndex; ?>" value="<?php echo htmlspecialchars((string)($_POST['q' . $globalIndex] ?? '')); ?>" placeholder="መልስዎን ይተይቡ" />
+                            <?php endif; ?>
                         </div>
                         <?php $globalIndex++; ?>
                     <?php endforeach; ?>
