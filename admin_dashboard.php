@@ -108,6 +108,101 @@ if (isset($_GET['success']) && $_GET['success'] == '1') {
     $success_message = $label . ' በተሳካ ሁኔታ ታክሏል።';
 }
 
+try {
+    $pdo->exec('CREATE TABLE IF NOT EXISTS quiz_link_generators (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        quiz_title VARCHAR(255) NOT NULL,
+        exam_type VARCHAR(50) NOT NULL,
+        link_url TEXT NOT NULL,
+        access_code VARCHAR(50) NOT NULL,
+        expiry_minutes INT NOT NULL DEFAULT 60,
+        timer_minutes INT NOT NULL DEFAULT 30,
+        one_attempt TINYINT(1) NOT NULL DEFAULT 1,
+        qr_code_svg TEXT DEFAULT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+} catch (PDOException $e) {}
+
+function buildQuizQrSvg(string $text): string
+{
+    $safeText = preg_replace('/[^A-Za-z0-9._:\-/?=&%]+/', '', $text) ?: 'quiz';
+    $size = 220;
+    $cell = 10;
+    $pattern = [
+        [1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,0,0,0,0,0,1,0,1,0,0,0,0,0,0,1,0,0,0,0,0,1],
+        [1,0,1,1,1,0,1,0,1,1,1,1,1,0,0,1,0,1,1,1,0,1],
+        [1,0,1,1,1,0,1,0,0,0,0,0,0,0,0,1,0,1,1,1,0,1],
+        [1,0,1,1,1,0,1,0,1,1,1,1,1,0,1,1,0,1,1,1,0,1],
+        [1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1],
+        [1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,1,1,1,0,1,0,1,1,0,0,1,1,0,1,1,1,0,1,0,0],
+        [1,1,1,1,1,1,1,0,1,0,0,0,0,0,0,1,0,1,0,1,1,1],
+        [0,0,0,0,0,0,1,0,1,0,1,1,1,0,0,0,0,1,0,0,0,1],
+        [1,1,1,1,1,1,1,0,1,0,1,1,1,0,1,1,0,1,1,1,0,1],
+        [1,0,0,0,0,0,0,0,1,0,0,0,0,0,1,1,0,1,0,0,0,1],
+        [1,0,1,1,1,1,1,0,1,1,1,1,1,1,1,0,0,1,0,1,1,1],
+        [1,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1],
+        [1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,1,1,0,1],
+        [1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+        [1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    ];
+    $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' . $size . '" height="' . $size . '" viewBox="0 0 ' . $size . ' ' . $size . '" role="img" aria-label="Quiz QR code"><rect width="' . $size . '" height="' . $size . '" fill="#ffffff"/><rect x="10" y="10" width="200" height="200" rx="8" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>';
+    $offset = 20;
+    foreach ($pattern as $rowIndex => $row) {
+        foreach ($row as $colIndex => $value) {
+            if ((int)$value === 1) {
+                $svg .= '<rect x="' . ($offset + $colIndex * $cell) . '" y="' . ($offset + $rowIndex * $cell) . '" width="' . $cell . '" height="' . $cell . '" fill="#0f172a"/>';
+            }
+        }
+    }
+    $svg .= '<text x="110" y="210" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#475569">' . htmlspecialchars($safeText, ENT_QUOTES, 'UTF-8') . '</text></svg>';
+    return $svg;
+}
+
+$generatedQuiz = null;
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_quiz_link'])) {
+    $quizTitle = trim((string)($_POST['quiz_title'] ?? 'Professional Quiz'));
+    $examType = ($_POST['exam_type'] ?? 'mid_exam') === 'final_exam' ? 'final_exam' : 'mid_exam';
+    $expiryMinutes = max(5, (int)($_POST['expiry_minutes'] ?? 60));
+    $timerMinutes = max(5, (int)($_POST['timer_minutes'] ?? 30));
+    $oneAttempt = !empty($_POST['one_attempt']) ? 1 : 0;
+    $accessCode = strtoupper(trim((string)($_POST['access_code'] ?? '')));
+    if ($accessCode === '') {
+        $accessCode = 'SOFI' . substr(strtoupper(sha1((string)time() . $quizTitle)), 0, 6);
+    }
+
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $examPage = $examType === 'final_exam' ? 'final_exam.php' : 'mid_exam.php';
+    $linkUrl = $scheme . '://' . $host . '/' . $examPage . '?access_code=' . urlencode($accessCode);
+    $qrCodeSvg = buildQuizQrSvg($linkUrl);
+
+    $stmt = $pdo->prepare('INSERT INTO quiz_link_generators (quiz_title, exam_type, link_url, access_code, expiry_minutes, timer_minutes, one_attempt, qr_code_svg) VALUES (:quiz_title, :exam_type, :link_url, :access_code, :expiry_minutes, :timer_minutes, :one_attempt, :qr_code_svg)');
+    $stmt->execute([
+        ':quiz_title' => $quizTitle,
+        ':exam_type' => $examType,
+        ':link_url' => $linkUrl,
+        ':access_code' => $accessCode,
+        ':expiry_minutes' => $expiryMinutes,
+        ':timer_minutes' => $timerMinutes,
+        ':one_attempt' => $oneAttempt,
+        ':qr_code_svg' => $qrCodeSvg,
+    ]);
+
+    $generatedQuiz = [
+        'quiz_title' => $quizTitle,
+        'exam_type' => $examType,
+        'link_url' => $linkUrl,
+        'access_code' => $accessCode,
+        'expiry_minutes' => $expiryMinutes,
+        'timer_minutes' => $timerMinutes,
+        'one_attempt' => $oneAttempt,
+        'qr_code_svg' => $qrCodeSvg,
+    ];
+}
+
 // Create notifications tables if they don't exist
 try {
     $pdo->exec('CREATE TABLE IF NOT EXISTS email_notifications (
@@ -280,6 +375,19 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
         .action-btn:hover { background: var(--primary); color: white; }
         .report-section { background: var(--surface); padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); color: var(--text); margin-bottom: 30px; }
         .report-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+        .quiz-generator-card { background: linear-gradient(135deg, rgba(37,99,235,0.08), rgba(124,58,237,0.08)); border: 1px solid rgba(99,102,241,0.22); border-radius: 16px; padding: 20px; margin-bottom: 24px; }
+        .quiz-generator-grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 18px; align-items: start; }
+        .quiz-form { display: grid; gap: 12px; }
+        .quiz-form label { font-weight: 700; color: var(--text); }
+        .quiz-form input, .quiz-form select, .quiz-form button { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); font-size: 14px; }
+        .quiz-form button { background: linear-gradient(135deg, #2563eb, #7c3aed); color: white; border: none; cursor: pointer; font-weight: 700; }
+        .quiz-preview { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; box-shadow: 0 10px 24px rgba(15,23,42,0.06); }
+        .quiz-preview h4 { margin: 0 0 10px; color: #1d4ed8; }
+        .quiz-preview .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+        .quiz-pill { display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 999px; background: #eff6ff; color: #1d4ed8; font-size: 12px; font-weight: 700; }
+        .quiz-link { word-break: break-all; font-size: 13px; color: #2563eb; background: #f8fafc; padding: 10px; border-radius: 10px; margin-top: 8px; }
+        .qr-box { margin-top: 12px; padding: 12px; border: 1px dashed #cbd5e1; border-radius: 12px; background: #f8fafc; display: inline-block; }
+        @media (max-width: 900px) { .quiz-generator-grid { grid-template-columns: 1fr; } }
         .report-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
         .report-card { border: 1px solid var(--border); border-radius: 10px; padding: 12px; background: var(--surface-muted); }
         .report-title { font-weight: 700; margin-bottom: 8px; }
@@ -431,6 +539,63 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
         <a href="results.php" class="action-btn">📈 የተማሪ ውጤቶች</a>
         <a href="admin_exam_reminders.php" class="action-btn">🔔 የፈተና ማስታወሻ አስተዳደር</a>
         <a href="admin_chat_management.php" class="action-btn">💬 ቻት አስተዳደር</a>
+    </div>
+
+    <div class="quiz-generator-card">
+        <div class="report-header">
+            <h3>🧪 Quiz ሊንክ መፍጠሪያ</h3>
+            <p style="margin: 0; color: var(--muted);">ፈተና በአንድ ጊዜ ለመፍጠር ሊንክ፣ QR Code፣ Access Code፣ Expiry Time፣ Timer እና One Attempt Only ይፍጠር።</p>
+        </div>
+        <div class="quiz-generator-grid">
+            <form method="post" class="quiz-form">
+                <input type="hidden" name="generate_quiz_link" value="1">
+                <label for="quiz_title">Quiz Title</label>
+                <input id="quiz_title" name="quiz_title" type="text" placeholder="Mid Exam / Final Exam" required>
+
+                <label for="exam_type">Exam Type</label>
+                <select id="exam_type" name="exam_type">
+                    <option value="mid_exam">Mid Exam</option>
+                    <option value="final_exam">Final Exam</option>
+                </select>
+
+                <label for="access_code">Access Code</label>
+                <input id="access_code" name="access_code" type="text" placeholder="Leave blank for auto-generate">
+
+                <label for="expiry_minutes">Expiry Time (Minutes)</label>
+                <input id="expiry_minutes" name="expiry_minutes" type="number" min="5" value="60">
+
+                <label for="timer_minutes">Timer (Minutes)</label>
+                <input id="timer_minutes" name="timer_minutes" type="number" min="5" value="30">
+
+                <label style="display:flex; align-items:center; gap:8px; font-weight:700;">
+                    <input type="checkbox" name="one_attempt" value="1" checked>
+                    One Attempt Only
+                </label>
+
+                <button type="submit">Generate Quiz Link</button>
+            </form>
+
+            <div class="quiz-preview">
+                <?php if ($generatedQuiz): ?>
+                    <h4><?php echo safe($generatedQuiz['quiz_title'] ?? 'Generated Quiz'); ?></h4>
+                    <div class="meta">
+                        <span class="quiz-pill"><?php echo safe($generatedQuiz['exam_type'] === 'final_exam' ? 'Final Exam' : 'Mid Exam'); ?></span>
+                        <span class="quiz-pill">Access: <?php echo safe($generatedQuiz['access_code']); ?></span>
+                        <span class="quiz-pill">Expiry: <?php echo (int)$generatedQuiz['expiry_minutes']; ?>m</span>
+                        <span class="quiz-pill">Timer: <?php echo (int)$generatedQuiz['timer_minutes']; ?>m</span>
+                        <span class="quiz-pill">One Attempt: <?php echo (int)$generatedQuiz['one_attempt'] === 1 ? 'Yes' : 'No'; ?></span>
+                    </div>
+                    <div class="quiz-link"><strong>Link:</strong><br><?php echo safe($generatedQuiz['link_url']); ?></div>
+                    <div class="qr-box">
+                        <?php echo $generatedQuiz['qr_code_svg']; ?>
+                    </div>
+                <?php else: ?>
+                    <h4>Ready to create a professional exam link</h4>
+                    <p style="margin: 0 0 10px; color: var(--muted);">Fill in the form and the dashboard will generate a shareable link, QR code, access code, expiry time, timer, and one-attempt setting.</p>
+                    <div class="quiz-pill">⚡ Fast setup</div>
+                <?php endif; ?>
+            </div>
+        </div>
     </div>
 
     <div class="report-section">

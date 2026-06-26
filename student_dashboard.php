@@ -433,7 +433,7 @@ if (empty($notifications)) {
         .grid-2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
         .grid-3 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
         .course-card, .mini-card { background: linear-gradient(135deg, var(--surface), var(--surface-3)); border: 1px solid var(--border); border-radius: 14px; padding: 14px; color: var(--text); }
-        .course-card img { width: 220px; border-radius: 50px; height: 310px; object-fit: cover; background: linear-gradient(135deg,#dbeafe,#c4b5fd); }
+        .course-card img { width: 220px; border-radius: 50px; height: 300px; object-fit: cover; background: linear-gradient(135deg,#dbeafe,#c4b5fd); }
         .course-card h3, .mini-card h3 { font-size: 20px; color: var(--text); margin: 10px 0 6px; font-weight: 800; line-height: 1.35; }
         .muted { color: var(--muted); font-size: 16px; line-height: 1.35; font-weight: 500; }
         .rich-content h1, .rich-content h2, .rich-content h3 { font-size: 16px; line-height: 1.35; margin: 0.35em 0; }
