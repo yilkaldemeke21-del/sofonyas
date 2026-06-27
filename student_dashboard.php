@@ -551,8 +551,13 @@ if (empty($notifications)) {
     </div>
 
     <div class="card" style="margin-bottom: 24px;">
-        <h2 class="section-title">🧩 Enroll ኮርስ</h2>
-        <p class="section-sub">እዚህ ኮርስ ፎቶ፣ ስም፣ አጭር መግለጫ እና ሙሉ አንቀጽ መግለጫ ከዳታቤዝ ጋር ይታያል። በአንድ ጠቅታ እንዲመዘገቡ እንደሚችሉ ይምረጡ።</p>
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+            <div>
+                <h2 class="section-title">🧩 Enroll ኮርስ</h2>
+                <p class="section-sub">እዚህ ኮርስ ፎቶ፣ ስም፣ አጭር መግለጫ እና ሙሉ አንቀጽ መግለጫ ከዳታቤዝ ጋር ይታያል። በአንድ ጠቅታ እንዲመዘገቡ እንደሚችሉ ይምረጡ።</p>
+            </div>
+            <a class="button secondary" href="courses.php">Browse All Courses</a>
+        </div>
         <div class="grid-3">
             <?php if (empty($available_courses)): ?>
                 <p class="muted">እስካሁን ምንም ኮርስ አልተጨመረም።</p>
@@ -571,7 +576,7 @@ if (empty($notifications)) {
                         <p class="muted"><span class="instructor-line">ዋጋ:</span> <?php echo number_format((float)($course['price'] ?? 0), 2); ?> ብር</p>
                         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
                             <a class="button" href="student_register.php?course=<?php echo rawurlencode($course['course_name']); ?>&amount=<?php echo (float)($course['price'] ?? 0); ?>">Enroll Now</a>
-                            <a class="button secondary" href="tutorial.php#courses">View Details</a>
+                            <a class="button secondary" href="course_details.php?id=<?php echo (int)($course['id'] ?? 0); ?>">View Details</a>
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -599,7 +604,7 @@ if (empty($notifications)) {
                         <div class="progress-track"><div class="progress-fill" style="width: <?php echo $progressValue; ?>%;"></div></div>
                         <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
                             <span class="pill info">Progress <?php echo $progressValue; ?>%</span>
-                            <a class="button" href="tutorial.php">ትምህርት ቀጥል</a>
+                            <a class="button" href="course_details.php?id=<?php echo (int)($row['course_id'] ?? 0); ?>">ትምህርት ቀጥል</a>
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -613,7 +618,7 @@ if (empty($notifications)) {
                 <h3>የሚቀጥለዉ ኮርስ</h3>
                 <p class="muted">ነገረ ሃይማኖት፣ነገረ ቅዱሳን፣ሐዋርያዊ ተልዕኮ፣አገልግሎት እና መንፈሳዊ ሕይወት.</p>
                 <div class="progress-track"><div class="progress-fill" style="width: <?php echo $progress_percentage; ?>%;"></div></div>
-                <a class="button" href="tutorial.php" style="margin-top:8px;">ካቆምክበት ቀጥል</a>
+                <a class="button" href="courses.php" style="margin-top:8px;">ካቆምክበት ቀጥል</a>
             </div>
         </div>
     </div>
