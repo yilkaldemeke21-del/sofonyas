@@ -56,11 +56,13 @@ if (!$course) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $course_name = safe($_POST['course_name'] ?? '');
     $course_code = safe($_POST['course_code'] ?? '');
-    $description = safe($_POST['description'] ?? '');
+    $description = sanitizeRichText($_POST['description'] ?? '');
     $price = (float)($_POST['price'] ?? 0);
     $instructor = safe($_POST['instructor'] ?? '');
+    $instructor_bio = sanitizeRichText($_POST['instructor_bio'] ?? '');
+    $instructor_image = safe($_POST['instructor_image'] ?? '');
     $tutorial_topic = safe($_POST['tutorial_topic'] ?? '');
-    $tutorial_text = safe($_POST['tutorial_text'] ?? '');
+    $tutorial_text = sanitizeRichText($_POST['tutorial_text'] ?? '');
     $tutorial_image = safe($_POST['tutorial_image'] ?? '');
     $tutorial_audio = safe($_POST['tutorial_audio'] ?? '');
     $tutorial_video = safe($_POST['tutorial_video'] ?? '');
@@ -106,7 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare(
                 'UPDATE courses SET course_name = :course_name, course_code = :course_code, 
                  description = :description, price = :price, instructor = :instructor, pdf_file = :pdf_file,
-                 tutorial_topic = :tutorial_topic, tutorial_text = :tutorial_text, tutorial_image = :tutorial_image, tutorial_audio = :tutorial_audio, tutorial_video = :tutorial_video
+                 tutorial_topic = :tutorial_topic, tutorial_text = :tutorial_text, tutorial_image = :tutorial_image, tutorial_audio = :tutorial_audio, tutorial_video = :tutorial_video, instructor_bio = :instructor_bio, instructor_image = :instructor_image
                  WHERE id = :id'
             );
             $stmt->execute([
@@ -115,6 +117,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':description' => $description,
                 ':price' => $price,
                 ':instructor' => $instructor,
+                ':instructor_bio' => $instructor_bio,
+                ':instructor_image' => $instructor_image,
                 ':pdf_file' => $pdf_file,
                 ':tutorial_topic' => $tutorial_topic,
                 ':tutorial_text' => $tutorial_text,
@@ -149,7 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 tinymce.init({
                     selector: '.rich-editor',
                     plugins: 'advlist autolink link image lists table wordcount code',
-                    toolbar: 'undo redo | blocks | bold italic | bullist numlist | link image table | removeformat',
+                    toolbar: 'undo redo | blocks | bold italic underline | bullist numlist | link image table | removeformat',
                     menubar: false,
                     branding: false,
                     promotion: false,
@@ -223,6 +227,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="form-group">
                 <label for="instructor">አስተማሪ</label>
                 <input type="text" id="instructor" name="instructor" value="<?php echo safe($course['instructor']); ?>">
+            </div>
+
+            <div class="form-group">
+                <label for="instructor_bio">አስተማሪ አጭር ማብራሪያ</label>
+                <textarea id="instructor_bio" name="instructor_bio" rows="3"><?php echo safe($course['instructor_bio'] ?? ''); ?></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="instructor_image">አስተማሪ ምስል URL</label>
+                <input type="url" id="instructor_image" name="instructor_image" value="<?php echo safe($course['instructor_image'] ?? ''); ?>">
             </div>
 
             <div class="form-group">

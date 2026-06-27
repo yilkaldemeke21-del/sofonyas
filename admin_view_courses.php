@@ -389,6 +389,19 @@ try {
                                 <?php if (!empty($course['tutorial_text'])): ?>
                                     <br><span class="muted rich-content"><strong>Text:</strong> <?php echo renderRichText($course['tutorial_text']); ?></span>
                                 <?php endif; ?>
+                                <?php if (!empty($course['instructor_image'])): ?>
+                                    <div class="media-block">
+                                        <strong>Instructor Image:</strong><br>
+                                        <img class="media-preview" src="<?php echo safe($course['instructor_image']); ?>" alt="Instructor image" style="max-width: 180px; border-radius: 12px;">
+                                        <br><a class="media-link" href="<?php echo safe($course['instructor_image']); ?>" target="_blank">Open image</a>
+                                    </div>
+                                <?php endif; ?>
+                                <?php if (!empty($course['instructor_bio'])): ?>
+                                    <div class="media-block">
+                                        <strong>Instructor Bio:</strong><br>
+                                        <div class="muted rich-content"><?php echo renderRichText($course['instructor_bio']); ?></div>
+                                    </div>
+                                <?php endif; ?>
                                 <?php if (!empty($course['tutorial_image'])): ?>
                                     <div class="media-block">
                                         <strong>Image:</strong><br>

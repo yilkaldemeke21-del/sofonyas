@@ -122,12 +122,40 @@ $isEnrolled = (bool)$registrationCheckStmt->fetch();
 
 $progressPercent = 0;
 $continueLessonId = null;
-if ($isEnrolled && !empty($lessons)) {
-    $bookmarkCountStmt = $pdo->prepare('SELECT COUNT(*) AS total FROM lesson_bookmarks WHERE student_id = :student_id AND course_id = :course_id');
+$completedLessons = 0;
+$bookmarkedLessonIds = [];
+if (!empty($lessons)) {
+    $bookmarkCountStmt = $pdo->prepare('SELECT lesson_id FROM lesson_bookmarks WHERE student_id = :student_id AND course_id = :course_id');
     $bookmarkCountStmt->execute([':student_id' => $_SESSION['student_id'], ':course_id' => $courseId]);
-    $bookmarkCount = (int)($bookmarkCountStmt->fetch()['total'] ?? 0);
-    $progressPercent = min(100, (int)round(($bookmarkCount / max(1, count($lessons))) * 100));
-    $continueLessonId = (int)($lessons[0]['id'] ?? 0);
+    $bookmarkedLessonIds = $bookmarkCountStmt->fetchAll(PDO::FETCH_COLUMN);
+    $completedLessons = count($bookmarkedLessonIds);
+
+    if ($isEnrolled) {
+        $progressPercent = min(100, (int)round(($completedLessons / max(1, count($lessons))) * 100));
+        $lessonIndexMap = [];
+        foreach ($lessons as $index => $lessonItem) {
+            $lessonIndexMap[(int)$lessonItem['id']] = $index;
+        }
+
+        $maxCompletedIndex = -1;
+        foreach ($bookmarkedLessonIds as $lessonId) {
+            $lessonId = (int)$lessonId;
+            if (isset($lessonIndexMap[$lessonId]) && $lessonIndexMap[$lessonId] > $maxCompletedIndex) {
+                $maxCompletedIndex = $lessonIndexMap[$lessonId];
+            }
+        }
+
+        if ($maxCompletedIndex >= 0) {
+            $nextIndex = $maxCompletedIndex + 1;
+            if (isset($lessons[$nextIndex])) {
+                $continueLessonId = (int)$lessons[$nextIndex]['id'];
+            } else {
+                $continueLessonId = (int)$lessons[$maxCompletedIndex]['id'];
+            }
+        } else {
+            $continueLessonId = (int)$lessons[0]['id'];
+        }
+    }
 }
 
 $ratingValue = 5.0;
@@ -186,7 +214,17 @@ $notes = $noteStmt->fetchAll();
                     <span class="badge">⭐ <?php echo htmlspecialchars($ratingStars, ENT_QUOTES, 'UTF-8'); ?></span>
                 </div>
                 <p><?php echo nl2br(htmlspecialchars($course['description'] ?? $course['short_description'] ?? '', ENT_QUOTES, 'UTF-8')); ?></p>
-                <p><strong>Instructor:</strong> <?php echo htmlspecialchars($course['instructor'] ?? 'Staff', ENT_QUOTES, 'UTF-8'); ?></p>
+                <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:flex-start; margin-bottom:10px;">
+                    <?php if (!empty($course['instructor_image'])): ?>
+                        <img src="<?php echo htmlspecialchars($course['instructor_image'], ENT_QUOTES, 'UTF-8'); ?>" alt="Instructor image" style="width:72px; height:72px; object-fit:cover; border-radius:50%; border:2px solid #e2e8f0;">
+                    <?php endif; ?>
+                    <div>
+                        <p><strong>Instructor:</strong> <?php echo htmlspecialchars($course['instructor'] ?? 'Staff', ENT_QUOTES, 'UTF-8'); ?></p>
+                        <?php if (!empty($course['instructor_bio'])): ?>
+                            <p style="margin:6px 0 0;"><?php echo nl2br(htmlspecialchars($course['instructor_bio'], ENT_QUOTES, 'UTF-8')); ?></p>
+                        <?php endif; ?>
+                    </div>
+                </div>
                 <p><strong>Price:</strong> <?php echo number_format((float)($course['price'] ?? 0), 2); ?></p>
                 <div class="stats-grid">
                     <div class="stat-box">
@@ -213,12 +251,38 @@ $notes = $noteStmt->fetchAll();
                         <button class="button" type="submit">Enroll Now</button>
                     </form>
                     <?php if (!empty($lessons) && $continueLessonId): ?>
-                        <a class="button secondary" href="lesson.php?course_id=<?php echo (int)$courseId; ?>&lesson_id=<?php echo (int)$continueLessonId; ?>">Continue Course</a>
+                        <a class="button secondary" href="course_content.php?course_id=<?php echo (int)$courseId; ?>&lesson_id=<?php echo (int)$continueLessonId; ?>">Continue Course</a>
                     <?php endif; ?>
                     <?php if (!empty($course['pdf_file'])): ?>
                         <a class="button secondary" href="<?php echo htmlspecialchars($course['pdf_file'], ENT_QUOTES, 'UTF-8'); ?>" target="_blank">Open PDF</a>
                     <?php endif; ?>
                 </div>
+                <?php if (!empty($course['thumbnail']) || !empty($course['tutorial_image']) || !empty($course['tutorial_audio']) || !empty($course['tutorial_video'])): ?>
+                    <div class="course-media" style="margin-top:16px; display:grid; gap:12px;">
+                        <?php if (!empty($course['thumbnail'])): ?>
+                            <div><img src="<?php echo htmlspecialchars($course['thumbnail'], ENT_QUOTES, 'UTF-8'); ?>" alt="Course thumbnail" style="max-width:100%; border-radius:14px;"></div>
+                        <?php endif; ?>
+                        <?php if (!empty($course['tutorial_image'])): ?>
+                            <div><img src="<?php echo htmlspecialchars($course['tutorial_image'], ENT_QUOTES, 'UTF-8'); ?>" alt="Tutorial image" style="max-width:100%; border-radius:14px;"></div>
+                        <?php endif; ?>
+                        <?php if (!empty($course['tutorial_audio'])): ?>
+                            <div>
+                                <audio controls style="width:100%;">
+                                    <source src="<?php echo htmlspecialchars($course['tutorial_audio'], ENT_QUOTES, 'UTF-8'); ?>">
+                                </audio>
+                            </div>
+                        <?php endif; ?>
+                        <?php if (!empty($course['tutorial_video'])): ?>
+                            <div>
+                                <?php if (preg_match('/(?:youtube\.com\/watch\?v=|youtu\.be\/)/i', $course['tutorial_video'])): ?>
+                                    <iframe width="100%" height="220" src="<?php echo htmlspecialchars((strpos($course['tutorial_video'], 'youtu.be') !== false ? 'https://www.youtube.com/embed/' . preg_replace('/^.*(?:youtu\.be\/|v=)([^&\n?]+).*$/', '$1', $course['tutorial_video']) : 'https://www.youtube.com/embed/' . preg_replace('/^.*v=([^&\n?]+).*$/', '$1', $course['tutorial_video'])), ENT_QUOTES, 'UTF-8'); ?>" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                                <?php else: ?>
+                                    <video controls style="width:100%; border-radius:14px;"><source src="<?php echo htmlspecialchars($course['tutorial_video'], ENT_QUOTES, 'UTF-8'); ?>"></video>
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
             </div>
             <div class="card" style="margin:0; background:#f8fafc;">
                 <h3>Course Modules</h3>
@@ -233,7 +297,7 @@ $notes = $noteStmt->fetchAll();
                                 <?php if (!empty($moduleGroups[$module['id']] ?? [])): ?>
                                     <ul>
                                         <?php foreach ($moduleGroups[$module['id']] as $lesson): ?>
-                                            <li><a href="lesson.php?course_id=<?php echo (int)$courseId; ?>&lesson_id=<?php echo (int)$lesson['id']; ?>"><?php echo htmlspecialchars($lesson['title'] ?? 'Lesson', ENT_QUOTES, 'UTF-8'); ?></a></li>
+                                            <li><a href="course_content.php?course_id=<?php echo (int)$courseId; ?>&lesson_id=<?php echo (int)$lesson['id']; ?>"><?php echo htmlspecialchars($lesson['title'] ?? 'Lesson', ENT_QUOTES, 'UTF-8'); ?></a></li>
                                         <?php endforeach; ?>
                                     </ul>
                                 <?php else: ?>
@@ -246,7 +310,7 @@ $notes = $noteStmt->fetchAll();
                                 <h4>General Lessons</h4>
                                 <ul>
                                     <?php foreach ($orphanLessons as $lesson): ?>
-                                        <li><a href="lesson.php?course_id=<?php echo (int)$courseId; ?>&lesson_id=<?php echo (int)$lesson['id']; ?>"><?php echo htmlspecialchars($lesson['title'] ?? 'Lesson', ENT_QUOTES, 'UTF-8'); ?></a></li>
+                                        <li><a href="course_content.php?course_id=<?php echo (int)$courseId; ?>&lesson_id=<?php echo (int)$lesson['id']; ?>"><?php echo htmlspecialchars($lesson['title'] ?? 'Lesson', ENT_QUOTES, 'UTF-8'); ?></a></li>
                                     <?php endforeach; ?>
                                 </ul>
                             </div>
@@ -298,7 +362,7 @@ $notes = $noteStmt->fetchAll();
                 <?php foreach ($lessons as $lesson): ?>
                     <li style="margin-bottom:10px;">
                         <strong><?php echo htmlspecialchars($lesson['title'] ?? 'Lesson', ENT_QUOTES, 'UTF-8'); ?></strong>
-                        <div><a href="lesson.php?course_id=<?php echo (int)$courseId; ?>&lesson_id=<?php echo (int)$lesson['id']; ?>">Open Lesson</a></div>
+                        <div><a href="course_content.php?course_id=<?php echo (int)$courseId; ?>&lesson_id=<?php echo (int)$lesson['id']; ?>">Open Lesson</a></div>
                     </li>
                 <?php endforeach; ?>
             </ul>

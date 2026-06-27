@@ -97,17 +97,42 @@ $noteCount = (int)($noteStmt->fetch()['total'] ?? 0);
 
 function buildCourseProgressInfo(PDO $pdo, array $course, string $studentId): array
 {
+    $courseId = (int)($course['id'] ?? 0);
+
     $enrollmentCountStmt = $pdo->prepare('SELECT COUNT(*) AS total FROM registrations WHERE course = :course_name');
     $enrollmentCountStmt->execute([':course_name' => $course['course_name']]);
     $enrollmentCount = (int)($enrollmentCountStmt->fetch()['total'] ?? 0);
 
-    $lessonStmt = $pdo->prepare('SELECT COUNT(*) AS total FROM course_lessons WHERE course_id = :course_id');
-    $lessonStmt->execute([':course_id' => (int)($course['id'] ?? 0)]);
-    $lessonCount = (int)($lessonStmt->fetch()['total'] ?? 0);
+    $lessonStmt = $pdo->prepare('SELECT id FROM course_lessons WHERE course_id = :course_id ORDER BY COALESCE(module_id, 999999) ASC, sort_order ASC, id ASC');
+    $lessonStmt->execute([':course_id' => $courseId]);
+    $orderedLessons = $lessonStmt->fetchAll(PDO::FETCH_COLUMN);
+    $lessonCount = count($orderedLessons);
 
-    $bookmarkStmt = $pdo->prepare('SELECT COUNT(*) AS total FROM lesson_bookmarks WHERE student_id = :student_id AND course_id = :course_id');
-    $bookmarkStmt->execute([':student_id' => $studentId, ':course_id' => (int)($course['id'] ?? 0)]);
-    $bookmarkCount = (int)($bookmarkStmt->fetch()['total'] ?? 0);
+    $bookmarkStmt = $pdo->prepare('SELECT lesson_id FROM lesson_bookmarks WHERE student_id = :student_id AND course_id = :course_id');
+    $bookmarkStmt->execute([':student_id' => $studentId, ':course_id' => $courseId]);
+    $bookmarkedLessonIds = $bookmarkStmt->fetchAll(PDO::FETCH_COLUMN);
+    $bookmarkCount = count($bookmarkedLessonIds);
+
+    $maxCompletedIndex = -1;
+    $lessonIndexMap = [];
+    foreach ($orderedLessons as $index => $lessonId) {
+        $lessonIndexMap[(int)$lessonId] = $index;
+    }
+    foreach ($bookmarkedLessonIds as $lessonId) {
+        $lessonId = (int)$lessonId;
+        if (isset($lessonIndexMap[$lessonId]) && $lessonIndexMap[$lessonId] > $maxCompletedIndex) {
+            $maxCompletedIndex = $lessonIndexMap[$lessonId];
+        }
+    }
+
+    $continueLessonId = 0;
+    if (!empty($orderedLessons)) {
+        if ($maxCompletedIndex >= 0 && isset($orderedLessons[$maxCompletedIndex + 1])) {
+            $continueLessonId = (int)$orderedLessons[$maxCompletedIndex + 1];
+        } else {
+            $continueLessonId = (int)$orderedLessons[0];
+        }
+    }
 
     $progressPercent = $lessonCount > 0 ? min(100, (int)round(($bookmarkCount / $lessonCount) * 100)) : 0;
     $ratingStars = '★★★★★';
@@ -117,6 +142,7 @@ function buildCourseProgressInfo(PDO $pdo, array $course, string $studentId): ar
         'progress_percent' => $progressPercent,
         'rating_stars' => $ratingStars,
         'category' => trim((string)($course['category'] ?? 'General')),
+        'continue_lesson_id' => $continueLessonId,
     ];
 }
 ?>
@@ -168,7 +194,11 @@ function buildCourseProgressInfo(PDO $pdo, array $course, string $studentId): ar
                                 <button class="button" type="submit">Enroll</button>
                             </form>
                             <a class="button secondary" href="course_details.php?id=<?php echo (int)($course['id'] ?? 0); ?>">View Details</a>
-                            <a class="button" href="lesson.php?course_id=<?php echo (int)($course['id'] ?? 0); ?>&lesson_id=1">Continue Course</a>
+                            <?php if (!empty($courseMeta['continue_lesson_id'])): ?>
+                                <a class="button" href="course_content.php?course_id=<?php echo (int)($course['id'] ?? 0); ?>&lesson_id=<?php echo (int)$courseMeta['continue_lesson_id']; ?>">Continue Course</a>
+                            <?php else: ?>
+                                <a class="button" href="course_details.php?id=<?php echo (int)($course['id'] ?? 0); ?>">Continue Course</a>
+                            <?php endif; ?>
                         </div>
                     </div>
                 <?php endforeach; ?>

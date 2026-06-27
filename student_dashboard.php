@@ -476,7 +476,7 @@ if (empty($notifications)) {
         <div class="quick-actions">
             <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle theme">🌙 Dark</button>
             <a class="button" href="sofonyas%20(2).html">መጀመሪያ</a>
-            <a class="button" href="tutorial.php">ኮርሶች</a>
+            <a class="button" href="courses.php">ኮርሶች</a>
             <a class="button" href="live_class.php">Join Live Class</a>
             <a class="button" href="discussion_forum.php">ፎርም</a>
             <a class="button" href="library.php">ላይብራሪ</a>
@@ -791,14 +791,14 @@ if (empty($notifications)) {
                 <div class="mini-card">
                     <h3><?php echo safe($item['lesson_title']); ?></h3>
                     <p class="muted">ኢንስትራክተር: <?php echo safe($item['instructor'] ?? 'Staff'); ?></p>
-                    <a class="button" href="tutorial.php" style="margin-top: 12px;">ሌሰን ክፈት</a>
+                    <a class="button" href="course_details.php?id=<?php echo (int)($item['course_id'] ?? 0); ?>" style="margin-top: 12px;">ሌሰን ክፈት</a>
                 </div>
             <?php endforeach; ?>
             <?php foreach ($saved_courses as $item): ?>
                 <div class="mini-card">
                     <h3><?php echo safe($item['course_name']); ?></h3>
                     <p class="muted">ኢንስትራክተር: <?php echo safe($item['instructor'] ?? 'Staff'); ?></p>
-                    <a class="button" href="tutorial.php" style="margin-top: 12px;">ኮርስ ተመልከት</a>
+                    <a class="button" href="course_details.php?id=<?php echo (int)($item['course_id'] ?? 0); ?>" style="margin-top: 12px;">ኮርስ ተመልከት</a>
                 </div>
             <?php endforeach; ?>
             <?php if (empty($saved_lessons) && empty($saved_courses)): ?>

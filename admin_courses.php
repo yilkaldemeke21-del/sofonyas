@@ -152,6 +152,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $thumbnail = cleanText($_POST['thumbnail'] ?? '');
     $price = (float)($_POST['price'] ?? 0);
     $instructor = cleanText($_POST['instructor'] ?? '');
+    $instructor_bio = sanitizeRichText($_POST['instructor_bio'] ?? '');
+    $instructor_image = cleanText($_POST['instructor_image'] ?? '');
     $tutorial_topic = cleanText($_POST['tutorial_topic'] ?? '');
     $tutorial_text = sanitizeRichText($_POST['tutorial_text'] ?? '');
     $tutorial_image = cleanText($_POST['tutorial_image'] ?? '');
@@ -209,8 +211,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         try {
             $stmt = $pdo->prepare(
-                'INSERT INTO courses (course_name, course_code, short_description, description, category, level, thumbnail, price, instructor, pdf_file, tutorial_topic, tutorial_text, tutorial_image, tutorial_audio, tutorial_video, modules, quiz, assignment, certificate_requirements) 
-                 VALUES (:course_name, :course_code, :short_description, :description, :category, :level, :thumbnail, :price, :instructor, :pdf_file, :tutorial_topic, :tutorial_text, :tutorial_image, :tutorial_audio, :tutorial_video, :modules, :quiz, :assignment, :certificate_requirements)'
+                'INSERT INTO courses (course_name, course_code, short_description, description, category, level, thumbnail, price, instructor, instructor_bio, instructor_image, pdf_file, tutorial_topic, tutorial_text, tutorial_image, tutorial_audio, tutorial_video, modules, quiz, assignment, certificate_requirements) 
+                 VALUES (:course_name, :course_code, :short_description, :description, :category, :level, :thumbnail, :price, :instructor, :instructor_bio, :instructor_image, :pdf_file, :tutorial_topic, :tutorial_text, :tutorial_image, :tutorial_audio, :tutorial_video, :modules, :quiz, :assignment, :certificate_requirements)'
             );
             $stmt->execute([
                 ':course_name' => $course_name,
@@ -222,6 +224,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':thumbnail' => $thumbnail,
                 ':price' => $price,
                 ':instructor' => $instructor,
+                ':instructor_bio' => $instructor_bio,
+                ':instructor_image' => $instructor_image,
                 ':pdf_file' => $pdf_file,
                 ':tutorial_topic' => $tutorial_topic,
                 ':tutorial_text' => $tutorial_text,
@@ -357,6 +361,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="form-group">
                 <label for="instructor">አስተማሪ</label>
                 <input type="text" id="instructor" name="instructor" placeholder="አስተማሪ ስም">
+            </div>
+
+            <div class="form-group">
+                <label for="instructor_bio">አስተማሪ አጭር ማብራሪያ</label>
+                <textarea id="instructor_bio" name="instructor_bio" rows="3" placeholder="አስተማሪ እንዴት እንደ ሰራዊት በአጭሩ ይገልጹ"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="instructor_image">አስተማሪ ምስል URL</label>
+                <input type="url" id="instructor_image" name="instructor_image" placeholder="https://.../instructor.jpg">
             </div>
 
             <div class="form-group">

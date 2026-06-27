@@ -22,6 +22,8 @@ try {
         thumbnail VARCHAR(255) DEFAULT NULL,
         price DECIMAL(10,2) NOT NULL DEFAULT 0,
         instructor VARCHAR(255) DEFAULT NULL,
+        instructor_bio TEXT DEFAULT NULL,
+        instructor_image VARCHAR(255) DEFAULT NULL,
         pdf_file VARCHAR(255) DEFAULT NULL,
         tutorial_topic VARCHAR(255) DEFAULT NULL,
         tutorial_text TEXT DEFAULT NULL,
@@ -110,15 +112,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $course_name = trim($_POST['course_name'] ?? '');
     $course_code = trim($_POST['course_code'] ?? '');
     $course_code = strtoupper($course_code);
-    $short_description = normalizeText($_POST['short_description'] ?? '');
-    $description = normalizeText($_POST['description'] ?? '');
+    $short_description = sanitizeRichText($_POST['short_description'] ?? '');
+    $description = sanitizeRichText($_POST['description'] ?? '');
     $category = normalizeText($_POST['category'] ?? '');
     $level = normalizeText($_POST['level'] ?? '');
     $thumbnail = normalizeText($_POST['thumbnail'] ?? '');
     $price = (float)($_POST['price'] ?? 0);
     $instructor = normalizeText($_POST['instructor'] ?? '');
+    $instructor_bio = sanitizeRichText($_POST['instructor_bio'] ?? '');
+    $instructor_image = normalizeText($_POST['instructor_image'] ?? '');
     $tutorial_topic = normalizeText($_POST['tutorial_topic'] ?? '');
-    $tutorial_text = normalizeText($_POST['tutorial_text'] ?? '');
+    $tutorial_text = sanitizeRichText($_POST['tutorial_text'] ?? '');
     $tutorial_image = normalizeText($_POST['tutorial_image'] ?? '');
     $tutorial_audio = normalizeText($_POST['tutorial_audio'] ?? '');
     $tutorial_video = normalizeText($_POST['tutorial_video'] ?? '');
@@ -129,19 +133,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $modules = $builderModules;
     }
 
-    $quiz = normalizeText($_POST['quiz'] ?? '');
+    $quiz = sanitizeRichText($_POST['quiz'] ?? '');
     $builderQuiz = normalizeText($_POST['builder_quiz'] ?? '');
     if ($builderQuiz !== '') {
         $quiz = $builderQuiz;
     }
 
-    $assignment = normalizeText($_POST['assignment'] ?? '');
+    $assignment = sanitizeRichText($_POST['assignment'] ?? '');
     $builderAssignment = normalizeText($_POST['builder_assignment'] ?? '');
     if ($builderAssignment !== '') {
         $assignment = $builderAssignment;
     }
 
-    $certificate_requirements = normalizeText($_POST['certificate_requirements'] ?? '');
+    $certificate_requirements = sanitizeRichText($_POST['certificate_requirements'] ?? '');
 
     if ($course_name === '' || $course_code === '') {
         $error = 'የኮርስ ስም እና ኮድ ማስገባት አለብዎት።';
@@ -182,8 +186,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
         try {
             $stmt = $pdo->prepare(
-                'INSERT INTO courses (course_name, course_code, short_description, description, category, level, thumbnail, price, instructor, pdf_file, tutorial_topic, tutorial_text, tutorial_image, tutorial_audio, tutorial_video, modules, quiz, assignment, certificate_requirements)
-                 VALUES (:course_name, :course_code, :short_description, :description, :category, :level, :thumbnail, :price, :instructor, :pdf_file, :tutorial_topic, :tutorial_text, :tutorial_image, :tutorial_audio, :tutorial_video, :modules, :quiz, :assignment, :certificate_requirements)'
+'INSERT INTO courses (course_name, course_code, short_description, description, category, level, thumbnail, price, instructor, instructor_bio, instructor_image, pdf_file, tutorial_topic, tutorial_text, tutorial_image, tutorial_audio, tutorial_video, modules, quiz, assignment, certificate_requirements) 
+                 VALUES (:course_name, :course_code, :short_description, :description, :category, :level, :thumbnail, :price, :instructor, :instructor_bio, :instructor_image, :pdf_file, :tutorial_topic, :tutorial_text, :tutorial_image, :tutorial_audio, :tutorial_video, :modules, :quiz, :assignment, :certificate_requirements)'
             );
             $stmt->execute([
                 ':course_name' => $course_name,
@@ -195,6 +199,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':thumbnail' => $thumbnail,
                 ':price' => $price,
                 ':instructor' => $instructor,
+                ':instructor_bio' => $instructor_bio,
+                ':instructor_image' => $instructor_image,
                 ':pdf_file' => $pdf_file,
                 ':tutorial_topic' => $tutorial_topic,
                 ':tutorial_text' => $tutorial_text,
@@ -220,7 +226,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <title>Admin Course Builder</title>
-    <script src="https://cdn.jsdelivr.net/npm/tinymce@6.8.3/tinymce.min.js" referrerpolicy="origin"></script>
+    <script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/super-build/ckeditor.js"></script>
+    <script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/translations/am.js"></script>
+    <script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/translations/om.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             function escapeHtml(value) {
@@ -247,7 +255,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     return {
                         title: moduleTitle || 'Untitled Module',
-                        lessons: lessons
+                        lessons: lessons,
+                        lessonTexts: lessonRows.map((row) => row.querySelector('.lesson-title').value.trim()).filter(Boolean)
                     };
                 }).filter((item) => item.title || item.lessons.length);
 
@@ -256,7 +265,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     return '<section class="builder-output-card"><h4>' + escapeHtml(module.title) + '</h4>' + lessonsMarkup + '</section>';
                 }).join('');
 
-                document.getElementById('builder_modules').value = markup;
+                const plainOutline = modules.map((module) => {
+                    const header = module.title ? 'Module: ' + module.title : 'Module';
+                    const lessonLines = module.lessonTexts.map((lessonTitle) => '- Lesson: ' + lessonTitle);
+                    return [header].concat(lessonLines).join('\n');
+                }).join('\n');
+
+                document.getElementById('builder_modules').value = plainOutline;
+                document.getElementById('lessonBuilderPreview').innerHTML = markup;
             }
 
             function renderQuizBuilderMarkup() {
@@ -425,31 +441,106 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             addQuizCard();
             addAssignmentCard();
 
-            function initRichEditors() {
-                if (window.tinymce) {
-                    tinymce.init({
-                        selector: '.rich-editor',
-                        plugins: 'advlist autolink link image lists table wordcount code',
-                        toolbar: 'undo redo | blocks | bold italic underline | bullist numlist | link image table | removeformat',
-                        menubar: false,
-                        branding: false,
-                        promotion: false,
-                        height: 180,
-                        forced_root_block: 'p',
-                        setup: function (editor) {
-                            editor.on('change', function () {
-                                editor.save();
-                            });
+            function getEditorConfig(language) {
+                return {
+                    toolbar: {
+                        items: [
+                            'undo', 'redo', '|',
+                            'heading', '|',
+                            'bold', 'italic', 'underline', 'strikethrough', 'subscript', 'superscript', '|',
+                            'fontSize', 'fontFamily', 'fontColor', 'fontBackgroundColor', '|',
+                            'bulletedList', 'numberedList', 'outdent', 'indent', '|',
+                            'link', 'insertImage', 'insertTable', 'blockQuote', 'codeBlock', 'horizontalLine', '|',
+                            'findAndReplace', 'removeFormat'
+                        ],
+                        shouldNotGroupWhenFull: true
+                    },
+                    heading: {
+                        options: [
+                            { model: 'paragraph', title: 'Paragraph', class: 'ck-heading_paragraph' },
+                            { model: 'heading1', view: 'h1', title: 'Heading 1', class: 'ck-heading_heading1' },
+                            { model: 'heading2', view: 'h2', title: 'Heading 2', class: 'ck-heading_heading2' },
+                            { model: 'heading3', view: 'h3', title: 'Heading 3', class: 'ck-heading_heading3' },
+                            { model: 'heading4', view: 'h4', title: 'Heading 4', class: 'ck-heading_heading4' },
+                            { model: 'heading5', view: 'h5', title: 'Heading 5', class: 'ck-heading_heading5' },
+                            { model: 'heading6', view: 'h6', title: 'Heading 6', class: 'ck-heading_heading6' }
+                        ]
+                    },
+                    language: language || 'en',
+                    image: {
+                        toolbar: ['imageStyle:inline', 'imageStyle:block', 'imageStyle:side', '|', 'toggleImageCaption', 'imageTextAlternative']
+                    },
+                    table: {
+                        contentToolbar: ['tableColumn', 'tableRow', 'mergeTableCells', 'tableProperties', 'tableCellProperties']
+                    },
+                    link: {
+                        decorators: {
+                            openInNewTab: {
+                                mode: 'manual',
+                                label: 'Open in a new tab',
+                                defaultValue: true,
+                                attributes: {
+                                    target: '_blank',
+                                    rel: 'noopener noreferrer'
+                                }
+                            }
                         }
-                    });
-                } else {
-                    document.querySelectorAll('.rich-editor').forEach(function (field) {
-                        field.setAttribute('placeholder', 'Use bold/italic formatting from the toolbar when the editor loads.');
-                    });
-                }
+                    },
+                    placeholder: 'Write rich content here...',
+                    height: 260,
+                    autosave: {
+                        save: function () {
+                            return Promise.resolve();
+                        }
+                    },
+                    wordCount: {
+                        displayWords: true,
+                        displayCharacters: true
+                    }
+                };
             }
 
-            initRichEditors();
+            const editorInstances = new Map();
+
+            function initRichEditors(language) {
+                document.querySelectorAll('.rich-editor').forEach(function (field) {
+                    const key = field.id || field.name || 'rich-editor';
+                    if (field.dataset.ckeditorInitialized === '1' && field.dataset.editorLanguage === language) {
+                        return;
+                    }
+
+                    if (field.dataset.ckeditorInitialized === '1') {
+                        const existingEditor = editorInstances.get(key);
+                        if (existingEditor) {
+                            const content = existingEditor.getData();
+                            existingEditor.destroy();
+                            editorInstances.delete(key);
+                            field.value = content;
+                        }
+                    }
+
+                    ClassicEditor.create(field, getEditorConfig(language)).then(function (editor) {
+                        editorInstances.set(key, editor);
+                        field.dataset.ckeditorInitialized = '1';
+                        field.dataset.editorLanguage = language;
+                        field.closest('form')?.addEventListener('submit', function () {
+                            editor.updateSourceElement();
+                        });
+                    }).catch(function (error) {
+                        console.error('CKEditor failed to initialize:', error);
+                        field.setAttribute('placeholder', 'Use the toolbar for headings, bold, italic, underline, lists, links, images, tables, and code blocks.');
+                    });
+                });
+            }
+
+            const languageSelect = document.getElementById('editor_language');
+            if (languageSelect) {
+                languageSelect.addEventListener('change', function () {
+                    initRichEditors(this.value);
+                });
+            }
+
+            initRichEditors(languageSelect ? languageSelect.value : 'en');
         });
     </script>
     <style>
@@ -527,6 +618,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php if ($error !== ''): ?><div class="alert error"><?php echo safe($error); ?></div><?php endif; ?>
         <?php if ($success !== ''): ?><div class="alert success"><?php echo safe($success); ?></div><?php endif; ?>
 
+        <div class="field-block" style="max-width: 280px; margin-bottom: 16px;">
+            <label for="editor_language">Editor Language</label>
+            <select id="editor_language">
+                <option value="en">English</option>
+                <option value="am">አማርኛ</option>
+                <option value="om">Afaan Oromoo</option>
+            </select>
+        </div>
+        <p class="small">Choose the editor language and use the toolbar for headings, bold, italic, underline, strikethrough, subscript, superscript, font size, font family, text color, background highlight, numbered and bullet lists, nested lists, block quotes, horizontal lines, links, images, tables, and code blocks.</p>
+        <div class="toolbar-note">Advanced features enabled: Find &amp; Replace, Undo / Redo, Auto Save, Word Count, and Character Count.</div>
+
         <form method="post" enctype="multipart/form-data">
             <div class="grid">
                 <div>
@@ -546,6 +648,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="field-block">
                         <label for="instructor">Instructor</label>
                         <input id="instructor" name="instructor" placeholder="Instructor name">
+                    </div>
+                    <div class="field-block">
+                        <label for="instructor_bio">Instructor Bio</label>
+                        <textarea id="instructor_bio" name="instructor_bio" placeholder="Short instructor bio or credentials"></textarea>
+                    </div>
+                    <div class="field-block">
+                        <label for="instructor_image">Instructor Image URL</label>
+                        <input id="instructor_image" name="instructor_image" placeholder="https://.../instructor.jpg">
                     </div>
                 </div>
                 <div>

@@ -37,12 +37,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['set_lang'])) {
 }
 
 $chatMessages = [];
+$featuredCourses = [];
+$announcements = [];
+$courseCount = 0;
+$studentCount = 0;
+$contactMessage = '';
+$contactStatus = '';
+
+try {
+    $pdo->exec('CREATE TABLE IF NOT EXISTS event_announcements (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        event_title VARCHAR(255) NOT NULL,
+        event_description TEXT DEFAULT NULL,
+        event_date DATETIME DEFAULT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+} catch (Throwable $e) {}
+
+try {
+    $pdo->exec('CREATE TABLE IF NOT EXISTS site_contact_messages (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        student_id VARCHAR(100) DEFAULT NULL,
+        message TEXT DEFAULT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+} catch (Throwable $e) {}
+
 try {
     $stmt = $pdo->prepare('SELECT id, sender_type, sender_name, message, reply_message, status, created_at, updated_at FROM site_chat_messages ORDER BY id DESC LIMIT 18');
     $stmt->execute();
     $chatMessages = array_reverse($stmt->fetchAll());
 } catch (Throwable $e) {
     $chatMessages = [];
+}
+
+try {
+    $stmt = $pdo->query('SELECT COUNT(*) AS total FROM courses');
+    $courseCount = (int)$stmt->fetchColumn();
+} catch (Throwable $e) {
+    $courseCount = 0;
+}
+
+try {
+    $stmt = $pdo->query('SELECT COUNT(*) AS total FROM students');
+    $studentCount = (int)$stmt->fetchColumn();
+} catch (Throwable $e) {
+    $studentCount = 0;
+}
+
+try {
+    $stmt = $pdo->query('SELECT id, course_name, short_description, description, thumbnail, instructor, price, category, level FROM courses ORDER BY created_at DESC LIMIT 6');
+    $featuredCourses = $stmt->fetchAll();
+} catch (Throwable $e) {
+    $featuredCourses = [];
+}
+
+try {
+    $stmt = $pdo->query('SELECT event_title, event_description, event_date, created_at FROM event_announcements ORDER BY event_date DESC, created_at DESC LIMIT 4');
+    $announcements = $stmt->fetchAll();
+} catch (Throwable $e) {
+    $announcements = [];
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['chat_message']) && trim($_POST['chat_message']) !== '') {
@@ -71,6 +127,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
     }
     header('Location: sofonyas2.php?lang=' . $lang);
     exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['contact_submit'])) {
+    $contactName = trim((string)($_POST['name'] ?? ''));
+    $contactEmail = trim((string)($_POST['email'] ?? ''));
+    $contactStudentId = trim((string)($_POST['student_id'] ?? ''));
+    $contactMessageText = trim((string)($_POST['message'] ?? ''));
+
+    if ($contactName !== '' && $contactEmail !== '' && $contactMessageText !== '') {
+        $stmt = $pdo->prepare('INSERT INTO site_contact_messages (name, email, student_id, message) VALUES (:name, :email, :student_id, :message)');
+        $stmt->execute([
+            ':name' => $contactName,
+            ':email' => $contactEmail,
+            ':student_id' => $contactStudentId,
+            ':message' => $contactMessageText,
+        ]);
+        $contactStatus = 'success';
+        $contactMessage = translateText('የጥያቄዎ ተቀብሏል። አስተዳዳሪ በቅርቡ ይመልሳል።', 'Your message has been received. We will respond soon.');
+    } else {
+        $contactStatus = 'error';
+        $contactMessage = translateText('እባክዎ ስም፣ ኢሜይል እና መልእክት ያስገቡ።', 'Please provide your name, email, and a message.');
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -110,7 +188,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         .hero-card { background: rgba(255,255,255,0.96); border-radius: 24px; padding: 16px; box-shadow: 0 18px 35px rgba(2,6,23,0.25); }
         .hero-slide { display: none; animation: fadeIn 0.6s ease; }
         .hero-slide.active { display: block; }
-        .hero-slide img { width: 100%; height: 280px; object-fit: cover; border-radius: 18px; }
+        .hero-slide img { width: 50%; height: 280px; object-fit: cover; border-radius: 18px; }
         .hero-slider-dots { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
         .hero-slider-dots button { width: 10px; height: 10px; border-radius: 999px; border: none; background: #cbd5e1; cursor: pointer; }
         .hero-slider-dots button.active { background: #2563eb; transform: scale(1.2); }
@@ -125,6 +203,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         .course-card img { width: 100%; height: 150px; object-fit: cover; transition: transform 0.35s ease; }
         .course-card:hover img { transform: scale(1.08); }
         .course-card .content { padding: 12px 14px; }
+        .ai-feature-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 16px; }
+        .ai-feature-card { background: linear-gradient(135deg, #ffffff, #f8fbff); border: 1px solid #dbeafe; border-radius: 16px; padding: 16px; box-shadow: 0 10px 24px rgba(37, 99, 235, 0.08); }
+        .ai-feature-card h3 { margin: 0 0 8px; color: #1d4ed8; }
+        .ai-feature-card p { margin: 0 0 10px; color: #475569; line-height: 1.6; }
         .testimonial-slider { position: relative; overflow: hidden; margin-top: 16px; }
         .testimonial-track { display: flex; transition: transform 0.45s ease; }
         .testimonial-card { min-width: 100%; background: linear-gradient(135deg, #ffffff, #f8fafc); border-radius: 18px; border: 1px solid #e2e8f0; padding: 18px; box-shadow: 0 8px 18px rgba(15,23,42,0.05); }
@@ -149,8 +231,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
             <li><a href="#about" data-am="ስለ እኛ" data-en="About">About</a></li>
             <li><a href="student_login.php" data-am="የተማሪ ማዕከል" data-en="Student Center">exam center</a></li>
             <li><a href="#view" data-am="እይታ" data-en="View">View</a></li>
-            <li><a href="contact.html" data-am="እናግራ" data-en="Contact">Contact</a></li>
-             <li><a href="dashboard.php">Dashboard</a></li>
+            <li><a href="#contact" data-am="እይታ" data-en="Contact">Contact</a></li>
+            <li><a href="dashboard.php">Dashboard</a></li>
             <li><a href="exam20.php">exam portal</a></li>
             <li><a href="tutorial.php">Courses</a></li>
             <li><a href="discussion_forum.php">Forum</a></li>
@@ -187,9 +269,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
                     <a class="button secondary" href="#about" data-am="ተጨማሪ ይወቁ" data-en="Learn More">Learn More</a>
                 </div>
                 <div class="hero-stats reveal">
-                    <div class="hero-stat">📚 100+ Lessons</div>
-                    <div class="hero-stat">🎯 Live Exams</div>
-                    <div class="hero-stat">🏅 Certificates</div>
+                    <div class="hero-stat">📚 <?php echo (int)$courseCount; ?> <?php echo safe(translateText('ኮርሶች', 'Courses')); ?></div>
+                    <div class="hero-stat">🎯 <?php echo (int)$studentCount; ?> <?php echo safe(translateText('ተማሪዎች', 'Students')); ?></div>
+                    <div class="hero-stat">📢 <?php echo count($announcements); ?> <?php echo safe(translateText('አዲስ ማስታወቂያዎች', 'Updates')); ?></div>
                 </div>
             </div>
             <div class="hero-visual reveal">
@@ -232,30 +314,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
     </div>
 
     <div class="card reveal">
+        <h2 data-am="የቅርብ ጊዜ ዝመናዎች" data-en="Latest Updates">Latest Updates</h2>
+        <?php if (empty($announcements)): ?>
+            <p class="muted">No updates are available yet.</p>
+        <?php else: ?>
+            <div class="course-grid">
+                <?php foreach ($announcements as $announcement): ?>
+                    <div class="course-card">
+                        <div class="content">
+                            <h3><?php echo safe($announcement['event_title'] ?? 'Update'); ?></h3>
+                            <p style="color:#475569; margin:6px 0 8px; line-height:1.6;"><?php echo safe($announcement['event_description'] ?? ''); ?></p>
+                            <div style="font-size:12px; color:#64748b;"><?php echo safe(!empty($announcement['event_date']) ? date('M d, Y', strtotime($announcement['event_date'])) : date('M d, Y', strtotime($announcement['created_at']))); ?></div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+    </div>
+
+    <div class="card reveal">
         <h2 data-am="በዚህ ዌቭሳይት የሚካተቱ ትምህርቶች" data-en="Courses Included on This Website">በዚህ ዌቭሳይት የሚካተቱ ትምህርቶች</h2>
-        <div class="course-grid">
-            <div class="course-card">
-                <img src="10 .jpg" alt="Religious teachings">
-                <div class="content">
-                    <h3 data-am="ነገረ ሃይማኖት" data-en="Religious teachings">ነገረ ሃይማኖት</h3>
-                    <p data-am="የእምነት ትምህርት እና ማብራሪያ" data-en="Faith-based teachings and guidance">Faith-based teachings and guidance</p>
-                </div>
+        <?php if (empty($featuredCourses)): ?>
+            <p class="muted">No courses are available yet.</p>
+        <?php else: ?>
+            <div class="course-grid">
+                <?php foreach ($featuredCourses as $course): ?>
+                    <?php $courseThumb = !empty($course['thumbnail']) ? publicMediaUrl($course['thumbnail']) : '10 .jpg'; ?>
+                    <div class="course-card">
+                        <img src="<?php echo safe($courseThumb); ?>" alt="<?php echo safe($course['course_name'] ?? 'Course'); ?>">
+                        <div class="content">
+                            <h3><?php echo safe($course['course_name'] ?? 'Course'); ?></h3>
+                            <p style="color:#475569; margin:6px 0 8px; line-height:1.6;"><?php echo safe($course['short_description'] ?: ($course['description'] ?? '')); ?></p>
+                            <div style="font-size:12px; color:#64748b;"><?php echo safe($course['category'] ?: 'General'); ?> • <?php echo safe($course['level'] ?: 'Beginner'); ?></div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
             </div>
-            <div class="course-card">
-                <img src="sofi photo.jpg" alt="Church order">
-                <div class="content">
-                    <h3 data-am="ስርዓተ ቤተ ክርስቲያን" data-en="Church order">ስርዓተ ቤተ ክርስቲያን</h3>
-                    <p data-am="በአስተዳደር እና ሥነ ምግባር ላይ ትምህርት" data-en="Structured guidance on church order and ethics">Structured guidance on church order and ethics</p>
-                </div>
-            </div>
-            <div class="course-card">
-                <img src="motta sofi.jpg" alt="The message of anointing">
-                <div class="content">
-                    <h3 data-am="ነገረ ቅባት" data-en="The message of anointing">ነገረ ቅባት</h3>
-                    <p data-am="ብልጥ የትምህርት እና ልምድ እድል" data-en="Deep learning experiences and practical insight">Deep learning experiences and practical insight</p>
-                </div>
-            </div>
-        </div>
+        <?php endif; ?>
     </div>
 
     <section class="card reveal" style="background:linear-gradient(135deg,#f8fbff 0%,#eef2ff 100%); border:1px solid #dbeafe;">
@@ -288,6 +383,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         </div>
     </section>
 
+    <section class="card reveal" style="background: linear-gradient(135deg, #f8fbff 0%, #eef2ff 100%); border: 1px solid #dbeafe;">
+        <h2 data-am="🤖 AI ባህሪያዎች" data-en="🤖 AI Features">🤖 AI Features</h2>
+        <p style="margin:8px 0 0; color:#475569; line-height:1.7;" data-am="በአስተማማኝ እና ፈጣን የመማሪያ ልምድ የተነደፉ እውቀት ተደጋጋሚ መሳሪያዎች እነዚህ ናቸው።" data-en="These intelligent tools are designed to make studying faster, clearer, and more personalized.">These intelligent tools are designed to make studying faster, clearer, and more personalized.</p>
+        <div class="ai-feature-list">
+            <div class="ai-feature-card">
+                <h3 data-am="AI ቻት ረዳት" data-en="AI Chat Assistant">AI Chat Assistant</h3>
+                <p data-am="በአጭሩ ጥያቄዎችን ይጠይቁ እና በአቅጣጫ የተዘጋጀ ድጋፍ ያግኙ።" data-en="Ask quick questions and get guided support in a simple conversational way.">Ask quick questions and get guided support in a simple conversational way.</p>
+                <a class="button secondary" href="discussion_forum.php" data-am="ቻት ክፈት" data-en="Open Chat">Open Chat</a>
+            </div>
+            <div class="ai-feature-card">
+                <h3 data-am="Quiz Generator" data-en="Quiz Generator">Quiz Generator</h3>
+                <p data-am="ከኮርሶችዎ በመመስረት የማጥናት ቀላል ጥያቄዎች ይፍጠሩ።" data-en="Generate practice questions from your lessons to reinforce learning and test understanding.">Generate practice questions from your lessons to reinforce learning and test understanding.</p>
+                <a class="button secondary" href="exam20.php" data-am="ፈተና ክፈት" data-en="Open Practice">Open Practice</a>
+            </div>
+            <div class="ai-feature-card">
+                <h3 data-am="Course Recommendation" data-en="Course Recommendation">Course Recommendation</h3>
+                <p data-am="እድገትዎን በመመልከት የሚገባዎትን ቀጣይ ኮርስ ይግኙ።" data-en="Discover the next best course based on your learning progress and interests.">Discover the next best course based on your learning progress and interests.</p>
+                <a class="button secondary" href="courses.php" data-am="ኮርሶች ተመልከት" data-en="Browse Courses">Browse Courses</a>
+            </div>
+        </div>
+    </section>
+
     <section class="card reveal">
         <h2 data-am="ተማሪዎች ምን ይላሉ" data-en="What students say">ተማሪዎች ምን ይላሉ</h2>
         <div class="testimonial-slider">
@@ -309,9 +426,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         </div>
     </section>
 
-    <section class="card contact-form reveal">
+    <section class="card contact-form reveal" id="contact">
         <h3 data-am="እንኳን ወደ ቤተ ገብርኤል በደህና መጡ!" data-en="Welcome to the Community!">እንኳን ወደ ቤተ ገብርኤል በደህና መጡ!</h3>
-        <form id="contactForm" action="register.php" method="post" novalidate>
+        <?php if ($contactMessage !== ''): ?>
+            <div style="margin-bottom:10px; padding:10px 12px; border-radius:10px; background: <?php echo $contactStatus === 'success' ? '#ecfdf5' : '#fef2f2'; ?>; color: <?php echo $contactStatus === 'success' ? '#166534' : '#b91c1c'; ?>; border: 1px solid <?php echo $contactStatus === 'success' ? '#a7f3d0' : '#fecaca'; ?>; font-weight:700;">
+                <?php echo safe($contactMessage); ?>
+            </div>
+        <?php endif; ?>
+        <form id="contactForm" action="sofonyas2.php" method="post" novalidate>
+            <input type="hidden" name="contact_submit" value="1">
             <label for="name" data-am="ስም" data-en="Name">ስም</label>
             <input id="name" name="name" required placeholder="ስምዎን እዚህ ያስገቡ"><br><br>
 
@@ -321,11 +444,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
             <label for="student_id" data-am="የተማሪ መለያ ቁጥር" data-en="Student ID">የተማሪ መለያ ቁጥር</label>
             <input type="text" id="student_id" name="student_id" placeholder="እባክዎ መለያ ቁጥር ያስገቡ" required><br><br>
 
-            <label for="password" data-am="ፓስወርድ" data-en="Password">ፓስወርድ</label>
-            <input id="password" name="password" type="password" placeholder="ፓስወርድ ያስገቡ" required><br><br>
+            <label for="message" data-am="መልእክት" data-en="Message">መልእክት</label>
+            <textarea id="message" name="message" rows="4" placeholder="እባክዎ መልእክትዎን ያስገቡ" required></textarea><br><br>
 
             <div class="controls"><br>
-                <button type="submit" class="button" data-am="ግባ" data-en="Register"><span class="loading" aria-hidden="true"></span>ግባ</button>
+                <button type="submit" class="button" data-am="ላክ" data-en="Send"><span class="loading" aria-hidden="true"></span>ላክ</button>
                 <button type="reset" class="button" data-am="አጥፋ" data-en="Clear">አጥፋ</button>
             </div>
         </form>

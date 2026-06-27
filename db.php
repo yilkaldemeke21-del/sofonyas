@@ -65,6 +65,8 @@ if (!function_exists('ensureCourseColumns')) {
             'category' => 'ALTER TABLE courses ADD COLUMN category VARCHAR(100) DEFAULT NULL',
             'level' => 'ALTER TABLE courses ADD COLUMN level VARCHAR(50) DEFAULT NULL',
             'thumbnail' => 'ALTER TABLE courses ADD COLUMN thumbnail VARCHAR(255) DEFAULT NULL',
+            'instructor_bio' => 'ALTER TABLE courses ADD COLUMN instructor_bio TEXT DEFAULT NULL',
+            'instructor_image' => 'ALTER TABLE courses ADD COLUMN instructor_image VARCHAR(255) DEFAULT NULL',
             'tutorial_topic' => 'ALTER TABLE courses ADD COLUMN tutorial_topic VARCHAR(255) DEFAULT NULL',
             'tutorial_text' => 'ALTER TABLE courses ADD COLUMN tutorial_text TEXT DEFAULT NULL',
             'tutorial_image' => 'ALTER TABLE courses ADD COLUMN tutorial_image VARCHAR(255) DEFAULT NULL',
@@ -154,11 +156,26 @@ function ensureCourseStructureTables(PDO $pdo): void
         course_id INT NOT NULL,
         module_id INT DEFAULT NULL,
         title VARCHAR(255) NOT NULL,
+        content TEXT DEFAULT NULL,
         sort_order INT NOT NULL DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_course_lessons_course (course_id),
         INDEX idx_course_lessons_module (module_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+}
+
+function ensureCourseLessonContentColumn(PDO $pdo): void
+{
+    $existingColumns = [];
+    $columnStmt = $pdo->query("SELECT COLUMN_NAME FROM information_schema.columns WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'course_lessons'");
+
+    foreach ($columnStmt->fetchAll(PDO::FETCH_COLUMN) as $columnName) {
+        $existingColumns[$columnName] = true;
+    }
+
+    if (!isset($existingColumns['content'])) {
+        $pdo->exec('ALTER TABLE course_lessons ADD COLUMN content TEXT DEFAULT NULL');
+    }
 }
 
 function ensureLessonBookmarkTables(PDO $pdo): void
@@ -376,6 +393,12 @@ if ($pdo instanceof PDO) {
         ensureCourseStructureTables($pdo);
     } catch (Throwable $e) {
         error_log('Course structure schema validation failed: ' . $e->getMessage());
+    }
+
+    try {
+        ensureCourseLessonContentColumn($pdo);
+    } catch (Throwable $e) {
+        error_log('Course lesson content schema validation failed: ' . $e->getMessage());
     }
 
     try {
