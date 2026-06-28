@@ -65,6 +65,8 @@ $ui = [
         'question_form_desc' => 'አንድ ክፍል ይምረጡ እና ጥያቄዎችን በተፈለገው ቅርጸት ይጨምሩ።',
         'select_section' => 'ክፍል ይምረጡ',
         'select_section_placeholder' => 'ክፍል ይምረጡ',
+        'no_instruction' => 'ምንም መመሪያ አልተሰጠም።',
+        'select_section_button' => 'ክፍል ይምረጡ',
         'question_type' => 'የጥያቄ አይነት',
         'question_label' => 'ጥያቄ',
         'question_placeholder' => 'ጥያቄውን እዚህ ይጻፉ',
@@ -81,6 +83,7 @@ $ui = [
         'recent_questions_desc' => 'በእያንዳንዱ ክፍል ላይ የተጨመሩትን የቅርብ ጊዜ ጥያቄዎች ይመልከቱ።',
         'empty_questions' => 'እስካሁን ምንም ጥያቄ አልተጨመረም። መጀመሪያ ጥያቄ ይፍጠሩ።',
         'show_more' => 'ተጨማሪ አሳይ',
+        'hide' => 'ተሸጥ',
         'edit_question' => 'ጥያቄ አስተካከል',
         'question_type_label' => 'አይነት',
         'options_label' => 'አማራጮች',
@@ -92,28 +95,6 @@ $ui = [
         'am_lang' => 'አማርኛ',
         'en_lang' => 'English',
         'section_label' => 'የክፍል ርዕስ',
-        'quiz_generator_title' => 'Quiz Link Generator',
-        'quiz_generator_desc' => 'አስተዳዳሪ ፈተና ሲፈጥር ሊንክ፣ አክሰስ ኮድ፣ Expiry፣ Timer እና QR Preview በአንድ ጊዜ ይፍጠር።',
-        'quiz_title_label' => 'የፈተና ርዕስ',
-        'quiz_title_placeholder' => 'Mid Exam / Final Exam',
-        'exam_type_label' => 'የፈተና አይነት',
-        'mid_exam' => 'Mid Exam',
-        'final_exam' => 'Final Exam',
-        'access_code_label' => 'Access Code',
-        'access_code_placeholder' => 'ባዶ ተው አውቶ ማመንጨት',
-        'expiry_label' => 'Expiry Time (Minutes)',
-        'timer_label' => 'Timer (Minutes)',
-        'one_attempt_label' => 'One Attempt Only',
-        'generate_button' => 'Generate Quiz Link',
-        'generated_heading' => 'Generated Quiz Link',
-        'ready_heading' => 'Ready to create a professional exam link',
-        'ready_text' => 'ይህንን ቅጽ ይሙሉ እና ሊንክ፣ QR Preview፣ Access Code፣ Expiry Time፣ Timer እና One Attempt ይፈጠር።',
-        'link_label' => 'Link',
-        'access_label' => 'Access',
-        'expiry_pill' => 'Expiry',
-        'timer_pill' => 'Timer',
-        'one_attempt_pill' => 'One Attempt',
-        'fast_setup' => '⚡ Fast setup',
     ],
     'en' => [
         'page_title' => 'Question Center',
@@ -154,6 +135,8 @@ $ui = [
         'question_form_desc' => 'Select a section and add a question in the format you need.',
         'select_section' => 'Select Section',
         'select_section_placeholder' => 'Choose a section',
+        'no_instruction' => 'No instruction provided.',
+        'select_section_button' => 'Select Section',
         'question_type' => 'Question Type',
         'question_label' => 'Question',
         'question_placeholder' => 'Write the question here',
@@ -170,6 +153,7 @@ $ui = [
         'recent_questions_desc' => 'See the latest questions added to each section.',
         'empty_questions' => 'No questions yet. Create your first question to populate this area.',
         'show_more' => 'Show More',
+        'hide' => 'Hide',
         'edit_question' => 'Edit Question',
         'question_type_label' => 'Type',
         'options_label' => 'Options',
@@ -181,28 +165,6 @@ $ui = [
         'am_lang' => 'አማርኛ',
         'en_lang' => 'English',
         'section_label' => 'Section Title',
-        'quiz_generator_title' => 'Quiz Link Generator',
-        'quiz_generator_desc' => 'Create a professional quiz link with access code, expiry, timer, and QR preview when you build an exam.',
-        'quiz_title_label' => 'Quiz Title',
-        'quiz_title_placeholder' => 'Mid Exam / Final Exam',
-        'exam_type_label' => 'Exam Type',
-        'mid_exam' => 'Mid Exam',
-        'final_exam' => 'Final Exam',
-        'access_code_label' => 'Access Code',
-        'access_code_placeholder' => 'Leave blank to auto-generate',
-        'expiry_label' => 'Expiry Time (Minutes)',
-        'timer_label' => 'Timer (Minutes)',
-        'one_attempt_label' => 'One Attempt Only',
-        'generate_button' => 'Generate Quiz Link',
-        'generated_heading' => 'Generated Quiz Link',
-        'ready_heading' => 'Ready to create a professional exam link',
-        'ready_text' => 'Fill the form and the system will generate a shareable link, QR preview, access code, expiry time, timer, and one-attempt setting.',
-        'link_label' => 'Link',
-        'access_label' => 'Access',
-        'expiry_pill' => 'Expiry',
-        'timer_pill' => 'Timer',
-        'one_attempt_pill' => 'One Attempt',
-        'fast_setup' => '⚡ Fast setup',
     ],
 ];
 $txt = $ui[$lang] ?? $ui['am'];
@@ -218,102 +180,6 @@ $answerChoices = [
     'C' => $txt['option_c'],
     'D' => $txt['option_d'],
 ];
-
-try {
-    $pdo->exec('CREATE TABLE IF NOT EXISTS quiz_link_generators (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        quiz_title VARCHAR(255) NOT NULL,
-        exam_type VARCHAR(50) NOT NULL,
-        link_url TEXT NOT NULL,
-        access_code VARCHAR(50) NOT NULL,
-        expiry_minutes INT NOT NULL DEFAULT 60,
-        timer_minutes INT NOT NULL DEFAULT 30,
-        one_attempt TINYINT(1) NOT NULL DEFAULT 1,
-        qr_code_svg TEXT DEFAULT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
-} catch (PDOException $e) {
-}
-
-function buildQuizQrSvg(string $text): string
-{
-    $safeText = preg_replace('/[^A-Za-z0-9._:\-/?=&%]+/', '', $text) ?: 'quiz';
-    $size = 220;
-    $cell = 10;
-    $pattern = [
-        [1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1],
-        [1,0,0,0,0,0,1,0,1,0,0,0,0,0,0,1,0,0,0,0,0,1],
-        [1,0,1,1,1,0,1,0,1,1,1,1,1,0,0,1,0,1,1,1,0,1],
-        [1,0,1,1,1,0,1,0,0,0,0,0,0,0,0,1,0,1,1,1,0,1],
-        [1,0,1,1,1,0,1,0,1,1,1,1,1,0,1,1,0,1,1,1,0,1],
-        [1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1],
-        [1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,1,1,1,0,1,0,1,1,0,0,1,1,0,1,1,1,0,1,0,0],
-        [1,1,1,1,1,1,1,0,1,0,0,0,0,0,0,1,0,1,0,1,1,1],
-        [0,0,0,0,0,0,1,0,1,0,1,1,1,0,0,0,0,1,0,0,0,1],
-        [1,1,1,1,1,1,1,0,1,0,1,1,1,0,1,1,0,1,1,1,0,1],
-        [1,0,0,0,0,0,0,0,1,0,0,0,0,0,1,1,0,1,0,0,0,1],
-        [1,0,1,1,1,1,1,0,1,1,1,1,1,1,1,0,0,1,0,1,1,1],
-        [1,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1],
-        [1,0,1,1,1,1,1,0,1,1,1,1,1,0,1,1,1,1,1,1,0,1],
-        [1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-        [1,1,1,1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-    ];
-    $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' . $size . '" height="' . $size . '" viewBox="0 0 ' . $size . ' ' . $size . '" role="img" aria-label="Quiz QR code"><rect width="' . $size . '" height="' . $size . '" fill="#ffffff"/><rect x="10" y="10" width="200" height="200" rx="8" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>';
-    $offset = 20;
-    foreach ($pattern as $rowIndex => $row) {
-        foreach ($row as $colIndex => $value) {
-            if ((int)$value === 1) {
-                $svg .= '<rect x="' . ($offset + $colIndex * $cell) . '" y="' . ($offset + $rowIndex * $cell) . '" width="' . $cell . '" height="' . $cell . '" fill="#0f172a"/>';
-            }
-        }
-    }
-    $svg .= '<text x="110" y="210" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#475569">' . htmlspecialchars($safeText, ENT_QUOTES, 'UTF-8') . '</text></svg>';
-    return $svg;
-}
-
-$generatedQuiz = null;
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['generate_quiz_link'])) {
-    $quizTitle = trim((string)($_POST['quiz_title'] ?? 'Professional Quiz'));
-    $examType = ($_POST['exam_type'] ?? 'mid_exam') === 'final_exam' ? 'final_exam' : 'mid_exam';
-    $expiryMinutes = max(5, (int)($_POST['expiry_minutes'] ?? 60));
-    $timerMinutes = max(5, (int)($_POST['timer_minutes'] ?? 30));
-    $oneAttempt = !empty($_POST['one_attempt']) ? 1 : 0;
-    $accessCode = strtoupper(trim((string)($_POST['access_code'] ?? '')));
-    if ($accessCode === '') {
-        $accessCode = 'SOFI' . substr(strtoupper(sha1((string)time() . $quizTitle)), 0, 6);
-    }
-
-    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    $examPage = $examType === 'final_exam' ? 'final_exam.php' : 'mid_exam.php';
-    $linkUrl = $scheme . '://' . $host . '/' . $examPage . '?access_code=' . urlencode($accessCode);
-    $qrCodeSvg = buildQuizQrSvg($linkUrl);
-
-    $stmt = $pdo->prepare('INSERT INTO quiz_link_generators (quiz_title, exam_type, link_url, access_code, expiry_minutes, timer_minutes, one_attempt, qr_code_svg) VALUES (:quiz_title, :exam_type, :link_url, :access_code, :expiry_minutes, :timer_minutes, :one_attempt, :qr_code_svg)');
-    $stmt->execute([
-        ':quiz_title' => $quizTitle,
-        ':exam_type' => $examType,
-        ':link_url' => $linkUrl,
-        ':access_code' => $accessCode,
-        ':expiry_minutes' => $expiryMinutes,
-        ':timer_minutes' => $timerMinutes,
-        ':one_attempt' => $oneAttempt,
-        ':qr_code_svg' => $qrCodeSvg,
-    ]);
-
-    $generatedQuiz = [
-        'quiz_title' => $quizTitle,
-        'exam_type' => $examType,
-        'link_url' => $linkUrl,
-        'access_code' => $accessCode,
-        'expiry_minutes' => $expiryMinutes,
-        'timer_minutes' => $timerMinutes,
-        'one_attempt' => $oneAttempt,
-        'qr_code_svg' => $qrCodeSvg,
-    ];
-}
 
 function normalizeQuestionType($value) {
     $type = strtolower(trim((string)($value ?? 'multiple_choice')));
@@ -390,9 +256,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $questionText = trim((string)($_POST['question'] ?? ''));
         $sectionId = (int)($_POST['section_id'] ?? 0);
 
-        if ($sectionId <= 0) {
+        // allow section_id = 0 to mean "auto-assign": fill the most recent section up to 10 questions,
+        // otherwise create a new section automatically
+        if ($sectionId < 0) {
             $error = $txt['question_section_required'];
-        } elseif ($questionText === '') {
+        } elseif ($sectionId === 0) {
+            try {
+                $lastStmt = $pdo->query('SELECT id FROM question_sections ORDER BY id DESC LIMIT 1');
+                $last = $lastStmt->fetch(PDO::FETCH_ASSOC);
+                if ($last) {
+                    $countStmt = $pdo->prepare('SELECT COUNT(*) as cnt FROM questions WHERE section_id = :id');
+                    $countStmt->execute([':id' => (int)$last['id']]);
+                    $cnt = (int)($countStmt->fetchColumn() ?? 0);
+                    if ($cnt >= 10) {
+                        $title = 'Auto Section ' . date('YmdHis');
+                        $ins = $pdo->prepare('INSERT INTO question_sections (title, instruction) VALUES (:title, :instruction)');
+                        $ins->execute([':title' => $title, ':instruction' => 'Auto-generated section']);
+                        $sectionId = (int)$pdo->lastInsertId();
+                    } else {
+                        $sectionId = (int)$last['id'];
+                    }
+                } else {
+                    $title = 'Auto Section ' . date('YmdHis');
+                    $ins = $pdo->prepare('INSERT INTO question_sections (title, instruction) VALUES (:title, :instruction)');
+                    $ins->execute([':title' => $title, ':instruction' => 'Auto-generated section']);
+                    $sectionId = (int)$pdo->lastInsertId();
+                }
+            } catch (PDOException $e) {
+                $error = $txt['section_error'] . $e->getMessage();
+            }
+        }
+
+        if (empty($error) && $sectionId <= 0) {
+            $error = $txt['question_section_required'];
+        }
+        elseif ($questionText === '') {
             $error = $txt['question_required'];
         } elseif ($questionType === 'multiple_choice' || $questionType === 'true_false') {
             $a = trim((string)($_POST['a'] ?? ''));
@@ -457,7 +355,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$stmt = $pdo->query('SELECT * FROM question_sections ORDER BY created_at DESC');
+$stmt = $pdo->query('SELECT qs.*, COUNT(q.id) AS question_count FROM question_sections qs LEFT JOIN questions q ON q.section_id = qs.id GROUP BY qs.id ORDER BY qs.created_at DESC');
 $sections = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $stmt = $pdo->query('SELECT COUNT(*) as total FROM question_sections');
@@ -476,27 +374,25 @@ $recentQuestions = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <title><?php echo safe($txt['page_title']); ?></title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #f8fbff 0%, #eef2ff 100%); color: #0f172a; }
-        .navbar { background: linear-gradient(135deg, #4f46e5 0%, #2563eb 100%); color: white; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; gap: 12px; box-shadow: 0 10px 24px rgba(79, 70, 229, 0.16); }
+        body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #f5f7ff 0%, #eef4ff 100%); color: #0f172a; }
+        .navbar { background: linear-gradient(135deg, #4f46e5 0%, #2563eb 100%); color: white; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
         .navbar a { color: white; text-decoration: none; margin-right: 14px; }
         .lang-switch { display: inline-flex; gap: 8px; align-items: center; }
         .lang-switch a { background: rgba(255,255,255,0.16); padding: 6px 10px; border-radius: 999px; font-size: 13px; }
         .lang-switch a.active { background: white; color: #2563eb; }
         .container { max-width: 1200px; margin: 24px auto; padding: 0 20px 40px; }
-        .hero { background: linear-gradient(135deg, #ffffff, #f8fbff); border-radius: 22px; padding: 24px; box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08); margin-bottom: 18px; border: 1px solid #dbeafe; }
+        .hero { background: white; border-radius: 18px; padding: 24px; box-shadow: 0 16px 35px rgba(15, 23, 42, 0.08); margin-bottom: 18px; }
         .hero h1 { color: #1d4ed8; margin-bottom: 6px; }
         .hero p { color: #475569; line-height: 1.7; }
-        .hero-badges { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 12px; }
         .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 18px 0 22px; }
-        .summary-card { background: linear-gradient(135deg, #eff6ff, #f8fafc); border: 1px solid #dbeafe; border-radius: 16px; padding: 14px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.5); }
+        .summary-card { background: #f8fbff; border: 1px solid #dbeafe; border-radius: 14px; padding: 14px; }
         .summary-card h3 { font-size: 13px; color: #64748b; margin-bottom: 6px; }
         .summary-card .value { font-size: 26px; font-weight: 800; color: #2563eb; }
         .tabs { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; }
         .tab-btn { display: inline-block; padding: 10px 14px; border-radius: 999px; background: #e2e8f0; color: #334155; text-decoration: none; font-weight: 700; }
         .tab-btn.active { background: #2563eb; color: white; }
         .grid { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 18px; }
-        .panel-card { background: white; border-radius: 18px; padding: 20px; box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06); border: 1px solid #e2e8f0; transition: transform 0.2s ease, box-shadow 0.2s ease; }
-        .panel-card:hover { transform: translateY(-2px); box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08); }
+        .panel-card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06); }
         .panel-card h2 { margin-bottom: 12px; color: #1e3a8a; font-size: 20px; }
         .panel-card p { color: #64748b; margin-bottom: 14px; line-height: 1.6; }
         .form-group { margin-bottom: 14px; }
@@ -517,21 +413,16 @@ $recentQuestions = $stmt->fetchAll(PDO::FETCH_ASSOC);
         .mini-btn { display: inline-block; padding: 7px 10px; border-radius: 999px; text-decoration: none; font-size: 13px; font-weight: 700; border: 1px solid #cbd5e1; background: white; color: #334155; cursor: pointer; }
         .mini-btn.primary { background: linear-gradient(135deg, #2563eb, #4f46e5); color: white; border-color: #2563eb; }
         .mini-btn.secondary { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
-        .mini-btn:hover { transform: translateY(-1px); }
+        .section-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 20px; }
+        .section-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 18px; box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06); cursor: pointer; transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease; }
+        .section-card:hover { transform: translateY(-2px); border-color: #2563eb; box-shadow: 0 16px 30px rgba(37, 99, 235, 0.12); }
+        .section-card.active { border-color: #2563eb; background: #eff6ff; }
+        .section-card h3 { margin: 10px 0 8px; font-size: 18px; color: #1e3a8a; }
+        .section-card p { color: #475569; font-size: 13px; line-height: 1.6; margin-bottom: 12px; }
+        .section-meta { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
         .question-extra { display: none; margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: #f8fafc; border: 1px solid #e2e8f0; font-size: 13px; color: #334155; line-height: 1.6; }
-        .section-pill { display: inline-block; padding: 6px 10px; border-radius: 999px; font-size: 12px; background: #dbeafe; color: #1d4ed8; font-weight: 700; margin-bottom: 8px; }
-        .ordinal-badge { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 999px; background: linear-gradient(135deg, #2563eb, #4f46e5); color: white; font-size: 12px; font-weight: 800; margin-right: 8px; }
         .question-extra.show { display: block; }
-        .quiz-generator-card { background: linear-gradient(135deg, rgba(37,99,235,0.08), rgba(124,58,237,0.08)); border: 1px solid rgba(99,102,241,0.2); border-radius: 20px; padding: 20px; margin-bottom: 18px; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.06); }
-        .quiz-generator-grid { display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 16px; align-items: start; }
-        .quiz-form { display: grid; gap: 10px; }
-        .quiz-form input, .quiz-form select, .quiz-form button { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid #cbd5e1; font-size: 14px; }
-        .quiz-form button { background: linear-gradient(135deg, #2563eb, #7c3aed); color: white; border: none; cursor: pointer; font-weight: 700; }
-        .quiz-preview { background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 14px; box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05); }
-        .quiz-pill { display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 999px; background: #eff6ff; color: #1d4ed8; font-size: 12px; font-weight: 700; margin-right: 6px; margin-bottom: 6px; }
-        .quiz-link { word-break: break-all; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; font-size: 13px; color: #2563eb; margin-top: 8px; }
-        .qr-box { display: inline-block; margin-top: 10px; padding: 10px; border: 1px dashed #cbd5e1; border-radius: 12px; background: #f8fafc; }
-        @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } .quiz-generator-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
@@ -549,10 +440,6 @@ $recentQuestions = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="hero">
         <h1><?php echo safe($txt['hero_title']); ?></h1>
         <p><?php echo safe($txt['hero_text']); ?></p>
-        <div class="hero-badges">
-            <span class="section-pill">🛠️ Admin Question Studio</span>
-            <span class="section-pill">📚 Section-based workflow</span>
-        </div>
         <div class="summary-grid">
             <div class="summary-card">
                 <h3><?php echo safe($txt['summary_sections']); ?></h3>
@@ -573,62 +460,6 @@ $recentQuestions = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
         <?php if ($error): ?><div class="error"><?php echo safe($error); ?></div><?php endif; ?>
         <?php if ($success): ?><div class="success"><?php echo safe($success); ?></div><?php endif; ?>
-    </div>
-
-    <div class="quiz-generator-card">
-        <div style="display:flex; justify-content:space-between; align-items:start; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
-            <div>
-                <h3 style="margin-bottom:6px; color:#1d4ed8;">🧪 <?php echo safe($txt['quiz_generator_title']); ?></h3>
-                <p style="margin:0; color:#475569; line-height:1.6;"><?php echo safe($txt['quiz_generator_desc']); ?></p>
-            </div>
-        </div>
-        <div class="quiz-generator-grid">
-            <form method="post" class="quiz-form">
-                <input type="hidden" name="generate_quiz_link" value="1">
-                <label for="quiz_title"><?php echo safe($txt['quiz_title_label']); ?></label>
-                <input id="quiz_title" name="quiz_title" type="text" placeholder="<?php echo safe($txt['quiz_title_placeholder']); ?>" required>
-
-                <label for="exam_type"><?php echo safe($txt['exam_type_label']); ?></label>
-                <select id="exam_type" name="exam_type">
-                    <option value="mid_exam"><?php echo safe($txt['mid_exam']); ?></option>
-                    <option value="final_exam"><?php echo safe($txt['final_exam']); ?></option>
-                </select>
-
-                <label for="access_code"><?php echo safe($txt['access_code_label']); ?></label>
-                <input id="access_code" name="access_code" type="text" placeholder="<?php echo safe($txt['access_code_placeholder']); ?>">
-
-                <label for="expiry_minutes"><?php echo safe($txt['expiry_label']); ?></label>
-                <input id="expiry_minutes" name="expiry_minutes" type="number" min="5" value="60">
-
-                <label for="timer_minutes"><?php echo safe($txt['timer_label']); ?></label>
-                <input id="timer_minutes" name="timer_minutes" type="number" min="5" value="30">
-
-                <label style="display:flex; align-items:center; gap:8px; font-weight:700;">
-                    <input type="checkbox" name="one_attempt" value="1" checked>
-                    <?php echo safe($txt['one_attempt_label']); ?>
-                </label>
-
-                <button type="submit"><?php echo safe($txt['generate_button']); ?></button>
-            </form>
-            <div class="quiz-preview">
-                <?php if ($generatedQuiz): ?>
-                    <h4 style="margin:0 0 8px; color:#1d4ed8;"><?php echo safe($txt['generated_heading']); ?></h4>
-                    <div>
-                        <span class="quiz-pill"><?php echo safe($generatedQuiz['exam_type'] === 'final_exam' ? $txt['final_exam'] : $txt['mid_exam']); ?></span>
-                        <span class="quiz-pill"><?php echo safe($txt['access_label'] . ': ' . $generatedQuiz['access_code']); ?></span>
-                        <span class="quiz-pill"><?php echo safe($txt['expiry_pill'] . ': ' . (int)$generatedQuiz['expiry_minutes'] . 'm'); ?></span>
-                        <span class="quiz-pill"><?php echo safe($txt['timer_pill'] . ': ' . (int)$generatedQuiz['timer_minutes'] . 'm'); ?></span>
-                        <span class="quiz-pill"><?php echo safe($txt['one_attempt_pill'] . ': ' . ((int)$generatedQuiz['one_attempt'] === 1 ? 'Yes' : 'No')); ?></span>
-                    </div>
-                    <div class="quiz-link"><strong><?php echo safe($txt['link_label']); ?>:</strong><br><?php echo safe($generatedQuiz['link_url']); ?></div>
-                    <div class="qr-box"><?php echo $generatedQuiz['qr_code_svg']; ?></div>
-                <?php else: ?>
-                    <h4 style="margin:0 0 8px; color:#1d4ed8;"><?php echo safe($txt['ready_heading']); ?></h4>
-                    <p style="margin:0 0 10px; color:#475569; line-height:1.6;"><?php echo safe($txt['ready_text']); ?></p>
-                    <div class="quiz-pill"><?php echo safe($txt['fast_setup']); ?></div>
-                <?php endif; ?>
-            </div>
-        </div>
     </div>
 
     <div class="grid">
@@ -656,13 +487,9 @@ $recentQuestions = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <p><?php echo safe($txt['sections_list_desc']); ?></p>
                 <?php if (!empty($sections)): ?>
                     <div class="list">
-                        <?php foreach ($sections as $index => $section): ?>
+                        <?php foreach ($sections as $section): ?>
                             <div class="list-item">
-                                <span class="section-pill">Section <?php echo (int)($index + 1); ?></span>
-                                <div style="display:flex; align-items:center; gap:8px;">
-                                    <span class="ordinal-badge"><?php echo (int)($index + 1); ?></span>
-                                    <strong><?php echo safe($section['title'] ?? ''); ?></strong>
-                                </div>
+                                <strong><?php echo safe($section['title'] ?? ''); ?></strong>
                                 <div class="muted"><?php echo safe($section['instruction'] ?: ($lang === 'am' ? 'ምንም መመሪያ አልተሰጠም።' : 'No instruction provided.')); ?></div>
                             </div>
                         <?php endforeach; ?>
@@ -675,6 +502,23 @@ $recentQuestions = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <div class="panel-card">
                 <h2><?php echo safe($txt['question_form_title']); ?></h2>
                 <p><?php echo safe($txt['question_form_desc']); ?></p>
+                <?php if (!empty($sections)): ?>
+                    <div class="section-grid">
+                        <?php foreach ($sections as $section): ?>
+                            <div class="section-card" data-section-id="<?php echo (int)$section['id']; ?>" onclick="selectSection(<?php echo (int)$section['id']; ?>)">
+                                <span class="pill info">Section</span>
+                                <h3><?php echo safe($section['title'] ?? 'Untitled'); ?></h3>
+                                <p><?php echo safe($section['instruction'] ?: $txt['no_instruction']); ?></p>
+                                <div class="section-meta">
+                                    <span class="pill success"><?php echo (int)($section['question_count'] ?? 0); ?> <?php echo safe($txt['questions']); ?></span>
+                                    <button type="button" class="mini-btn secondary" onclick="event.stopPropagation(); selectSection(<?php echo (int)$section['id']; ?>)"><?php echo safe($txt['select_section_button']); ?></button>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php else: ?>
+                    <div class="help-box"><?php echo safe($txt['empty_sections']); ?></div>
+                <?php endif; ?>
                 <form method="post">
                     <input type="hidden" name="add_question" value="1">
                     <input type="hidden" name="lang" value="<?php echo safe($lang); ?>">
@@ -683,6 +527,7 @@ $recentQuestions = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <label for="section_id"><?php echo safe($txt['select_section']); ?></label>
                         <select id="section_id" name="section_id" required>
                             <option value=""><?php echo safe($txt['select_section_placeholder']); ?></option>
+                            <option value="0">Auto-assign (fill sections up to 10 questions)</option>
                             <?php foreach ($sections as $section): ?>
                                 <option value="<?php echo (int)($section['id'] ?? 0); ?>"><?php echo safe($section['title'] ?? ''); ?></option>
                             <?php endforeach; ?>
@@ -737,19 +582,21 @@ $recentQuestions = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </form>
             </div>
             <div class="panel-card">
-                <h2><?php echo safe($txt['recent_questions_title']); ?></h2>
-                <p><?php echo safe($txt['recent_questions_desc']); ?></p>
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                    <div>
+                        <h2><?php echo safe($txt['recent_questions_title']); ?></h2>
+                        <p><?php echo safe($txt['recent_questions_desc']); ?></p>
+                    </div>
+                    <button type="button" id="toggleAllQuestionsBtn" class="mini-btn secondary" onclick="toggleAllQuestionDetails()"><?php echo safe($txt['show_more']); ?> All</button>
+                </div>
                 <?php if (!empty($recentQuestions)): ?>
                     <div class="list">
-                        <?php foreach ($recentQuestions as $index => $question): ?>
+                        <?php foreach ($recentQuestions as $question): ?>
                             <div class="list-item">
-                                <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
-                                    <span class="ordinal-badge"><?php echo (int)($index + 1); ?></span>
-                                    <strong><?php echo safe($question['question_text'] ?? ''); ?></strong>
-                                </div>
+                                <strong><?php echo safe($question['question_text'] ?? ''); ?></strong>
                                 <div class="muted"><?php echo safe($txt['sections'] . ': ' . ($question['section_title'] ?: $txt['unassigned'])); ?> • <?php echo safe($txt['questions'] . ': ' . ($question['question_type'] ?? 'multiple_choice')); ?></div>
                                 <div class="list-actions">
-                                    <button type="button" class="mini-btn secondary" onclick="toggleQuestionDetails('q-<?php echo (int)$question['id']; ?>')"><?php echo safe($txt['show_more']); ?></button>
+                                    <button type="button" class="mini-btn secondary" onclick="toggleQuestionDetails('q-<?php echo (int)$question['id']; ?>', this)"><?php echo safe($txt['show_more']); ?></button>
                                     <a href="admin_edit_question.php?id=<?php echo (int)$question['id']; ?>" class="mini-btn primary"><?php echo safe($txt['edit_question']); ?></a>
                                 </div>
                                 <div id="q-<?php echo (int)$question['id']; ?>" class="question-extra">
@@ -772,11 +619,45 @@ $recentQuestions = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
 </div>
 <script>
-function toggleQuestionDetails(id) {
+function toggleQuestionDetails(id, button) {
     const panel = document.getElementById(id);
-    if (panel) {
-        panel.classList.toggle('show');
+    if (!panel) {
+        return;
     }
+    const isShown = panel.classList.toggle('show');
+    if (button) {
+        button.textContent = isShown ? '<?php echo safe($txt['hide']); ?>' : '<?php echo safe($txt['show_more']); ?>';
+    }
+}
+
+function selectSection(sectionId) {
+    const select = document.getElementById('section_id');
+    const cards = document.querySelectorAll('.section-card');
+    if (select) {
+        select.value = sectionId;
+        select.focus();
+    }
+    cards.forEach(card => {
+        card.classList.toggle('active', card.dataset.sectionId === String(sectionId));
+    });
+}
+
+function toggleAllQuestionDetails() {
+    const panels = document.querySelectorAll('.question-extra');
+    const button = document.getElementById('toggleAllQuestionsBtn');
+    if (!panels.length || !button) {
+        return;
+    }
+
+    const anyHidden = Array.from(panels).some((panel) => !panel.classList.contains('show'));
+    panels.forEach((panel) => {
+        panel.classList.toggle('show', anyHidden);
+        const toggleBtn = document.querySelector(`button[onclick*="${panel.id}"]`);
+        if (toggleBtn) {
+            toggleBtn.textContent = anyHidden ? '<?php echo safe($txt['hide']); ?>' : '<?php echo safe($txt['show_more']); ?>';
+        }
+    });
+    button.textContent = anyHidden ? '<?php echo safe($txt['hide']); ?> All' : '<?php echo safe($txt['show_more']); ?> All';
 }
 
 function toggleQuestionType(type) {
@@ -835,6 +716,18 @@ function toggleQuestionType(type) {
 }
 
 toggleQuestionType(document.getElementById('question_type').value);
+
+document.addEventListener('DOMContentLoaded', function() {
+    const select = document.getElementById('section_id');
+    if (!select) {
+        return;
+    }
+    const sectionId = select.value;
+    const cards = document.querySelectorAll('.section-card');
+    cards.forEach(card => {
+        card.classList.toggle('active', card.dataset.sectionId === sectionId);
+    });
+});
 </script>
 </body>
 </html>

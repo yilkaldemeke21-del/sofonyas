@@ -91,31 +91,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
 <div class="wrap">
-    <h1>⚙️ ዌቭሣይት ማስተካከያ</h1>
-    <p class="muted">የዌቭሣይቱን ሥም፣ሎጎ፣ኢሜይል/ስልክ ቁጥድ፣እና የግርጌ ጽሁፍ ከዚህ ማስተካከል ይቺላሉ።.</p>
+    <h1>⚙️ Website Settings</h1>
+    <p class="muted">Update the website name, logo, contact details, and footer text from here.</p>
     <?php if ($message): ?><div class="msg"><?php echo safe($message); ?></div><?php endif; ?>
     <form method="post" enctype="multipart/form-data">
-        <label for="website_name">የዌቭሣይት ሥም</label>
-        <input id="website_name" name="website_name" value="<?php echo safe($settings['website_name'] ?? ''); ?>" placeholder="ዲ/ን ሶፎንያስ ደመቀ ቤተ ገብርኤል ዌቭሣይት">
+        <label for="website_name">Website Name</label>
+        <input id="website_name" name="website_name" value="<?php echo safe($settings['website_name'] ?? ''); ?>" placeholder="Sofoniyas Website">
 
-        <label for="logo">ሎጎ</label>
+        <label for="logo">Logo</label>
         <input id="logo" name="logo" type="file" accept="image/*">
         <?php if (!empty($settings['logo'])): ?>
             <img class="logo-preview" src="<?php echo safe($settings['logo']); ?>" alt="Current Logo">
         <?php endif; ?>
 
-        <label for="contact_email">አድራሻ ኢሜይል</label>
-        <input id="contact_email" name="contact_email" type="email" value="<?php echo safe($settings['contact_email'] ?? ''); ?>" placeholder="yilkaldemeke21@gmail.com">
+        <label for="contact_email">Contact Email</label>
+        <input id="contact_email" name="contact_email" type="email" value="<?php echo safe($settings['contact_email'] ?? ''); ?>" placeholder="you@example.com">
 
-        <label for="phone_number">ስልክ ቁጥር</label>
-        <input id="phone_number" name="phone_number" value="<?php echo safe($settings['phone_number'] ?? ''); ?>" placeholder="+251 927603731">
+        <label for="phone_number">Phone Number</label>
+        <input id="phone_number" name="phone_number" value="<?php echo safe($settings['phone_number'] ?? ''); ?>" placeholder="+251 9xx xxx xxxx">
 
-        <label for="footer_text">የግርጌ ጽሁፍ</label>
+        <label for="footer_text">Footer Text</label>
         <textarea id="footer_text" name="footer_text" placeholder="Write footer text here"><?php echo safe($settings['footer_text'] ?? ''); ?></textarea>
 
         <button type="submit" style="margin-top:16px;">Save Settings</button>
     </form>
-    <p style="margin-top:16px;"><a href="admin_dashboard.php">← ወደ ዳሽቦርድ</a></p>
+    <p style="margin-top:16px;"><a href="admin_dashboard.php">← Back to Dashboard</a></p>
 </div>
 </body>
 </html>

@@ -450,7 +450,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             'bold', 'italic', 'underline', 'strikethrough', 'subscript', 'superscript', '|',
                             'fontSize', 'fontFamily', 'fontColor', 'fontBackgroundColor', '|',
                             'bulletedList', 'numberedList', 'outdent', 'indent', '|',
-                            'link', 'insertImage', 'insertTable', 'blockQuote', 'codeBlock', 'horizontalLine', '|',
+                            'link', 'insertImage', 'imageUpload', 'insertTable', 'mediaEmbed', 'blockQuote', 'codeBlock', 'horizontalLine', '|',
                             'findAndReplace', 'removeFormat'
                         ],
                         shouldNotGroupWhenFull: true

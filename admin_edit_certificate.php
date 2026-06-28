@@ -88,13 +88,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .logo-chip { display: inline-flex; align-items: center; gap: 10px; font-weight: bold; color: #5b21b6; font-size: 14px; }
         .logo-box { width: 44px; height: 44px; border-radius: 14px; background: linear-gradient(135deg, #7c3aed, #a78bfa); color: white; display: grid; place-items: center; font-weight: bold; box-shadow: 0 10px 20px rgba(124,58,237,0.25); }
         .preview h3 { margin: 10px 0 8px; font-size: 22px; color: #111827; }
+        .preview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 16px; }
+        .preview-value { margin: 6px 0 0; font-size: 16px; color: #111827; font-weight: 700; }
         .mini { color: #475569; font-size: 13px; line-height: 1.6; }
         .mini strong { color: #111827; }
-        .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+        .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
         .print-btn { display: inline-block; padding: 10px 14px; border-radius: 6px; background: #16a34a; color: white; text-decoration: none; border: 0; cursor: pointer; }
         .print-btn:hover { background: #15803d; }
         @media print {
-            .topbar, .no-print, .msg { display: none !important; }
+            .topbar, .no-print, .msg, .actions { display: none !important; }
             body { background: #fff; }
             .card { box-shadow: none; border: 1px solid #ddd; }
             .preview-frame { border-color: #7c3aed; }
@@ -113,13 +115,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <div class="preview">
             <div class="preview-frame">
-                <div class="logo-chip"><span class="logo-box">ሶፊ</span>ዲ/ን ሶፎንያስ(ቤተ ገብርኤል) ኦንላይን መንፈሳዊ የቤ/ክ ዌቭሣይት</div>
-                <h3>Certificate Preview</h3>
-                <p class="mini">የተማሪ ስም: <strong><?php echo safe($student_name ?: 'student name'); ?></strong></p>
-                <p class="mini">የፈተናው አይነት: <strong><?php echo safe($exam_type ?: 'Exam Type'); ?></strong></p>
-                <p class="mini">ያመጣው ነጥብ: <strong><?php echo (int)$score; ?> / <?php echo (int)$total_questions; ?></strong></p>
-                <p class="mini">የተሰጠበት ቀን: <strong><?php echo safe(date('Y-m-d H:i', strtotime($issued_at))); ?></strong></p>
-                <p class="mini">ይህንን በpdf መልኩ የሚታየዉን የሠርተፊኬት ዉጤት ማዉረድ ይቻላል።</p>
+                <div class="logo-chip"><span class="logo-box">ሶፊ</span> ዲ/ን ሶፎንያስ (ቤተ ገብርኤል) ኦንላይን ትምህርት ዌቭሣይት</div>
+                <h3>የማጠናከር ሰርቲፊኬት</h3>
+                <p class="mini">ይህ ሰርቲፊኬት እውነተኛ ብቃትና በደንብ እንዳሳየ የተማሪውን ማረጋገጫ ነው።</p>
+                <div class="preview-grid">
+                    <div>
+                        <p class="mini"><strong>የተማሪ ስም</strong></p>
+                        <p class="preview-value"><?php echo safe($student_name ?: 'እባክዎ ስም ያስገቡ'); ?></p>
+                    </div>
+                    <div>
+                        <p class="mini"><strong>የፈተና አይነት</strong></p>
+                        <p class="preview-value"><?php echo safe($exam_type ?: 'እባክዎ ያስገቡ'); ?></p>
+                    </div>
+                    <div>
+                        <p class="mini"><strong>ውጤት</strong></p>
+                        <p class="preview-value"><?php echo (int)$score; ?> / <?php echo (int)$total_questions; ?></p>
+                    </div>
+                    <div>
+                        <p class="mini"><strong>የተሰጠበት ቀን</strong></p>
+                        <p class="preview-value"><?php echo safe(date('Y-m-d H:i', strtotime($issued_at))); ?></p>
+                    </div>
+                </div>
             </div>
             <div class="actions no-print">
                 <button type="submit" form="certificate-form">💾 ሰርቲፊኬት አስተካክል</button>
@@ -128,8 +144,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <form id="certificate-form" method="post">
-
-        <form method="post">
             <div class="field">
                 <label for="student_name">የተማሪ ስም</label>
                 <input type="text" id="student_name" name="student_name" value="<?php echo safe($student_name); ?>" required>

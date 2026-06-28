@@ -18,6 +18,7 @@ try {
         event_title VARCHAR(255) NOT NULL,
         event_description TEXT NOT NULL,
         event_date DATETIME NOT NULL,
+        content_type VARCHAR(30) NOT NULL DEFAULT "announcement",
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 } catch (PDOException $e) {}
@@ -36,9 +37,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $date = trim($_POST['event_date'] ?? date('Y-m-d H:i:s'));
 
     if ($title !== '' && $content !== '') {
+        $contentType = ($type === 'blog') ? 'blog' : (($type === 'news') ? 'news' : 'announcement');
         $description = $content . ($link !== '' ? "\n\nሊንክ: $link" : '');
-        $stmt = $pdo->prepare('UPDATE event_announcements SET event_title = ?, event_description = ?, event_date = ? WHERE id = ?');
-        $stmt->execute([$title, $description, $date, $id]);
+        $stmt = $pdo->prepare('UPDATE event_announcements SET event_title = ?, event_description = ?, event_date = ?, content_type = ? WHERE id = ?');
+        $stmt->execute([$title, $description, $date, $contentType, $id]);
         header('Location: admin_dashboard.php?success=1&section=' . urlencode($type));
         exit;
     } else {

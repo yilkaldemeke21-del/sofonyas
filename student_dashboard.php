@@ -103,35 +103,6 @@ $student_certificates = $stmt->fetchAll();
 $stmt = $pdo->query('SELECT * FROM courses ORDER BY created_at DESC LIMIT 6');
 $available_courses = $stmt->fetchAll();
 
-$pdo->exec('CREATE TABLE IF NOT EXISTS question_sections (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    instruction TEXT DEFAULT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
-
-$pdo->exec('CREATE TABLE IF NOT EXISTS questions (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    question_type VARCHAR(30) NOT NULL DEFAULT "multiple_choice",
-    question_text TEXT NOT NULL,
-    option_a VARCHAR(255) NOT NULL DEFAULT "",
-    option_b VARCHAR(255) NOT NULL DEFAULT "",
-    option_c VARCHAR(255) NOT NULL DEFAULT "",
-    option_d VARCHAR(255) NOT NULL DEFAULT "",
-    correct_answer VARCHAR(255) NOT NULL DEFAULT "",
-    section_id INT DEFAULT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_questions_section (section_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
-
-try {
-    $pdo->exec('ALTER TABLE questions ADD COLUMN section_id INT DEFAULT NULL');
-} catch (PDOException $e) {
-}
-
-$stmt = $pdo->query('SELECT qs.id, qs.title, qs.instruction, COUNT(q.id) AS question_count FROM question_sections qs LEFT JOIN questions q ON q.section_id = qs.id GROUP BY qs.id, qs.title, qs.instruction ORDER BY qs.created_at DESC LIMIT 8');
-$exam_sections = $stmt->fetchAll();
-
 $completed_courses = count($student_certificates);
 $in_progress_courses = max(0, $enrolled_courses - $completed_courses);
 
@@ -197,6 +168,35 @@ $saved_courses = $stmt->fetchAll();
 $stmt = $pdo->prepare('SELECT lb.*, c.course_name, c.instructor FROM lesson_bookmarks lb JOIN courses c ON c.id = lb.course_id WHERE lb.student_id = :student_id ORDER BY lb.created_at DESC LIMIT 8');
 $stmt->execute([':student_id' => $studentId]);
 $saved_lessons = $stmt->fetchAll();
+
+$stmt = $pdo->query('SELECT qs.id, qs.title, qs.instruction, COUNT(q.id) AS question_count FROM question_sections qs LEFT JOIN questions q ON q.section_id = qs.id GROUP BY qs.id ORDER BY qs.created_at ASC');
+$exam_sections = $stmt->fetchAll();
+
+$activeExamLinks = [];
+function normalizeExamType(string $examType): string
+{
+    $value = strtolower(trim($examType));
+    $value = preg_replace('/\s+/', '_', $value);
+    if (in_array($value, ['mid', 'midexam', 'mid_exam'], true)) {
+        return 'mid_exam';
+    }
+    if (in_array($value, ['final', 'finalexam', 'final_exam'], true)) {
+        return 'final_exam';
+    }
+    return $value;
+}
+
+foreach (['mid_exam', 'final_exam'] as $type) {
+    $stmt = $pdo->prepare('SELECT * FROM quiz_link_generators WHERE REPLACE(LOWER(exam_type), \' \' , \'_\') = :exam_type ORDER BY created_at DESC LIMIT 1');
+    $stmt->execute([':exam_type' => $type]);
+    $link = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($link) {
+        $expiresAt = strtotime($link['created_at'] ?? '0') + max(1, (int)$link['expiry_minutes']) * 60;
+        if (time() <= $expiresAt) {
+            $activeExamLinks[$type] = $link;
+        }
+    }
+}
 
 $avg_quiz_score = 0;
 $stmt = $pdo->prepare('SELECT AVG(score) as avg_score FROM quiz_results WHERE student_id = :student_id');
@@ -433,7 +433,7 @@ if (empty($notifications)) {
         .grid-2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
         .grid-3 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
         .course-card, .mini-card { background: linear-gradient(135deg, var(--surface), var(--surface-3)); border: 1px solid var(--border); border-radius: 14px; padding: 14px; color: var(--text); }
-        .course-card img { width: 220px; border-radius: 50px; height: 300px; object-fit: cover; background: linear-gradient(135deg,#dbeafe,#c4b5fd); }
+        .course-card img { width: 220px; border-radius: 50px; height: 310px; object-fit: cover; background: linear-gradient(135deg,#dbeafe,#c4b5fd); }
         .course-card h3, .mini-card h3 { font-size: 20px; color: var(--text); margin: 10px 0 6px; font-weight: 800; line-height: 1.35; }
         .muted { color: var(--muted); font-size: 16px; line-height: 1.35; font-weight: 500; }
         .rich-content h1, .rich-content h2, .rich-content h3 { font-size: 16px; line-height: 1.35; margin: 0.35em 0; }
@@ -476,8 +476,8 @@ if (empty($notifications)) {
         <div class="quick-actions">
             <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle theme">🌙 Dark</button>
             <a class="button" href="sofonyas%20(2).html">መጀመሪያ</a>
-            <a class="button" href="courses.php">ኮርሶች</a>
-            <a class="button" href="live_class.php">Join Live Class</a>
+            <a class="button" href="tutorial.php">ኮርሶች</a>
+            <a class="button" href="live_class.php">Live Class</a>
             <a class="button" href="discussion_forum.php">ፎርም</a>
             <a class="button" href="library.php">ላይብራሪ</a>
             <a class="button secondary" href="student_logout.php">ውጣ</a>
@@ -494,25 +494,29 @@ if (empty($notifications)) {
     </div>
 
     <div class="card" style="margin-bottom: 24px;">
-        <h2 class="section-title">🧩 Exam Sections</h2>
-        <p class="section-sub">ከአድሚኑ የተጨመሩት ጥያቄዎች እና ክፍሎች እዚህ ይታያሉ። ወደ ሚድ እና ፋይናል ፈተና ለመጀመር ይጠቀሙ።</p>
+        <h2 class="section-title">🧠 Exam Portal</h2>
+        <p class="section-sub">በአድሚኑ የተፈጠሩ ሴክሽኖችን እና ጥያቄዎችን እዚህ ይመልከቱ። እባኮትን በዚህ ወቅት የሚገኙትን የፈተና ሊንኮች ተጠቀሙ።</p>
         <?php if (empty($exam_sections)): ?>
-            <p class="muted">እስካሁን ምንም የፈተና ክፍሎች አልተጨመሩም።</p>
+            <p class="muted">ጥያቄ ክፍሎች አልተሰሩም። እባኮትን ከአድሚኑ ጋር እየተገናኙ ክፍሎችን ያክሉ።</p>
         <?php else: ?>
-            <div class="grid-3">
+            <div class="grid-3" style="margin-bottom: 18px;">
                 <?php foreach ($exam_sections as $section): ?>
                     <div class="mini-card">
                         <span class="pill info">Section</span>
-                        <h3><?php echo safe($section['title'] ?? 'Section'); ?></h3>
-                        <p class="muted" style="margin-top:6px;"><?php echo safe($section['instruction'] ?: 'No instruction provided.'); ?></p>
-                        <p class="muted"><strong><?php echo (int)($section['question_count'] ?? 0); ?></strong> questions</p>
+                        <h3><?php echo safe($section['title'] ?? 'Untitled Section'); ?></h3>
+                        <p class="muted"><?php echo safe($section['instruction'] ?: 'No instruction provided.'); ?></p>
+                        <p class="muted"><strong><?php echo (int)$section['question_count']; ?></strong> Questions</p>
                     </div>
                 <?php endforeach; ?>
             </div>
         <?php endif; ?>
-        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
-            <a class="button" href="mid_exam.php">Start Mid Exam</a>
-            <a class="button secondary" href="final_exam.php">Start Final Exam</a>
+        <div style="display:flex; flex-wrap:wrap; gap:12px;">
+            <a class="button" href="<?php echo safe($activeExamLinks['mid_exam']['link_url'] ?? 'mid_exam.php'); ?>">Start Mid Exam</a>
+            <a class="button secondary" href="<?php echo safe($activeExamLinks['final_exam']['link_url'] ?? 'final_exam.php'); ?>">Start Final Exam</a>
+        </div>
+        <div style="margin-top: 12px; display:flex; gap:12px; flex-wrap:wrap;">
+            <?php if (empty($activeExamLinks['mid_exam'])): ?><span class="pill warning">No active mid exam link</span><?php endif; ?>
+            <?php if (empty($activeExamLinks['final_exam'])): ?><span class="pill warning">No active final exam link</span><?php endif; ?>
         </div>
     </div>
 
@@ -551,13 +555,8 @@ if (empty($notifications)) {
     </div>
 
     <div class="card" style="margin-bottom: 24px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
-            <div>
-                <h2 class="section-title">🧩 Enroll ኮርስ</h2>
-                <p class="section-sub">እዚህ ኮርስ ፎቶ፣ ስም፣ አጭር መግለጫ እና ሙሉ አንቀጽ መግለጫ ከዳታቤዝ ጋር ይታያል። በአንድ ጠቅታ እንዲመዘገቡ እንደሚችሉ ይምረጡ።</p>
-            </div>
-            <a class="button secondary" href="courses.php">Browse All Courses</a>
-        </div>
+        <h2 class="section-title">🧩 Enroll ኮርስ</h2>
+        <p class="section-sub">እዚህ ኮርስ ፎቶ፣ ስም፣ አጭር መግለጫ እና ሙሉ አንቀጽ መግለጫ ከዳታቤዝ ጋር ይታያል። በአንድ ጠቅታ እንዲመዘገቡ እንደሚችሉ ይምረጡ።</p>
         <div class="grid-3">
             <?php if (empty($available_courses)): ?>
                 <p class="muted">እስካሁን ምንም ኮርስ አልተጨመረም።</p>
@@ -576,7 +575,7 @@ if (empty($notifications)) {
                         <p class="muted"><span class="instructor-line">ዋጋ:</span> <?php echo number_format((float)($course['price'] ?? 0), 2); ?> ብር</p>
                         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
                             <a class="button" href="student_register.php?course=<?php echo rawurlencode($course['course_name']); ?>&amount=<?php echo (float)($course['price'] ?? 0); ?>">Enroll Now</a>
-                            <a class="button secondary" href="course_details.php?id=<?php echo (int)($course['id'] ?? 0); ?>">View Details</a>
+                            <a class="button secondary" href="tutorial.php#courses">View Details</a>
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -604,7 +603,7 @@ if (empty($notifications)) {
                         <div class="progress-track"><div class="progress-fill" style="width: <?php echo $progressValue; ?>%;"></div></div>
                         <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
                             <span class="pill info">Progress <?php echo $progressValue; ?>%</span>
-                            <a class="button" href="course_details.php?id=<?php echo (int)($row['course_id'] ?? 0); ?>">ትምህርት ቀጥል</a>
+                            <a class="button" href="tutorial.php">ትምህርት ቀጥል</a>
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -618,7 +617,7 @@ if (empty($notifications)) {
                 <h3>የሚቀጥለዉ ኮርስ</h3>
                 <p class="muted">ነገረ ሃይማኖት፣ነገረ ቅዱሳን፣ሐዋርያዊ ተልዕኮ፣አገልግሎት እና መንፈሳዊ ሕይወት.</p>
                 <div class="progress-track"><div class="progress-fill" style="width: <?php echo $progress_percentage; ?>%;"></div></div>
-                <a class="button" href="courses.php" style="margin-top:8px;">ካቆምክበት ቀጥል</a>
+                <a class="button" href="tutorial.php" style="margin-top:8px;">ካቆምክበት ቀጥል</a>
             </div>
         </div>
     </div>
@@ -791,14 +790,14 @@ if (empty($notifications)) {
                 <div class="mini-card">
                     <h3><?php echo safe($item['lesson_title']); ?></h3>
                     <p class="muted">ኢንስትራክተር: <?php echo safe($item['instructor'] ?? 'Staff'); ?></p>
-                    <a class="button" href="course_details.php?id=<?php echo (int)($item['course_id'] ?? 0); ?>" style="margin-top: 12px;">ሌሰን ክፈት</a>
+                    <a class="button" href="tutorial.php" style="margin-top: 12px;">ሌሰን ክፈት</a>
                 </div>
             <?php endforeach; ?>
             <?php foreach ($saved_courses as $item): ?>
                 <div class="mini-card">
                     <h3><?php echo safe($item['course_name']); ?></h3>
                     <p class="muted">ኢንስትራክተር: <?php echo safe($item['instructor'] ?? 'Staff'); ?></p>
-                    <a class="button" href="course_details.php?id=<?php echo (int)($item['course_id'] ?? 0); ?>" style="margin-top: 12px;">ኮርስ ተመልከት</a>
+                    <a class="button" href="tutorial.php" style="margin-top: 12px;">ኮርስ ተመልከት</a>
                 </div>
             <?php endforeach; ?>
             <?php if (empty($saved_lessons) && empty($saved_courses)): ?>

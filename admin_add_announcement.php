@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <label><?php echo admin_text('content_label'); ?></label>
         <textarea name="content" placeholder="የማስታወቂያ ይዘት እዚህ ይጻፉ..." required></textarea>
         <label><?php echo admin_text('link_label'); ?></label>
-        <input type="text" name="link" placeholder=" text">
+        <input type="text" name="link" placeholder="https://example.com ወይም ተጨማሪ ሊንክ">
         <div class="hint">ሊንክ ካለ የሚመለከትበት ቦታ ነው።</div>
         <div class="actions">
             <button type="submit"><?php echo admin_text('save_announcement'); ?></button>

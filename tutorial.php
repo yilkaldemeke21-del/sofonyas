@@ -34,6 +34,9 @@ if (isset($_POST['save_lesson']) && isset($_SESSION['student_id'])) {
     $message = 'Please login as a student before saving a lesson.';
 }
 
+$courseId = (int)($_GET['course_id'] ?? 0);
+$lessonId = (int)($_GET['lesson_id'] ?? 0);
+
 $stmt = $pdo->query('SELECT * FROM courses ORDER BY created_at DESC LIMIT 12');
 $courses = $stmt->fetchAll();
 
@@ -48,6 +51,68 @@ foreach ($moduleStmt->fetchAll() as $module) {
 $lessonStmt = $pdo->query('SELECT * FROM course_lessons ORDER BY course_id, module_id, sort_order, id');
 foreach ($lessonStmt->fetchAll() as $lesson) {
   $lessonMap[(int)$lesson['course_id']][] = $lesson;
+}
+
+$firstLessonMap = [];
+foreach ($lessonMap as $courseIdKey => $lessons) {
+  if (!empty($lessons)) {
+    $firstLessonMap[(int)$courseIdKey] = (int)$lessons[0]['id'];
+  }
+}
+
+$selectedCourse = null;
+$selectedLesson = null;
+$courseModules = [];
+$allLessons = [];
+$lessonIndex = null;
+$prevLesson = null;
+$nextLesson = null;
+$showLessonView = false;
+
+if ($courseId > 0) {
+  $courseStmt = $pdo->prepare('SELECT * FROM courses WHERE id = :id LIMIT 1');
+  $courseStmt->execute([':id' => $courseId]);
+  $selectedCourse = $courseStmt->fetch();
+
+  if ($selectedCourse) {
+    $moduleStmt = $pdo->prepare('SELECT * FROM course_modules WHERE course_id = :course_id ORDER BY sort_order ASC, id ASC');
+    $moduleStmt->execute([':course_id' => $courseId]);
+    $courseModules = $moduleStmt->fetchAll();
+
+    $lessonStmt = $pdo->prepare('SELECT cl.*, cm.name AS module_name FROM course_lessons cl LEFT JOIN course_modules cm ON cm.id = cl.module_id WHERE cl.course_id = :course_id ORDER BY COALESCE(cl.module_id, 999999) ASC, cl.sort_order ASC, cl.id ASC');
+    $lessonStmt->execute([':course_id' => $courseId]);
+    $allLessons = $lessonStmt->fetchAll();
+
+    if ($lessonId > 0) {
+      foreach ($allLessons as $lesson) {
+        if ((int)$lesson['id'] === $lessonId) {
+          $selectedLesson = $lesson;
+          break;
+        }
+      }
+    }
+
+    if (!$selectedLesson && !empty($allLessons)) {
+      $selectedLesson = $allLessons[0];
+    }
+
+    if ($selectedLesson) {
+      $showLessonView = true;
+      $currentLessonId = (int)$selectedLesson['id'];
+      foreach ($allLessons as $index => $lesson) {
+        if ((int)$lesson['id'] === $currentLessonId) {
+          $lessonIndex = $index;
+          if (isset($allLessons[$index - 1])) {
+            $prevLesson = $allLessons[$index - 1];
+          }
+          if (isset($allLessons[$index + 1])) {
+            $nextLesson = $allLessons[$index + 1];
+          }
+          break;
+        }
+      }
+    }
+  }
 }
 ?>
 <!DOCTYPE html>
@@ -118,69 +183,186 @@ foreach ($lessonStmt->fetchAll() as $lesson) {
   </div>
 
   <div class="card" id="courses">
-    <h2>የሚገኙ ኮርሶች</h2>
-    <?php if (empty($courses)): ?>
-      <p class="muted">እስካሁን ምንም ኮርስ አልተጨመረም።</p>
-    <?php else: ?>
-      <div class="grid">
-        <?php foreach ($courses as $course): ?>
-          <div style="border:1px solid #e5e7eb; border-radius:10px; padding:14px; background:#f8fafc;">
-            <h3 style="margin-top:0;"><?php echo htmlspecialchars($course['course_name']); ?></h3>
-            <?php if (!empty($course['tutorial_video'])): ?>
-              <div class="video-card" data-course-id="<?php echo (int)$course['id']; ?>" data-course-title="<?php echo htmlspecialchars($course['course_name']); ?>" data-video-url="<?php echo htmlspecialchars($course['tutorial_video']); ?>">
-                <?php if (preg_match('/youtube\.com|youtu\.be/i', (string)$course['tutorial_video'])): ?>
-                  <iframe class="video-frame" height="220" src="<?php echo htmlspecialchars($course['tutorial_video']); ?>" title="Lesson video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-                <?php else: ?>
-                  <video class="video-frame" controls preload="metadata" playsinline>
-                    <source src="<?php echo htmlspecialchars($course['tutorial_video']); ?>">
-                    Your browser does not support the video tag.
-                  </video>
-                <?php endif; ?>
-                <div class="video-meta">
-                  <div class="video-actions">
-                    <button class="btn" type="button" data-play-btn>▶ Play</button>
-                    <button class="btn" type="button" data-resume-btn>↻ Resume</button>
-                  </div>
-                  <span class="pill" data-status-label>Start video</span>
+    <?php if ($showLessonView && $selectedCourse && $selectedLesson): ?>
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+        <div>
+          <h2 style="margin:0 0 8px;"><?php echo htmlspecialchars($selectedCourse['course_name'] ?? 'Tutorial'); ?></h2>
+          <p class="muted" style="margin:0;"><?php echo !empty($selectedCourse['short_description']) ? renderRichText($selectedCourse['short_description']) : 'ይህ ኮርስ በተለያዩ ስልቶች ይወስዳል።'; ?></p>
+        </div>
+        <a class="btn" href="tutorial.php">Back to Courses</a>
+      </div>
+      <div style="display:grid; grid-template-columns: 320px 1fr; gap:16px; margin-top:16px;">
+        <div class="outline-card" style="background:#f8fafc;">
+          <h4 style="margin-top:0;">Lesson outline</h4>
+          <?php if (!empty($courseModules)): ?>
+            <?php foreach ($courseModules as $module): ?>
+              <div class="module-card">
+                <div class="module-title">
+                  <span><?php echo htmlspecialchars($module['name']); ?></span>
+                  <span class="tag">Module</span>
                 </div>
-                <div class="progress-track"><div class="progress-fill" data-progress-fill></div></div>
-                <div class="video-meta" style="margin-top:8px;">
-                  <span class="pill" data-completion-label>Completion 0%</span>
+                <div>
+                  <?php foreach ($allLessons as $lesson): ?>
+                    <?php if ((int)$lesson['module_id'] === (int)$module['id']): ?>
+                      <a class="lesson-chip" href="tutorial.php?course_id=<?php echo (int)$selectedCourse['id']; ?>&lesson_id=<?php echo (int)$lesson['id']; ?>" style="display:inline-flex; text-decoration:none; margin:4px 6px 0 0;">
+                        📘 <?php echo htmlspecialchars($lesson['title'] ?? 'Lesson'); ?>
+                      </a>
+                    <?php endif; ?>
+                  <?php endforeach; ?>
                 </div>
-                <div class="history-panel" data-history-panel>
-                  <h5>Watch History</h5>
-                  <div class="history-list" data-history-list></div>
-                </div>
-                <p class="muted" style="margin-top:8px;">Play, resume, or revisit your last watched position for this lesson.</p>
               </div>
+            <?php endforeach; ?>
+          <?php endif; ?>
+          <?php $orphanLessons = array_values(array_filter($allLessons, fn($lesson) => empty($lesson['module_id']))); ?>
+          <?php if (!empty($orphanLessons)): ?>
+            <div class="module-card">
+              <div class="module-title"><span>General Lessons</span><span class="tag">Standalone</span></div>
+              <div>
+                <?php foreach ($orphanLessons as $lesson): ?>
+                  <a class="lesson-chip" href="tutorial.php?course_id=<?php echo (int)$selectedCourse['id']; ?>&lesson_id=<?php echo (int)$lesson['id']; ?>" style="display:inline-flex; text-decoration:none; margin:4px 6px 0 0;">
+                    📗 <?php echo htmlspecialchars($lesson['title'] ?? 'Lesson'); ?>
+                  </a>
+                <?php endforeach; ?>
+              </div>
+            </div>
+          <?php endif; ?>
+        </div>
+        <div class="outline-card" style="background:#fff;">
+          <?php if (!empty($selectedCourse['thumbnail'])): ?>
+            <img src="<?php echo htmlspecialchars($selectedCourse['thumbnail']); ?>" alt="<?php echo htmlspecialchars($selectedCourse['course_name']); ?>" style="width:100%; max-height:220px; object-fit:cover; border-radius:12px; margin-bottom:12px;">
+          <?php endif; ?>
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
+            <?php if (!empty($selectedCourse['instructor_image'])): ?>
+              <img src="<?php echo htmlspecialchars($selectedCourse['instructor_image']); ?>" alt="Instructor" style="width:64px; height:64px; object-fit:cover; border-radius:50%; border:2px solid #dbeafe;">
             <?php endif; ?>
-            <?php if (!empty($course['thumbnail'])): ?>
-              <img src="<?php echo htmlspecialchars($course['thumbnail']); ?>" alt="<?php echo htmlspecialchars($course['course_name']); ?>" style="width:100%; max-height:180px; object-fit:cover; border-radius:8px; margin-bottom:10px;">
+            <div>
+              <h3 style="margin:0;"><?php echo htmlspecialchars($selectedCourse['instructor'] ?? 'Instructor'); ?></h3>
+              <p class="muted" style="margin:4px 0 0;"><?php echo htmlspecialchars($selectedCourse['course_name'] ?? 'Course'); ?></p>
+            </div>
+          </div>
+          <?php if (!empty($selectedCourse['instructor_bio'])): ?>
+            <div class="muted rich-content" style="margin-bottom:12px;"><strong>Instructor Bio:</strong> <?php echo renderRichText($selectedCourse['instructor_bio']); ?></div>
+          <?php endif; ?>
+          <h3 style="margin-top:0; margin-bottom:8px;"><?php echo htmlspecialchars($selectedLesson['title'] ?? 'Lesson'); ?></h3>
+          <p class="muted" style="margin:0 0 10px;"><strong>Module:</strong> <?php echo htmlspecialchars($selectedLesson['module_name'] ?: 'General'); ?> · <strong>Lesson:</strong> <?php echo ($lessonIndex !== null ? $lessonIndex + 1 : 0) . ' / ' . count($allLessons); ?></p>
+          <div class="rich-content" style="margin-bottom:12px;">
+            <?php echo renderRichText($selectedLesson['content'] ?? $selectedCourse['tutorial_text'] ?? $selectedCourse['description'] ?? 'This lesson content will be added soon.'); ?>
+          </div>
+          <div class="video-actions" style="margin-top:10px;">
+            <?php if ($prevLesson): ?>
+              <a class="btn" href="tutorial.php?course_id=<?php echo (int)$selectedCourse['id']; ?>&lesson_id=<?php echo (int)$prevLesson['id']; ?>">← Previous</a>
             <?php endif; ?>
-            <?php if (!empty($course['short_description'])): ?>
-              <div class="muted rich-content" style="margin-bottom:8px;"><strong>አጭር መግለጫ:</strong> <?php echo renderRichText($course['short_description']); ?></div>
+            <?php if ($nextLesson): ?>
+              <a class="btn" href="tutorial.php?course_id=<?php echo (int)$selectedCourse['id']; ?>&lesson_id=<?php echo (int)$nextLesson['id']; ?>">Next →</a>
+            <?php else: ?>
+              <div class="pill" style="background:#ecfdf5;color:#166534;border:1px solid #a7f3d0;">Course tutorial completed</div>
             <?php endif; ?>
-            <div class="muted rich-content" style="margin-bottom:8px;"><?php echo !empty($course['description']) ? renderRichText($course['description']) : 'የኮርስ መግለጫ የለም'; ?></div>
-            <?php if (!empty($course['category']) || !empty($course['level'])): ?>
-              <p><strong>ምድብ / ደረጃ:</strong> <?php echo htmlspecialchars($course['category'] ?: ''); ?><?php echo (!empty($course['category']) && !empty($course['level']) ? ' · ' : ''); ?><?php echo htmlspecialchars($course['level'] ?: ''); ?></p>
-            <?php endif; ?>
-            <p><strong>ኮድ:</strong> <?php echo htmlspecialchars($course['course_code']); ?></p>
-            <p><strong>ዋጋ:</strong> <?php echo number_format($course['price'], 2); ?> ብር</p>
-            <?php if (!empty($moduleMap[$course['id']]) || !empty($lessonMap[$course['id']])): ?>
-              <div class="outline-card" style="margin-bottom:10px;">
-                <strong>Course → Module → Lesson</strong>
-                <div style="margin-top:8px;">
-                  <?php foreach ($moduleMap[$course['id']] ?? [] as $module): ?>
-                    <div class="module-card">
-                      <div class="module-title">
-                        <span><?php echo htmlspecialchars($module['name']); ?></span>
-                        <span class="tag">Module</span>
+            <a class="btn" href="student_dashboard.php">Back to dashboard</a>
+          </div>
+        </div>
+      </div>
+    <?php elseif ($selectedCourse): ?>
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+        <div>
+          <h2 style="margin:0 0 8px;"><?php echo htmlspecialchars($selectedCourse['course_name'] ?? 'Course'); ?></h2>
+          <p class="muted" style="margin:0;"><?php echo !empty($selectedCourse['short_description']) ? renderRichText($selectedCourse['short_description']) : 'ይህ ኮርስ በተለያዩ ስልቶች ይወስዳል።'; ?></p>
+        </div>
+        <a class="btn" href="tutorial.php">Back to Courses</a>
+      </div>
+      <div class="outline-card" style="margin-top:16px; background:#f8fafc;">
+        <?php if (!empty($selectedCourse['thumbnail'])): ?>
+          <img src="<?php echo htmlspecialchars($selectedCourse['thumbnail']); ?>" alt="<?php echo htmlspecialchars($selectedCourse['course_name']); ?>" style="width:100%; max-height:220px; object-fit:cover; border-radius:12px; margin-bottom:12px;">
+        <?php endif; ?>
+        <div class="pill" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;">No lessons have been added for this course yet.</div>
+        <p class="muted" style="margin-top:10px;">The course is ready for students, and the lesson content will appear here once it is published.</p>
+      </div>
+    <?php else: ?>
+      <h2>የሚገኙ ኮርሶች</h2>
+      <?php if (empty($courses)): ?>
+        <p class="muted">እስካሁን ምንም ኮርስ አልተጨመረም።</p>
+      <?php else: ?>
+        <div class="grid">
+          <?php foreach ($courses as $course): ?>
+            <div style="border:1px solid #e5e7eb; border-radius:10px; padding:14px; background:#f8fafc;">
+              <h3 style="margin-top:0;"><?php echo htmlspecialchars($course['course_name']); ?></h3>
+              <?php if (!empty($course['tutorial_video'])): ?>
+                <div class="video-card" data-course-id="<?php echo (int)$course['id']; ?>" data-course-title="<?php echo htmlspecialchars($course['course_name']); ?>" data-video-url="<?php echo htmlspecialchars($course['tutorial_video']); ?>">
+                  <?php if (preg_match('/youtube\.com|youtu\.be/i', (string)$course['tutorial_video'])): ?>
+                    <iframe class="video-frame" height="220" src="<?php echo htmlspecialchars($course['tutorial_video']); ?>" title="Lesson video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+                  <?php else: ?>
+                    <video class="video-frame" controls preload="metadata" playsinline>
+                      <source src="<?php echo htmlspecialchars($course['tutorial_video']); ?>">
+                      Your browser does not support the video tag.
+                    </video>
+                  <?php endif; ?>
+                  <div class="video-meta">
+                    <div class="video-actions">
+                      <button class="btn" type="button" data-play-btn>▶ Play</button>
+                      <button class="btn" type="button" data-resume-btn>↻ Resume</button>
+                    </div>
+                    <span class="pill" data-status-label>Start video</span>
+                  </div>
+                  <div class="progress-track"><div class="progress-fill" data-progress-fill></div></div>
+                  <div class="video-meta" style="margin-top:8px;">
+                    <span class="pill" data-completion-label>Completion 0%</span>
+                  </div>
+                  <div class="history-panel" data-history-panel>
+                    <h5>Watch History</h5>
+                    <div class="history-list" data-history-list></div>
+                  </div>
+                  <p class="muted" style="margin-top:8px;">Play, resume, or revisit your last watched position for this lesson.</p>
+                </div>
+              <?php endif; ?>
+              <?php if (!empty($course['thumbnail'])): ?>
+                <img src="<?php echo htmlspecialchars($course['thumbnail']); ?>" alt="<?php echo htmlspecialchars($course['course_name']); ?>" style="width:100%; max-height:180px; object-fit:cover; border-radius:8px; margin-bottom:10px;">
+              <?php endif; ?>
+              <?php if (!empty($course['short_description'])): ?>
+                <div class="muted rich-content" style="margin-bottom:8px;"><strong>አጭር መግለጫ:</strong> <?php echo renderRichText($course['short_description']); ?></div>
+              <?php endif; ?>
+              <div class="muted rich-content" style="margin-bottom:8px;"><?php echo !empty($course['description']) ? renderRichText($course['description']) : 'የኮርስ መግለጫ የለም'; ?></div>
+              <?php if (!empty($course['category']) || !empty($course['level'])): ?>
+                <p><strong>ምድብ / ደረጃ:</strong> <?php echo htmlspecialchars($course['category'] ?: ''); ?><?php echo (!empty($course['category']) && !empty($course['level']) ? ' · ' : ''); ?><?php echo htmlspecialchars($course['level'] ?: ''); ?></p>
+              <?php endif; ?>
+              <p><strong>ኮድ:</strong> <?php echo htmlspecialchars($course['course_code']); ?></p>
+              <p><strong>ዋጋ:</strong> <?php echo number_format($course['price'], 2); ?> ብር</p>
+              <?php if (!empty($moduleMap[$course['id']]) || !empty($lessonMap[$course['id']])): ?>
+                <div class="outline-card" style="margin-bottom:10px;">
+                  <strong>Course → Module → Lesson</strong>
+                  <div style="margin-top:8px;">
+                    <?php foreach ($moduleMap[$course['id']] ?? [] as $module): ?>
+                      <div class="module-card">
+                        <div class="module-title">
+                          <span><?php echo htmlspecialchars($module['name']); ?></span>
+                          <span class="tag">Module</span>
+                        </div>
+                        <div>
+                          <?php $moduleLessons = array_values(array_filter($lessonMap[$course['id']] ?? [], fn($lesson) => (int)$lesson['module_id'] === (int)$module['id'])); ?>
+                          <?php if ($moduleLessons): ?>
+                            <?php foreach ($moduleLessons as $lesson): ?>
+                              <span class="lesson-chip">📘 <?php echo htmlspecialchars($lesson['title']); ?></span>
+                              <form method="post" style="display:inline-block; margin-left: 4px;">
+                                <input type="hidden" name="save_lesson" value="1">
+                                <input type="hidden" name="lesson_id" value="<?php echo (int)$lesson['id']; ?>">
+                                <input type="hidden" name="course_id" value="<?php echo (int)$course['id']; ?>">
+                                <input type="hidden" name="lesson_title" value="<?php echo safe($lesson['title']); ?>">
+                                <input type="hidden" name="course_name" value="<?php echo safe($course['course_name']); ?>">
+                                <input type="hidden" name="instructor" value="<?php echo safe($course['instructor'] ?? ''); ?>">
+                                <button type="submit" class="btn" style="padding:6px 10px; font-size:12px; border:none; cursor:pointer;">Save</button>
+                              </form>
+                            <?php endforeach; ?>
+                          <?php else: ?>
+                            <span class="muted">No lessons added yet.</span>
+                          <?php endif; ?>
+                        </div>
                       </div>
-                      <div>
-                        <?php $moduleLessons = array_values(array_filter($lessonMap[$course['id']] ?? [], fn($lesson) => (int)$lesson['module_id'] === (int)$module['id'])); ?>
-                        <?php if ($moduleLessons): ?>
-                          <?php foreach ($moduleLessons as $lesson): ?>
-                            <span class="lesson-chip">📘 <?php echo htmlspecialchars($lesson['title']); ?></span>
+                    <?php endforeach; ?>
+                    <?php $orphanLessons = array_values(array_filter($lessonMap[$course['id']] ?? [], fn($lesson) => (int)$lesson['module_id'] === 0 || !array_filter($moduleMap[$course['id']] ?? [], fn($m) => (int)$m['id'] === (int)$lesson['module_id']))); ?>
+                    <?php if (!empty($orphanLessons)): ?>
+                      <div class="module-card">
+                        <div class="module-title"><span>General Lessons</span><span class="tag">Standalone</span></div>
+                        <div>
+                          <?php foreach ($orphanLessons as $lesson): ?>
+                            <span class="lesson-chip">📗 <?php echo htmlspecialchars($lesson['title']); ?></span>
                             <form method="post" style="display:inline-block; margin-left: 4px;">
                               <input type="hidden" name="save_lesson" value="1">
                               <input type="hidden" name="lesson_id" value="<?php echo (int)$lesson['id']; ?>">
@@ -191,57 +373,37 @@ foreach ($lessonStmt->fetchAll() as $lesson) {
                               <button type="submit" class="btn" style="padding:6px 10px; font-size:12px; border:none; cursor:pointer;">Save</button>
                             </form>
                           <?php endforeach; ?>
-                        <?php else: ?>
-                          <span class="muted">No lessons added yet.</span>
-                        <?php endif; ?>
+                        </div>
                       </div>
-                    </div>
-                  <?php endforeach; ?>
-                  <?php $orphanLessons = array_values(array_filter($lessonMap[$course['id']] ?? [], fn($lesson) => (int)$lesson['module_id'] === 0 || !array_filter($moduleMap[$course['id']] ?? [], fn($m) => (int)$m['id'] === (int)$lesson['module_id']))); ?>
-                  <?php if (!empty($orphanLessons)): ?>
-                    <div class="module-card">
-                      <div class="module-title"><span>General Lessons</span><span class="tag">Standalone</span></div>
-                      <div>
-                        <?php foreach ($orphanLessons as $lesson): ?>
-                          <span class="lesson-chip">📗 <?php echo htmlspecialchars($lesson['title']); ?></span>
-                          <form method="post" style="display:inline-block; margin-left: 4px;">
-                            <input type="hidden" name="save_lesson" value="1">
-                            <input type="hidden" name="lesson_id" value="<?php echo (int)$lesson['id']; ?>">
-                            <input type="hidden" name="course_id" value="<?php echo (int)$course['id']; ?>">
-                            <input type="hidden" name="lesson_title" value="<?php echo safe($lesson['title']); ?>">
-                            <input type="hidden" name="course_name" value="<?php echo safe($course['course_name']); ?>">
-                            <input type="hidden" name="instructor" value="<?php echo safe($course['instructor'] ?? ''); ?>">
-                            <button type="submit" class="btn" style="padding:6px 10px; font-size:12px; border:none; cursor:pointer;">Save</button>
-                          </form>
-                        <?php endforeach; ?>
-                      </div>
-                    </div>
-                  <?php endif; ?>
+                    <?php endif; ?>
+                  </div>
                 </div>
-              </div>
-            <?php endif; ?>
-            <?php if (!empty($course['modules'])): ?><div class="rich-content" style="margin-bottom:10px;"><strong>Course Outline:</strong> <?php echo renderRichText($course['modules']); ?></div><?php endif; ?>
-            <?php if (!empty($course['quiz'])): ?><div class="rich-content" style="margin-bottom:10px;"><strong>Quiz:</strong> <?php echo renderRichText($course['quiz']); ?></div><?php endif; ?>
-            <?php if (!empty($course['assignment'])): ?><div class="rich-content" style="margin-bottom:10px;"><strong>Assignment:</strong> <?php echo renderRichText($course['assignment']); ?></div><?php endif; ?>
-            <?php if (!empty($course['certificate_requirements'])): ?><div class="rich-content" style="margin-bottom:10px;"><strong>Certificate Requirements:</strong> <?php echo renderRichText($course['certificate_requirements']); ?></div><?php endif; ?>
-            <p>
-              <a class="btn" href="student_register.php?course=<?php echo rawurlencode($course['course_name']); ?>&amount=<?php echo (float)$course['price']; ?>">ይመዝገቡ ለዚህ ትምህርት</a>
-              <form method="post" style="display:inline-block; margin-left: 4px;">
-                <input type="hidden" name="save_lesson" value="1">
-                <input type="hidden" name="lesson_id" value="<?php echo (int)$course['id']; ?>">
-                <input type="hidden" name="course_id" value="<?php echo (int)$course['id']; ?>">
-                <input type="hidden" name="lesson_title" value="<?php echo safe($course['course_name']); ?>">
-                <input type="hidden" name="course_name" value="<?php echo safe($course['course_name']); ?>">
-                <input type="hidden" name="instructor" value="<?php echo safe($course['instructor'] ?? ''); ?>">
-                <button type="submit" class="btn" style="border: none; cursor: pointer;">ትምህርት አስቀምጥ</button>
-              </form>
-              <?php if (!empty($course['pdf_file'])): ?>
-                <a class="btn" href="<?php echo htmlspecialchars(publicMediaUrl($course['pdf_file'])); ?>" target="_blank">PDF እይ</a>
               <?php endif; ?>
-            </p>
-          </div>
-        <?php endforeach; ?>
-      </div>
+              <?php if (!empty($course['modules'])): ?><div class="rich-content" style="margin-bottom:10px;"><strong>Course Outline:</strong> <?php echo renderRichText($course['modules']); ?></div><?php endif; ?>
+              <?php if (!empty($course['quiz'])): ?><div class="rich-content" style="margin-bottom:10px;"><strong>Quiz:</strong> <?php echo renderRichText($course['quiz']); ?></div><?php endif; ?>
+              <?php if (!empty($course['assignment'])): ?><div class="rich-content" style="margin-bottom:10px;"><strong>Assignment:</strong> <?php echo renderRichText($course['assignment']); ?></div><?php endif; ?>
+              <?php if (!empty($course['certificate_requirements'])): ?><div class="rich-content" style="margin-bottom:10px;"><strong>Certificate Requirements:</strong> <?php echo renderRichText($course['certificate_requirements']); ?></div><?php endif; ?>
+              <p>
+                <?php $firstLessonId = $firstLessonMap[$course['id']] ?? 0; ?>
+                <a class="btn" href="tutorial.php?course_id=<?php echo (int)$course['id']; ?><?php echo $firstLessonId ? '&lesson_id=' . (int)$firstLessonId : ''; ?>">Start tutorial</a>
+                <a class="btn" href="student_register.php?course=<?php echo rawurlencode($course['course_name']); ?>&amount=<?php echo (float)$course['price']; ?>">ይመዝገቡ ለዚህ ትምህርት</a>
+                <form method="post" style="display:inline-block; margin-left: 4px;">
+                  <input type="hidden" name="save_lesson" value="1">
+                  <input type="hidden" name="lesson_id" value="<?php echo (int)$course['id']; ?>">
+                  <input type="hidden" name="course_id" value="<?php echo (int)$course['id']; ?>">
+                  <input type="hidden" name="lesson_title" value="<?php echo safe($course['course_name']); ?>">
+                  <input type="hidden" name="course_name" value="<?php echo safe($course['course_name']); ?>">
+                  <input type="hidden" name="instructor" value="<?php echo safe($course['instructor'] ?? ''); ?>">
+                  <button type="submit" class="btn" style="border: none; cursor: pointer;">ትምህርት አስቀምጥ</button>
+                </form>
+                <?php if (!empty($course['pdf_file'])): ?>
+                  <a class="btn" href="<?php echo htmlspecialchars(publicMediaUrl($course['pdf_file'])); ?>" target="_blank">PDF እይ</a>
+                <?php endif; ?>
+              </p>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
     <?php endif; ?>
   </div>
 </div>

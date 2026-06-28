@@ -94,57 +94,6 @@ $stmt = $pdo->query('SELECT * FROM courses ORDER BY created_at DESC');
 $courses = $stmt->fetchAll();
 $noteStmt = $pdo->query('SELECT COUNT(*) AS total FROM admin_notes');
 $noteCount = (int)($noteStmt->fetch()['total'] ?? 0);
-
-function buildCourseProgressInfo(PDO $pdo, array $course, string $studentId): array
-{
-    $courseId = (int)($course['id'] ?? 0);
-
-    $enrollmentCountStmt = $pdo->prepare('SELECT COUNT(*) AS total FROM registrations WHERE course = :course_name');
-    $enrollmentCountStmt->execute([':course_name' => $course['course_name']]);
-    $enrollmentCount = (int)($enrollmentCountStmt->fetch()['total'] ?? 0);
-
-    $lessonStmt = $pdo->prepare('SELECT id FROM course_lessons WHERE course_id = :course_id ORDER BY COALESCE(module_id, 999999) ASC, sort_order ASC, id ASC');
-    $lessonStmt->execute([':course_id' => $courseId]);
-    $orderedLessons = $lessonStmt->fetchAll(PDO::FETCH_COLUMN);
-    $lessonCount = count($orderedLessons);
-
-    $bookmarkStmt = $pdo->prepare('SELECT lesson_id FROM lesson_bookmarks WHERE student_id = :student_id AND course_id = :course_id');
-    $bookmarkStmt->execute([':student_id' => $studentId, ':course_id' => $courseId]);
-    $bookmarkedLessonIds = $bookmarkStmt->fetchAll(PDO::FETCH_COLUMN);
-    $bookmarkCount = count($bookmarkedLessonIds);
-
-    $maxCompletedIndex = -1;
-    $lessonIndexMap = [];
-    foreach ($orderedLessons as $index => $lessonId) {
-        $lessonIndexMap[(int)$lessonId] = $index;
-    }
-    foreach ($bookmarkedLessonIds as $lessonId) {
-        $lessonId = (int)$lessonId;
-        if (isset($lessonIndexMap[$lessonId]) && $lessonIndexMap[$lessonId] > $maxCompletedIndex) {
-            $maxCompletedIndex = $lessonIndexMap[$lessonId];
-        }
-    }
-
-    $continueLessonId = 0;
-    if (!empty($orderedLessons)) {
-        if ($maxCompletedIndex >= 0 && isset($orderedLessons[$maxCompletedIndex + 1])) {
-            $continueLessonId = (int)$orderedLessons[$maxCompletedIndex + 1];
-        } else {
-            $continueLessonId = (int)$orderedLessons[0];
-        }
-    }
-
-    $progressPercent = $lessonCount > 0 ? min(100, (int)round(($bookmarkCount / $lessonCount) * 100)) : 0;
-    $ratingStars = '★★★★★';
-
-    return [
-        'enrollment_count' => $enrollmentCount,
-        'progress_percent' => $progressPercent,
-        'rating_stars' => $ratingStars,
-        'category' => trim((string)($course['category'] ?? 'General')),
-        'continue_lesson_id' => $continueLessonId,
-    ];
-}
 ?>
 <!DOCTYPE html>
 <html lang="am">
@@ -176,30 +125,18 @@ function buildCourseProgressInfo(PDO $pdo, array $course, string $studentId): ar
             <div class="feature-grid">
                 <?php foreach ($courses as $course): ?>
                     <?php $hasTutorial = !empty($course['tutorial_topic']) || !empty($course['tutorial_text']) || !empty($course['tutorial_video']); ?>
-                    <?php $courseMeta = buildCourseProgressInfo($pdo, $course, $_SESSION['student_id']); ?>
                     <div class="card" style="margin:0;">
                         <h3><?php echo htmlspecialchars($course['course_name'] ?? 'Untitled Course', ENT_QUOTES, 'UTF-8'); ?></h3>
                         <p><?php echo htmlspecialchars($course['short_description'] ?? $course['description'] ?? '', ENT_QUOTES, 'UTF-8'); ?></p>
                         <p><strong>Instructor:</strong> <?php echo htmlspecialchars($course['instructor'] ?? 'Staff', ENT_QUOTES, 'UTF-8'); ?></p>
-                        <p><strong>Category:</strong> <?php echo htmlspecialchars($courseMeta['category'], ENT_QUOTES, 'UTF-8'); ?></p>
-                        <p><strong>Rating:</strong> <?php echo htmlspecialchars($courseMeta['rating_stars'], ENT_QUOTES, 'UTF-8'); ?></p>
-                        <p><strong>Enrolled:</strong> <?php echo (int)$courseMeta['enrollment_count']; ?></p>
-                        <p><strong>Progress:</strong> <?php echo (int)$courseMeta['progress_percent']; ?>%</p>
-                        <div class="progress-track" style="height:8px; margin:6px 0 10px;"><div class="progress-fill" style="width:<?php echo (int)$courseMeta['progress_percent']; ?>%"></div></div>
+                        <p><strong>Price:</strong> <?php echo number_format((float)($course['price'] ?? 0), 2); ?></p>
                         <p><strong>Notes:</strong> <?php echo $noteCount > 0 ? 'Available' : 'Coming soon'; ?></p>
                         <p><strong>Tutorial:</strong> <?php echo $hasTutorial ? 'Available' : 'Coming soon'; ?></p>
-                        <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;">
-                            <form method="post" style="display:inline-block; margin:0;">
-                                <input type="hidden" name="enroll_course_id" value="<?php echo (int)($course['id'] ?? 0); ?>">
-                                <button class="button" type="submit">Enroll</button>
-                            </form>
-                            <a class="button secondary" href="course_details.php?id=<?php echo (int)($course['id'] ?? 0); ?>">View Details</a>
-                            <?php if (!empty($courseMeta['continue_lesson_id'])): ?>
-                                <a class="button" href="course_content.php?course_id=<?php echo (int)($course['id'] ?? 0); ?>&lesson_id=<?php echo (int)$courseMeta['continue_lesson_id']; ?>">Continue Course</a>
-                            <?php else: ?>
-                                <a class="button" href="course_details.php?id=<?php echo (int)($course['id'] ?? 0); ?>">Continue Course</a>
-                            <?php endif; ?>
-                        </div>
+                        <form method="post" style="display:inline-block; margin-top:8px;">
+                            <input type="hidden" name="enroll_course_id" value="<?php echo (int)($course['id'] ?? 0); ?>">
+                            <button class="button" type="submit">Enroll</button>
+                        </form>
+                        <a class="button secondary" href="course_details.php?id=<?php echo (int)($course['id'] ?? 0); ?>">View Details</a>
                     </div>
                 <?php endforeach; ?>
             </div>

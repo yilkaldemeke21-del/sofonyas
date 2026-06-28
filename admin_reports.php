@@ -33,6 +33,27 @@ $reportTitle = [
 ][$type] ?? 'Admin Report';
 
 $rows = [];
+$message = '';
+$error = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['contact_id'], $_POST['admin_reply'])) {
+    $contactId = (int)$_POST['contact_id'];
+    $reply = trim((string)$_POST['admin_reply']);
+    $adminName = trim((string)($_SESSION['admin_name'] ?? $_SESSION['admin_username'] ?? 'Admin'));
+
+    if ($contactId > 0 && $reply !== '') {
+        $stmt = $pdo->prepare('UPDATE contact_messages SET admin_reply = :admin_reply, replied_at = NOW(), replied_by = :replied_by, status = :status WHERE id = :id');
+        $stmt->execute([
+            ':admin_reply' => $reply,
+            ':replied_by' => $adminName,
+            ':status' => 'replied',
+            ':id' => $contactId,
+        ]);
+        $message = 'Response saved successfully.';
+    } else {
+        $error = 'Please enter a response before saving.';
+    }
+}
 
 switch ($type) {
     case 'students':
@@ -52,7 +73,7 @@ switch ($type) {
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         break;
     case 'contact_messages':
-        $stmt = $pdo->query('SELECT name, email, phone, subject, status, created_at FROM contact_messages ORDER BY created_at DESC');
+        $stmt = $pdo->query('SELECT id, name, email, phone, subject, status, admin_reply, replied_at, replied_by, created_at FROM contact_messages ORDER BY created_at DESC');
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         break;
     case 'announcements':
@@ -84,7 +105,7 @@ switch ($type) {
         $columns = [['label' => 'Student', 'key' => 'student_name'], ['label' => 'Exam Type', 'key' => 'exam_type'], ['label' => 'Score', 'key' => 'score'], ['label' => 'Total', 'key' => 'total_questions'], ['label' => 'Issued At', 'key' => 'issued_at']];
         break;
     case 'contact_messages':
-        $columns = [['label' => 'Name', 'key' => 'name'], ['label' => 'Email', 'key' => 'email'], ['label' => 'Phone', 'key' => 'phone'], ['label' => 'Subject', 'key' => 'subject'], ['label' => 'Status', 'key' => 'status'], ['label' => 'Created At', 'key' => 'created_at']];
+        $columns = [['label' => 'Name', 'key' => 'name'], ['label' => 'Email', 'key' => 'email'], ['label' => 'Phone', 'key' => 'phone'], ['label' => 'Subject', 'key' => 'subject'], ['label' => 'Status', 'key' => 'status'], ['label' => 'Admin Reply', 'key' => 'admin_reply'], ['label' => 'Replied By', 'key' => 'replied_by'], ['label' => 'Created At', 'key' => 'created_at']];
         break;
     case 'announcements':
     case 'blog_posts':
@@ -124,7 +145,7 @@ switch ($type) {
     <div class="actions">
         <button type="button" onclick="window.print()">Print Report</button>
         <?php if ($isAdmin): ?>
-            <a href="admin_dashboard.php" style="margin-left:10px;color:#2563eb;text-decoration:none;display:inline-block;padding:8px 12px;border:1px solid #cbd5e1;border-radius:6px;">Back to Dashboard</a>
+            <a href="admin_dashboard.php" style="margin-left:10px;color:#2563eb;text-decoration:none;display:inline-block;padding:8px 12px;border:1px solid #cbd5e1;border-radius:6px;">ወደ ዳሽቦርድ ተመለስ</a>
         <?php endif; ?>
     </div>
     <?php if (!$isAdmin): ?>
@@ -132,8 +153,10 @@ switch ($type) {
     <?php endif; ?>
     <h1><?php echo safe($reportTitle); ?></h1>
     <div class="meta">Generated on <?php echo date('Y-m-d H:i'); ?> • Admin Report Center</div>
+    <?php if ($message !== ''): ?><div style="margin-bottom:12px;padding:10px 12px;border-radius:8px;background:#ecfdf5;color:#166534;border:1px solid #a7f3d0;"><?php echo safe($message); ?></div><?php endif; ?>
+    <?php if ($error !== ''): ?><div style="margin-bottom:12px;padding:10px 12px;border-radius:8px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;"><?php echo safe($error); ?></div><?php endif; ?>
     <?php if (empty($rows)): ?>
-        <p>No data found for this report.</p>
+        <p>ምንም የቀረበ መረጃ የለም!.</p>
     <?php else: ?>
         <table>
             <thead>
@@ -149,6 +172,15 @@ switch ($type) {
                         <?php foreach ($columns as $column): ?>
                             <td><?php echo safe($row[$column['key']] ?? ''); ?></td>
                         <?php endforeach; ?>
+                        <?php if ($type === 'contact_messages'): ?>
+                            <td>
+                                <form method="post" style="display:flex; flex-direction:column; gap:6px; min-width:260px;">
+                                    <input type="hidden" name="contact_id" value="<?php echo (int)($row['id'] ?? 0); ?>">
+                                    <textarea name="admin_reply" rows="3" placeholder="Type response here..." style="padding:8px;border:1px solid #cbd5e1;border-radius:6px;"><?php echo safe($row['admin_reply'] ?? ''); ?></textarea>
+                                    <button type="submit" style="width:auto;">Save Reply</button>
+                                </form>
+                            </td>
+                        <?php endif; ?>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
