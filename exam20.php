@@ -3,15 +3,16 @@ session_start();
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/mail_config.php';
 
-if (!isset($_SESSION['student_id'])) {
+$previewMode = !empty($_GET['preview']) && isset($_SESSION['admin_id']);
+if (!$previewMode && !isset($_SESSION['student_id'])) {
     header('Location: student_login.php');
     exit;
 }
 
 ensureExamAccessTables($pdo);
 
-$studentId = (string)($_SESSION['student_id'] ?? '');
-$studentName = $_SESSION['student_name'] ?? 'Student';
+$studentId = $previewMode ? 'admin-preview' : (string)($_SESSION['student_id'] ?? '');
+$studentName = $previewMode ? 'Admin Preview' : ($_SESSION['student_name'] ?? 'Student');
 $examType = 'exam20';
 $EXAM_LIMIT_SECONDS = 210 * 60; // 210 minutes = 3 hours 30 minutes
 
@@ -50,10 +51,15 @@ if (!empty($accessCodeRecord['access_code']) && isset($accessCodeRecord['is_acti
 
 $accessCodeIsActive = !empty($accessCodeRecord['is_active']);
 $accessCode = $accessCodeRecord['access_code'] ?? $defaultAccessCode;
-$accessCodeGranted = (!empty($_SESSION['exam20_access_granted']) && $_SESSION['exam20_access_granted'] === $examType);
+$accessCodeGranted = $previewMode || (!empty($_SESSION['exam20_access_granted']) && $_SESSION['exam20_access_granted'] === $examType);
 $accessError = '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['exam_access_submit'])) {
+if ($previewMode) {
+    $hasApproval = true;
+    $accessCodeGranted = true;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['exam_access_submit']) && !$previewMode) {
     $submittedCode = strtoupper(trim((string)($_POST['exam_access_code'] ?? '')));
     $expectedCode = strtoupper((string)($accessCode ?: $defaultAccessCode));
 
@@ -195,7 +201,7 @@ function buildExamOptions(array $question): array
     ];
 }
 
-$stmt = $pdo->query('SELECT q.*, s.title AS section_title, s.instruction AS section_instruction, COALESCE(q.section_id, 0) AS section_id FROM questions q LEFT JOIN question_sections s ON s.id = q.section_id ORDER BY COALESCE(q.section_id, 0) ASC, q.created_at ASC LIMIT 30');
+$stmt = $pdo->query('SELECT q.*, s.title AS section_title, s.instruction AS section_instruction, COALESCE(q.section_id, 0) AS section_id FROM questions q LEFT JOIN question_sections s ON s.id = q.section_id ORDER BY COALESCE(q.section_id, 0) ASC, q.created_at ASC LIMIT 45');
 $questions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $pages = [];
@@ -318,6 +324,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['exam_access_submit']
     <title>Real Exam System</title>
     <style>
         body { font-family: Arial, sans-serif; background: #f4f7fb; color: #233; margin: 0; }
+        body.admin-preview { background: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 40%, #bfdbfe 100%); }
+        body.admin-preview .card { border: 1px solid #93c5fd; box-shadow: 0 24px 50px rgba(37, 99, 235, 0.15); }
+        body.admin-preview .badge { background: #bfdbfe; color: #1e40af; }
+        body.admin-preview .section-card { box-shadow: 0 14px 32px rgba(59,130,246,0.18); }
+        body.admin-preview .nav-btn { box-shadow: 0 12px 24px rgba(37,99,235,0.16); }
         .wrap { max-width: 1100px; margin: 30px auto; padding: 20px; }
         .card { background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); }
         h1 { color: #4f46e5; margin-top: 0; }
@@ -342,18 +353,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['exam_access_submit']
         .bad { color:#991b1b; }
         .answer-note { font-size: 13px; color:#475569; margin-top:6px; }
         body.locked { overflow: hidden; }
+        /* Section grid */
+        .section-grid { display:flex; gap:10px; flex-wrap:wrap; margin: 14px 0 18px; }
+        .section-card { flex: 1 0 90px; min-width:80px; padding:12px; border-radius:10px; color:#fff; font-weight:700; text-align:center; cursor:pointer; box-shadow: 0 8px 20px rgba(2,6,23,0.06); transition: transform .12s ease, opacity .12s ease; }
+        .section-card.disabled { opacity:.35; cursor:not-allowed; transform:none; box-shadow:none; }
+        .section-card.active { outline: 3px solid rgba(255,255,255,0.15); transform: translateY(-4px); }
+        .section-card[data-index='1']{ background: linear-gradient(90deg,#ef4444,#f97316); }
+        .section-card[data-index='2']{ background: linear-gradient(90deg,#f97316,#f59e0b); }
+        .section-card[data-index='3']{ background: linear-gradient(90deg,#f59e0b,#eab308); }
+        .section-card[data-index='4']{ background: linear-gradient(90deg,#84cc16,#16a34a); }
+        .section-card[data-index='5']{ background: linear-gradient(90deg,#10b981,#06b6d4); }
+        .section-card[data-index='6']{ background: linear-gradient(90deg,#06b6d4,#3b82f6); }
+        .section-card[data-index='7']{ background: linear-gradient(90deg,#3b82f6,#7c3aed); }
+        .section-card[data-index='8']{ background: linear-gradient(90deg,#7c3aed,#ec4899); }
+        .section-card[data-index='9']{ background: linear-gradient(90deg,#ec4899,#ef4444); }
+        .section-card[data-index='10']{ background: linear-gradient(90deg,#0ea5e9,#06b6d4); }
     </style>
 </head>
-<body<?php echo empty($accessCodeGranted) ? ' class="locked"' : ''; ?>>
+<body class="<?php echo $previewMode ? 'admin-preview' : ''; ?><?php echo empty($accessCodeGranted) ? ' locked' : ''; ?>">
 <div class="wrap">
     <div class="card">
-        <h1>እውነተኛ የፈተና ስርዓት</h1>
+        <h1><?php echo $previewMode ? 'Admin Preview: Exam Page' : 'እውነተኛ የፈተና ስርዓት'; ?></h1>
         <p class="small">ይህ እውነተኛ የሙከራ ጥያቄ ነው። በተሰጠው ጊዜ ውስጥ መልስ ይስጡ።</p>
         <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
             <span class="badge">ሰአት መቆጣጠሪያ</span>
             <span class="badge">ዉጤት ማስተካከያ</span>
             <span class="badge">በቅጽበት ዉጤት አሳይ</span>
         </div>
+        <?php if ($previewMode): ?>
+            <div class="result" style="background:#e0f2fe;border-color:#93c5fd;color:#1d4ed8;">Preview mode enabled: this is a designer preview of the exam experience with up to 45 questions.</div>
+        <?php endif; ?>
         <p class="small" style="color:#b91c1c; font-weight:700;">የጊዜ ገደብ: 2:30 ሰዓት (150 ደቂቃ)</p>
         <div id="timerBox" class="result" style="margin-bottom:16px;">ቀሪ ጊዜ: <strong id="timerText">--:--:--</strong></div>
         <?php if ($hasSubmittedExam): ?>
@@ -384,6 +413,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['exam_access_submit']
         <?php elseif (empty($questions)): ?>
             <div class="result" style="background:#fef3c7;border-color:#f59e0b;color:#92400e;">ምንም ጥያቄዎች አልተጫኑም። እባክዎ በ Admin ጥያቄዎች ውስጥ ጥያቄ ያክሉ።</div>
         <?php else: ?>
+            <!-- Section selector: 10 colored cards -->
+            <div class="section-grid" id="sectionGrid">
+                <?php for ($si = 1; $si <= 10; $si++): ?>
+                    <?php $enabled = $si <= max(1, $totalPages); ?>
+                    <div class="section-card <?php echo $enabled ? '' : 'disabled'; ?>" data-index="<?php echo $si; ?>">
+                        ክፍል <?php echo $si; ?>
+                        <div style="font-size:12px;font-weight:600;margin-top:6px;"><?php echo $enabled ? (isset($pages[$si-1]) ? count($pages[$si-1]['questions']).' Q' : 'N/A') : '—'; ?></div>
+                    </div>
+                <?php endfor; ?>
+            </div>
             <form method="post" id="examForm">
                 <div class="progress" aria-hidden="true"><span id="progressFill"></span></div>
                 <div class="small chip" id="sectionInfo">Section 1 of <?php echo max(1, $totalPages); ?></div>
@@ -464,6 +503,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['exam_access_submit']
         }
 
         let currentPage = 0;
+        function syncSectionCards() {
+            const sectionGrid = document.getElementById('sectionGrid');
+            const sectionBlocks = document.querySelectorAll('.section-block');
+            if (!sectionGrid || sectionBlocks.length === 0) {
+                return;
+            }
+            const cards = Array.from(sectionGrid.querySelectorAll('.section-card'));
+            cards.forEach((card) => {
+                const idx = parseInt(card.getAttribute('data-index'), 10) - 1;
+                if (card.classList.contains('disabled')) {
+                    return;
+                }
+                card.addEventListener('click', () => {
+                    if (idx >= 0 && idx < sectionBlocks.length) {
+                        currentPage = idx;
+                        updateNav();
+                        setTimeout(() => { document.getElementById('examForm').scrollIntoView({behavior:'smooth', block:'start'}); }, 100);
+                    }
+                });
+            });
+        }
+
         if (prevBtn) {
             prevBtn.addEventListener('click', () => {
                 if (currentPage > 0) {
@@ -480,6 +541,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['exam_access_submit']
                 }
             });
         }
+
+        syncSectionCards();
         updateNav();
 
         document.querySelectorAll('.answer-option input').forEach((input) => {

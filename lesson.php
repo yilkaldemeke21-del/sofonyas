@@ -30,7 +30,7 @@ if (!$lesson) {
 }
 
 $lessonTitle = $lesson['title'] ?? 'Lesson';
-$lessonContent = nl2br(htmlspecialchars($course['tutorial_text'] ?? $course['description'] ?? 'This lesson content will be added soon.', ENT_QUOTES, 'UTF-8'));
+$lessonContent = renderRichText($lesson['content'] ?? $course['tutorial_text'] ?? $course['description'] ?? 'This lesson content will be added soon.');
 
 $noteStmt = $pdo->prepare('SELECT * FROM admin_notes ORDER BY created_at DESC LIMIT 5');
 $noteStmt->execute();

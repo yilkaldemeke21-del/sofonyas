@@ -154,6 +154,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .result { background: #ecfdf5; border: 1px solid #a7f3d0; padding: 12px; border-radius: 10px; margin-top: 16px; }
         .wrong { background: #fff7ed; border-color: #fdba74; }
         .small { color: #555; font-size: 13px; }
+        /* Section grid */
+        .section-grid { display:flex; gap:10px; flex-wrap:wrap; margin: 14px 0 18px; }
+        .section-card { flex: 1 0 90px; min-width:80px; padding:12px; border-radius:10px; color:#fff; font-weight:700; text-align:center; cursor:pointer; box-shadow: 0 8px 20px rgba(2,6,23,0.06); transition: transform .12s ease, opacity .12s ease; }
+        .section-card.disabled { opacity:.35; cursor:not-allowed; transform:none; box-shadow:none; }
+        .section-card.active { outline: 3px solid rgba(255,255,255,0.15); transform: translateY(-4px); }
+        .section-card[data-index='1']{ background: linear-gradient(90deg,#ef4444,#f97316); }
+        .section-card[data-index='2']{ background: linear-gradient(90deg,#f97316,#f59e0b); }
+        .section-card[data-index='3']{ background: linear-gradient(90deg,#f59e0b,#eab308); }
+        .section-card[data-index='4']{ background: linear-gradient(90deg,#84cc16,#16a34a); }
+        .section-card[data-index='5']{ background: linear-gradient(90deg,#10b981,#06b6d4); }
+        .section-card[data-index='6']{ background: linear-gradient(90deg,#06b6d4,#3b82f6); }
+        .section-card[data-index='7']{ background: linear-gradient(90deg,#3b82f6,#7c3aed); }
+        .section-card[data-index='8']{ background: linear-gradient(90deg,#7c3aed,#ec4899); }
+        .section-card[data-index='9']{ background: linear-gradient(90deg,#ec4899,#ef4444); }
+        .section-card[data-index='10']{ background: linear-gradient(90deg,#0ea5e9,#06b6d4); }
     </style>
 </head>
 <body>
@@ -168,6 +183,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php unset($_SESSION['short_exam_message']); ?>
         <?php endif; ?>
 
+        <!-- Section selector: 10 colored cards -->
+        <div class="section-grid" id="sectionGrid">
+            <?php for ($si = 1; $si <= 10; $si++): ?>
+                <?php $enabled = $si <= max(1, $totalPages); ?>
+                <div class="section-card <?php echo $enabled ? '' : 'disabled'; ?>" data-index="<?php echo $si; ?>">
+                    ገጽ <?php echo $si; ?>
+                    <div style="font-size:12px;font-weight:600;margin-top:6px;"><?php echo $enabled ? (isset($pages[$si-1]) ? count($pages[$si-1]['questions']).' Q' : 'N/A') : '—'; ?></div>
+                </div>
+            <?php endfor; ?>
+        </div>
         <form method="post" id="examForm">
             <?php foreach ($pages as $pageIndex => $page): ?>
                 <div class="section-block <?php echo $pageIndex === 0 ? 'active' : ''; ?>" data-page="<?php echo $pageIndex; ?>" style="display: <?php echo $pageIndex === 0 ? 'block' : 'none'; ?>;">
@@ -242,6 +267,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // focus first input on page
             const firstInput = document.querySelector('.section-block[data-page="' + page + '"] input[type="text"]');
             if (firstInput) firstInput.focus();
+            // update section cards active state
+            const sg = document.getElementById('sectionGrid');
+            if (sg) {
+                sg.querySelectorAll('.section-card').forEach((c) => c.classList.remove('active'));
+                const card = sg.querySelector('.section-card[data-index="' + (page + 1) + '"]');
+                if (card) card.classList.add('active');
+            }
         }
 
         if (nextBtn) {
@@ -261,6 +293,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Initialize
         showPage(0);
+
+                // wire up section cards
+                const sectionGrid = document.getElementById('sectionGrid');
+                if (sectionGrid) {
+                    sectionGrid.querySelectorAll('.section-card').forEach((card) => {
+                        if (card.classList.contains('disabled')) return;
+                        card.addEventListener('click', () => {
+                            const idx = parseInt(card.getAttribute('data-index'), 10) - 1;
+                            if (!isNaN(idx) && idx >= 0 && idx < totalPages) showPage(idx);
+                        });
+                    });
+                    // set initial active
+                    const initCard = sectionGrid.querySelector('.section-card[data-index="1"]');
+                    if (initCard) initCard.classList.add('active');
+                }
 
         function updateTimer() {
             const now = Date.now();

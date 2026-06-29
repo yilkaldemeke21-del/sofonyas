@@ -165,7 +165,7 @@ $notes = $noteStmt->fetchAll();
                 <?php foreach ($notes as $note): ?>
                     <li style="margin-bottom:10px;">
                         <strong><?php echo htmlspecialchars($note['title'] ?? 'Note', ENT_QUOTES, 'UTF-8'); ?></strong>
-                        <div><?php echo nl2br(htmlspecialchars($note['description'] ?? '', ENT_QUOTES, 'UTF-8')); ?></div>
+                        <div class="rich-content"><?php echo renderRichText($note['description'] ?? ''); ?></div>
                         <?php if (!empty($note['file_path'])): ?>
                             <div><a href="<?php echo htmlspecialchars($note['file_path'], ENT_QUOTES, 'UTF-8'); ?>" target="_blank">Open File</a></div>
                         <?php endif; ?>

@@ -176,6 +176,25 @@ if (!$accessError && $quizLink) {
         $accessError = 'ይቅርታ፣ ይህን ቅጽ ለመጠቀም በውስጥ ምዝገባ ያለዎት ተማሪ መሆን ይኖርቦታል።';
     }
 
+    // Enforce admin approval for this student/exam if a record exists in student_exam_approvals
+    try {
+        $approvalStmt = $pdo->prepare('SELECT status, approved_at, notes, seat_number FROM student_exam_approvals WHERE student_id = :student_id AND exam_type = :exam_type LIMIT 1');
+        $approvalStmt->execute([':student_id' => $studentId, ':exam_type' => $examType]);
+        $approval = $approvalStmt->fetch(PDO::FETCH_ASSOC);
+        if ($approval) {
+            if (strtolower(trim((string)($approval['status'] ?? ''))) !== 'approved') {
+                $accessError = 'ይቅርታ፣ ይህ ተማሪ ለዚህ ፈተና አልተፈቀደም። እባክዎ ከአስተዳደር ይጠይቁ።';
+            }
+            // If seat_number column exists and is required, block access when not assigned
+            $seatCol = $pdo->query("SHOW COLUMNS FROM student_exam_approvals LIKE 'seat_number'")->fetch(PDO::FETCH_ASSOC);
+            if ($seatCol && empty($approval['seat_number'])) {
+                $accessError = 'ይቅርታ፣ የፈተና ቦታዎ (seat) አልተመዘገበዎትም። እባክዎ ከአስተዳደር ይጠይቁ።';
+            }
+        }
+    } catch (Exception $e) {
+        // ignore approval enforcement failures
+    }
+
     $pdo->exec('CREATE TABLE IF NOT EXISTS exam_submissions (
         id INT AUTO_INCREMENT PRIMARY KEY,
         student_id VARCHAR(100) NOT NULL,

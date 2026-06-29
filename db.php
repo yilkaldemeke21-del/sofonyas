@@ -441,16 +441,11 @@ function ensureSiteChatTables(PDO $pdo): void
 }
 
 function sanitizeRichText($value): string {
-    $html = (string)($value ?? '');
-    $html = html_entity_decode($html, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-
-    $allowedTags = '<p><br><strong><b><em><i><u><ul><ol><li><h1><h2><h3><h4><h5><h6><blockquote><pre><code><a><img><table><thead><tbody><tr><th><td><span><div>'; 
-
-    return strip_tags($html, $allowedTags);
+    return (string)($value ?? '');
 }
 
 function renderRichText($value): string {
-    return sanitizeRichText($value);
+    return (string)($value ?? '');
 }
 
 if (!function_exists('safe')) {

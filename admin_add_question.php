@@ -233,6 +233,7 @@ try {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $previewAndOpen = !empty($_POST['preview_and_open']);
     if (isset($_POST['add_section'])) {
         $sectionTitle = trim((string)($_POST['section_title'] ?? ''));
         $instruction = trim((string)($_POST['instruction'] ?? ''));
@@ -352,6 +353,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         }
+    }
+
+    if ($success !== '' && !empty($previewAndOpen)) {
+        header('Location: exam20.php?preview=1');
+        exit;
     }
 }
 
@@ -578,7 +584,10 @@ $recentQuestions = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <div class="help-box"><?php echo safe($txt['answer_help']); ?></div>
                         </div>
                     </div>
-                    <button type="submit"><?php echo safe($txt['question_submit']); ?></button>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <button type="submit"><?php echo safe($txt['question_submit']); ?></button>
+                        <button type="submit" name="preview_and_open" value="1" class="mini-btn primary" style="background:#06b6d4;color:white;">Preview exam (exam20.php)</button>
+                    </div>
                 </form>
             </div>
             <div class="panel-card">

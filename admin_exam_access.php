@@ -35,6 +35,16 @@ try {
     // ignore
 }
 
+// Ensure seat_number column exists for student approvals
+try {
+    $colCheck = $pdo->query("SHOW COLUMNS FROM student_exam_approvals LIKE 'seat_number'")->fetch(PDO::FETCH_ASSOC);
+    if (!$colCheck) {
+        $pdo->exec("ALTER TABLE student_exam_approvals ADD COLUMN seat_number VARCHAR(50) DEFAULT NULL AFTER exam_type");
+    }
+} catch (PDOException $e) {
+    // ignore
+}
+
 $selectedExamType = trim($_GET['exam_type'] ?? ($_POST['exam_type'] ?? 'exam20'));
 $selectedExamType = in_array($selectedExamType, ['exam20', 'mid_exam', 'final_exam'], true) ? $selectedExamType : 'exam20';
 
@@ -75,8 +85,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($studentId === '') {
             $error = 'ተማሪ መለያ የለም።';
         } else {
+            $seatNumber = trim($_POST['seat_number'] ?? '');
             try {
-                $stmt = $pdo->prepare('INSERT INTO student_exam_approvals (student_id, exam_type, status, approved_by, approved_at, notes) VALUES (:student_id, :exam_type, :status, :approved_by, :approved_at, :notes) ON DUPLICATE KEY UPDATE status = VALUES(status), approved_by = VALUES(approved_by), approved_at = VALUES(approved_at), notes = VALUES(notes)');
+                $stmt = $pdo->prepare('INSERT INTO student_exam_approvals (student_id, exam_type, status, approved_by, approved_at, notes, seat_number) VALUES (:student_id, :exam_type, :status, :approved_by, :approved_at, :notes, :seat_number) ON DUPLICATE KEY UPDATE status = VALUES(status), approved_by = VALUES(approved_by), approved_at = VALUES(approved_at), notes = VALUES(notes), seat_number = VALUES(seat_number)');
                 $stmt->execute([
                     ':student_id' => $studentId,
                     ':exam_type' => $examType,
@@ -84,6 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ':approved_by' => $_SESSION['admin_username'] ?? 'admin',
                     ':approved_at' => $status === 'approved' ? date('Y-m-d H:i:s') : null,
                     ':notes' => $notes,
+                    ':seat_number' => $seatNumber,
                 ]);
                 $message = 'የተማሪ ማረጋገጫ ተስተካክሏል።';
             } catch (PDOException $e) {
@@ -101,7 +113,7 @@ $defaultAccessCode = !empty($accessCodeRecord['access_code']) ? $accessCodeRecor
 $codesStmt = $pdo->query('SELECT * FROM exam_access_codes ORDER BY exam_type ASC, created_at DESC');
 $allAccessCodes = $codesStmt->fetchAll(PDO::FETCH_ASSOC);
 
-$stmt = $pdo->query('SELECT a.student_id, s.name, s.email, a.status, a.approved_at, a.notes, a.exam_type FROM student_exam_approvals a LEFT JOIN students s ON s.student_id = a.student_id ORDER BY a.created_at DESC');
+$stmt = $pdo->query('SELECT a.student_id, s.name, s.email, a.exam_type, a.status, a.seat_number, a.approved_at, a.notes FROM student_exam_approvals a LEFT JOIN students s ON s.student_id = a.student_id ORDER BY a.created_at DESC');
 $studentApprovals = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
@@ -208,6 +220,10 @@ $studentApprovals = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </select>
             </div>
             <div style="margin-bottom:12px;">
+                <label for="seat_number">Seat Number (optional)</label>
+                <input id="seat_number" name="seat_number" placeholder="e.g., A12" />
+            </div>
+            <div style="margin-bottom:12px;">
                 <label for="notes">ማስታወሻ</label>
                 <textarea id="notes" name="notes" rows="3" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:6px;"></textarea>
             </div>
@@ -223,6 +239,7 @@ $studentApprovals = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <th style="text-align:left;padding:8px;border-bottom:1px solid #ddd;">መለያ</th>
                     <th style="text-align:left;padding:8px;border-bottom:1px solid #ddd;">ስም</th>
                     <th style="text-align:left;padding:8px;border-bottom:1px solid #ddd;">ኢሜይል</th>
+                    <th style="text-align:left;padding:8px;border-bottom:1px solid #ddd;">Seat</th>
                     <th style="text-align:left;padding:8px;border-bottom:1px solid #ddd;">ሁኔታ</th>
                     <th style="text-align:left;padding:8px;border-bottom:1px solid #ddd;">ማስታወሻ</th>
                 </tr>
@@ -233,6 +250,7 @@ $studentApprovals = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <td style="padding:8px;border-bottom:1px solid #ddd;"><?php echo safe($row['student_id'] ?? ''); ?></td>
                     <td style="padding:8px;border-bottom:1px solid #ddd;"><?php echo safe($row['name'] ?? ''); ?></td>
                     <td style="padding:8px;border-bottom:1px solid #ddd;"><?php echo safe($row['email'] ?? ''); ?></td>
+                    <td style="padding:8px;border-bottom:1px solid #ddd;"><?php echo safe($row['seat_number'] ?? '-'); ?></td>
                     <td style="padding:8px;border-bottom:1px solid #ddd;"><?php echo safe($row['exam_type'] ?? 'exam20'); ?></td>
                     <td style="padding:8px;border-bottom:1px solid #ddd;"><?php echo safe($row['status'] ?? 'pending'); ?></td>
                     <td style="padding:8px;border-bottom:1px solid #ddd;"><?php echo safe($row['notes'] ?? ''); ?></td>

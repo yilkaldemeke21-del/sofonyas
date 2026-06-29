@@ -226,9 +226,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <title>Admin Course Builder</title>
-    <script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/super-build/ckeditor.js"></script>
-    <script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/translations/am.js"></script>
-    <script src="https://cdn.ckeditor.com/ckeditor5/41.4.2/translations/om.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tinymce@6/tinymce.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             function escapeHtml(value) {
@@ -272,7 +270,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }).join('\n');
 
                 document.getElementById('builder_modules').value = plainOutline;
-                document.getElementById('lessonBuilderPreview').innerHTML = markup;
+                const preview = document.getElementById('lessonBuilderPreview');
+                if (preview) {
+                    preview.innerHTML = markup;
+                }
             }
 
             function renderQuizBuilderMarkup() {
@@ -315,6 +316,224 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 document.getElementById('builder_assignment').value = items.length ? items.join('') : '';
             }
 
+            const draftStorageKey = 'admin_course_builder_draft';
+            const publishSuccess = <?php echo json_encode(!empty($success)); ?>;
+            let draftTimer = null;
+
+            function setDraftStatus(message) {
+                const statusEl = document.getElementById('draftStatus');
+                if (statusEl) {
+                    statusEl.textContent = message;
+                }
+            }
+
+            const debouncedSaveDraft = debounce(saveDraft, 400);
+
+            function debounce(fn, delay) {
+                return function () {
+                    clearTimeout(draftTimer);
+                    draftTimer = setTimeout(fn, delay);
+                };
+            }
+
+            function collectDraftData() {
+                const fields = [
+                    'course_name', 'course_code', 'price', 'instructor', 'instructor_image',
+                    'category', 'level', 'thumbnail', 'pdf_file', 'tutorial_topic', 'tutorial_image',
+                    'tutorial_audio', 'tutorial_video', 'builder_modules', 'builder_quiz', 'builder_assignment'
+                ];
+
+                const data = {};
+                fields.forEach((id) => {
+                    const field = document.getElementById(id);
+                    if (field) {
+                        data[id] = field.value;
+                    }
+                });
+
+                const richFields = [
+                    'instructor_bio', 'tutorial_text', 'modules', 'short_description', 'description', 'quiz', 'assignment', 'certificate_requirements'
+                ];
+                richFields.forEach((id) => {
+                    const editor = tinymce.get(id);
+                    if (editor) {
+                        data[id] = editor.getContent();
+                    } else {
+                        const field = document.getElementById(id);
+                        if (field) {
+                            data[id] = field.value;
+                        }
+                    }
+                });
+
+                data.moduleCards = collectModuleCards();
+                data.quizCards = collectQuizCards();
+                data.assignmentCards = collectAssignmentCards();
+
+                return data;
+            }
+
+            function collectModuleCards() {
+                return Array.from(document.querySelectorAll('#lessonBuilderList .builder-card')).map((card) => ({
+                    title: card.querySelector('.module-title')?.value || '',
+                    lessons: Array.from(card.querySelectorAll('.lesson-row .lesson-title')).map((input) => input.value || '')
+                }));
+            }
+
+            function collectQuizCards() {
+                return Array.from(document.querySelectorAll('#quizBuilderList .quiz-card')).map((card) => ({
+                    question: card.querySelector('.quiz-question')?.value || '',
+                    optionA: card.querySelector('.quiz-a')?.value || '',
+                    optionB: card.querySelector('.quiz-b')?.value || '',
+                    optionC: card.querySelector('.quiz-c')?.value || '',
+                    optionD: card.querySelector('.quiz-d')?.value || '',
+                    answer: card.querySelector('.quiz-answer')?.value || '',
+                    note: card.querySelector('.quiz-note')?.value || ''
+                }));
+            }
+
+            function collectAssignmentCards() {
+                return Array.from(document.querySelectorAll('#assignmentBuilderList .assignment-card')).map((card) => ({
+                    title: card.querySelector('.assignment-title')?.value || '',
+                    description: card.querySelector('.assignment-description')?.value || '',
+                    dueDate: card.querySelector('.assignment-due')?.value || '',
+                    points: card.querySelector('.assignment-points')?.value || ''
+                }));
+            }
+
+            function saveDraft() {
+                try {
+                    localStorage.setItem(draftStorageKey, JSON.stringify(collectDraftData()));
+                    setDraftStatus('Draft saved locally.');
+                } catch (error) {
+                    console.warn('Draft save failed:', error);
+                    setDraftStatus('Draft save failed.');
+                }
+            }
+
+            function restoreDraft() {
+                const stored = localStorage.getItem(draftStorageKey);
+                if (!stored) {
+                    setDraftStatus('No draft found to restore.');
+                    return;
+                }
+                try {
+                    const data = JSON.parse(stored);
+                    if (Array.isArray(data.moduleCards)) {
+                        populateModuleCards(data.moduleCards);
+                    }
+                    if (Array.isArray(data.quizCards)) {
+                        populateQuizCards(data.quizCards);
+                    }
+                    if (Array.isArray(data.assignmentCards)) {
+                        populateAssignmentCards(data.assignmentCards);
+                    }
+
+                    Object.keys(data).forEach((id) => {
+                        const field = document.getElementById(id);
+                        if (field) {
+                            field.value = data[id] || '';
+                        }
+                        const editor = tinymce.get(id);
+                        if (editor) {
+                            editor.setContent(data[id] || '');
+                        }
+                    });
+
+                    renderLessonBuilderMarkup();
+                    renderQuizBuilderMarkup();
+                    renderAssignmentBuilderMarkup();
+                    setDraftStatus('Draft restored from browser storage.');
+                } catch (error) {
+                    console.warn('Draft restore failed:', error);
+                    setDraftStatus('Unable to restore draft.');
+                }
+            }
+
+            function populateModuleCards(cards) {
+                const wrapper = document.getElementById('lessonBuilderList');
+                if (!wrapper) return;
+                wrapper.innerHTML = '';
+                if (cards.length === 0) {
+                    addLessonCard();
+                    return;
+                }
+                cards.forEach((cardData) => {
+                    const card = document.createElement('article');
+                    card.className = 'builder-card';
+                    card.draggable = true;
+                    card.innerHTML = '<div class="builder-card-header"><strong>Module</strong><button type="button" class="ghost-btn remove-card">Remove</button></div><label class="small">Module Title</label><input class="module-title" type="text" placeholder="Module title"><label class="small">Lesson Items</label><div class="lesson-list"></div><button type="button" class="ghost-btn add-lesson">+ Add Lesson</button>';
+                    wrapper.appendChild(card);
+                    const titleField = card.querySelector('.module-title');
+                    if (titleField) {
+                        titleField.value = cardData.title || '';
+                    }
+                    const lessonList = card.querySelector('.lesson-list');
+                    (cardData.lessons || []).forEach((lessonTitle) => {
+                        const row = document.createElement('div');
+                        row.className = 'lesson-row';
+                        row.draggable = true;
+                        row.innerHTML = '<input type="text" class="lesson-title" placeholder="Lesson title or topic"><button type="button" class="ghost-btn remove-row">Remove</button>';
+                        const input = row.querySelector('.lesson-title');
+                        if (input) {
+                            input.value = lessonTitle || '';
+                        }
+                        lessonList.appendChild(row);
+                    });
+                    bindBuilderEvents(card);
+                });
+            }
+
+            function populateQuizCards(cards) {
+                const wrapper = document.getElementById('quizBuilderList');
+                if (!wrapper) return;
+                wrapper.innerHTML = '';
+                if (cards.length === 0) {
+                    addQuizCard();
+                    return;
+                }
+                cards.forEach((cardData) => {
+                    const card = document.createElement('article');
+                    card.className = 'quiz-card';
+                    card.innerHTML = '<div class="builder-card-header"><strong>Question</strong><button type="button" class="ghost-btn remove-card">Remove</button></div><input type="text" class="quiz-question" placeholder="Question title"><input type="text" class="quiz-a" placeholder="Option A"><input type="text" class="quiz-b" placeholder="Option B"><input type="text" class="quiz-c" placeholder="Option C"><input type="text" class="quiz-d" placeholder="Option D"><input type="text" class="quiz-answer" placeholder="Correct answer"><textarea class="quiz-note" placeholder="Hint or explanation"></textarea>';
+                    wrapper.appendChild(card);
+                    card.querySelector('.quiz-question').value = cardData.question || '';
+                    card.querySelector('.quiz-a').value = cardData.optionA || '';
+                    card.querySelector('.quiz-b').value = cardData.optionB || '';
+                    card.querySelector('.quiz-c').value = cardData.optionC || '';
+                    card.querySelector('.quiz-d').value = cardData.optionD || '';
+                    card.querySelector('.quiz-answer').value = cardData.answer || '';
+                    card.querySelector('.quiz-note').value = cardData.note || '';
+                    bindBuilderEvents(card);
+                });
+            }
+
+            function populateAssignmentCards(cards) {
+                const wrapper = document.getElementById('assignmentBuilderList');
+                if (!wrapper) return;
+                wrapper.innerHTML = '';
+                if (cards.length === 0) {
+                    addAssignmentCard();
+                    return;
+                }
+                cards.forEach((cardData) => {
+                    const card = document.createElement('article');
+                    card.className = 'assignment-card';
+                    card.innerHTML = '<div class="builder-card-header"><strong>Assignment</strong><button type="button" class="ghost-btn remove-card">Remove</button></div><input type="text" class="assignment-title" placeholder="Assignment title"><textarea class="assignment-description" placeholder="Assignment instructions, objectives, and rubric"></textarea><input type="text" class="assignment-due" placeholder="Due date"><input type="text" class="assignment-points" placeholder="Points or weight">';
+                    wrapper.appendChild(card);
+                    card.querySelector('.assignment-title').value = cardData.title || '';
+                    card.querySelector('.assignment-description').value = cardData.description || '';
+                    card.querySelector('.assignment-due').value = cardData.dueDate || '';
+                    card.querySelector('.assignment-points').value = cardData.points || '';
+                    bindBuilderEvents(card);
+                });
+            }
+
+            function clearDraft() {
+                localStorage.removeItem(draftStorageKey);
+                setDraftStatus('Draft cleared.');
+            }
+
             function addLessonCard() {
                 const wrapper = document.getElementById('lessonBuilderList');
                 const card = document.createElement('article');
@@ -351,7 +570,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 const wrapper = document.getElementById('assignmentBuilderList');
                 const card = document.createElement('article');
                 card.className = 'assignment-card';
-                card.innerHTML = '<div class="builder-card-header"><strong>Assignment</strong><button type="button" class="ghost-btn remove-card">Remove</button></div><input type="text" class="assignment-title" placeholder="Assignment title"><textarea class="assignment-description" placeholder="Assignment instructions, objectives, and rubric"></textarea><input type="text" class="assignment-due" placeholder="Due date"><input type="text" class="assignment-points" placeholder="Points or weight"></textarea>';
+                card.innerHTML = '<div class="builder-card-header"><strong>Assignment</strong><button type="button" class="ghost-btn remove-card">Remove</button></div><input type="text" class="assignment-title" placeholder="Assignment title"><textarea class="assignment-description" placeholder="Assignment instructions, objectives, and rubric"></textarea><input type="text" class="assignment-due" placeholder="Due date"><input type="text" class="assignment-points" placeholder="Points or weight">';
                 wrapper.appendChild(card);
                 bindBuilderEvents(card);
                 renderAssignmentBuilderMarkup();
@@ -368,6 +587,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         renderLessonBuilderMarkup();
                         renderQuizBuilderMarkup();
                         renderAssignmentBuilderMarkup();
+                        debouncedSaveDraft();
                     });
                 });
 
@@ -375,12 +595,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     button.addEventListener('click', function () {
                         button.closest('.lesson-row').remove();
                         renderLessonBuilderMarkup();
+                        debouncedSaveDraft();
                     });
                 });
 
                 node.querySelectorAll('.add-lesson').forEach(function (button) {
                     button.addEventListener('click', function () {
                         addLessonRow(button.closest('.builder-card').querySelector('.lesson-list'));
+                        debouncedSaveDraft();
                     });
                 });
 
@@ -389,6 +611,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         renderLessonBuilderMarkup();
                         renderQuizBuilderMarkup();
                         renderAssignmentBuilderMarkup();
+                        debouncedSaveDraft();
                     });
                 });
 
@@ -432,6 +655,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             document.getElementById('addAssignmentItemBtn')?.addEventListener('click', addAssignmentCard);
 
             document.querySelector('form')?.addEventListener('submit', function () {
+                if (typeof tinymce !== 'undefined') {
+                    tinymce.triggerSave();
+                }
                 renderLessonBuilderMarkup();
                 renderQuizBuilderMarkup();
                 renderAssignmentBuilderMarkup();
@@ -441,106 +667,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             addQuizCard();
             addAssignmentCard();
 
-            function getEditorConfig(language) {
-                return {
-                    toolbar: {
-                        items: [
-                            'undo', 'redo', '|',
-                            'heading', '|',
-                            'bold', 'italic', 'underline', 'strikethrough', 'subscript', 'superscript', '|',
-                            'fontSize', 'fontFamily', 'fontColor', 'fontBackgroundColor', '|',
-                            'bulletedList', 'numberedList', 'outdent', 'indent', '|',
-                            'link', 'insertImage', 'imageUpload', 'insertTable', 'mediaEmbed', 'blockQuote', 'codeBlock', 'horizontalLine', '|',
-                            'findAndReplace', 'removeFormat'
-                        ],
-                        shouldNotGroupWhenFull: true
-                    },
-                    heading: {
-                        options: [
-                            { model: 'paragraph', title: 'Paragraph', class: 'ck-heading_paragraph' },
-                            { model: 'heading1', view: 'h1', title: 'Heading 1', class: 'ck-heading_heading1' },
-                            { model: 'heading2', view: 'h2', title: 'Heading 2', class: 'ck-heading_heading2' },
-                            { model: 'heading3', view: 'h3', title: 'Heading 3', class: 'ck-heading_heading3' },
-                            { model: 'heading4', view: 'h4', title: 'Heading 4', class: 'ck-heading_heading4' },
-                            { model: 'heading5', view: 'h5', title: 'Heading 5', class: 'ck-heading_heading5' },
-                            { model: 'heading6', view: 'h6', title: 'Heading 6', class: 'ck-heading_heading6' }
-                        ]
-                    },
-                    language: language || 'en',
-                    image: {
-                        toolbar: ['imageStyle:inline', 'imageStyle:block', 'imageStyle:side', '|', 'toggleImageCaption', 'imageTextAlternative']
-                    },
-                    table: {
-                        contentToolbar: ['tableColumn', 'tableRow', 'mergeTableCells', 'tableProperties', 'tableCellProperties']
-                    },
-                    link: {
-                        decorators: {
-                            openInNewTab: {
-                                mode: 'manual',
-                                label: 'Open in a new tab',
-                                defaultValue: true,
-                                attributes: {
-                                    target: '_blank',
-                                    rel: 'noopener noreferrer'
-                                }
-                            }
-                        }
-                    },
-                    placeholder: 'Write rich content here...',
+            function initTinyMCEEditors() {
+                if (typeof tinymce === 'undefined') {
+                    return;
+                }
+
+                tinymce.remove('textarea.rich-editor');
+
+                tinymce.init({
+                    selector: 'textarea.rich-editor',
                     height: 260,
-                    autosave: {
-                        save: function () {
-                            return Promise.resolve();
-                        }
-                    },
-                    wordCount: {
-                        displayWords: true,
-                        displayCharacters: true
-                    }
-                };
-            }
-
-            const editorInstances = new Map();
-
-            function initRichEditors(language) {
-                document.querySelectorAll('.rich-editor').forEach(function (field) {
-                    const key = field.id || field.name || 'rich-editor';
-                    if (field.dataset.ckeditorInitialized === '1' && field.dataset.editorLanguage === language) {
-                        return;
-                    }
-
-                    if (field.dataset.ckeditorInitialized === '1') {
-                        const existingEditor = editorInstances.get(key);
-                        if (existingEditor) {
-                            const content = existingEditor.getData();
-                            existingEditor.destroy();
-                            editorInstances.delete(key);
-                            field.value = content;
-                        }
-                    }
-
-                    ClassicEditor.create(field, getEditorConfig(language)).then(function (editor) {
-                        editorInstances.set(key, editor);
-                        field.dataset.ckeditorInitialized = '1';
-                        field.dataset.editorLanguage = language;
-                        field.closest('form')?.addEventListener('submit', function () {
-                            editor.updateSourceElement();
+                    menubar: false,
+                    plugins: 'advlist autolink lists link image charmap preview anchor searchreplace visualblocks code fullscreen insertdatetime media table wordcount help',
+                    toolbar: 'undo redo | formatselect | bold italic underline strikethrough | bullist numlist outdent indent | alignleft aligncenter alignright alignjustify | link image media table | removeformat | code',
+                    toolbar_mode: 'wrap',
+                    branding: false,
+                    automatic_uploads: true,
+                    image_title: true,
+                    file_picker_types: 'image media',
+                    content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px; }',
+                    setup: function (editor) {
+                        editor.on('change input undo redo', function () {
+                            editor.save();
+                            debouncedSaveDraft();
                         });
-                    }).catch(function (error) {
-                        console.error('CKEditor failed to initialize:', error);
-                        field.setAttribute('placeholder', 'Use the toolbar for headings, bold, italic, underline, lists, links, images, tables, and code blocks.');
-                    });
+                    }
                 });
             }
 
-            const languageSelect = document.getElementById('editor_language');
-            if (languageSelect) {
-                languageSelect.addEventListener('change', function () {
-                    initRichEditors(this.value);
-                });
+            function checkDraftAvailable() {
+                if (localStorage.getItem(draftStorageKey)) {
+                    setDraftStatus('Draft available in browser storage. Click restore to load it.');
+                } else {
+                    setDraftStatus('No saved draft found yet.');
+                }
             }
 
-            initRichEditors(languageSelect ? languageSelect.value : 'en');
+            initTinyMCEEditors();
+
+            document.getElementById('restoreDraftBtn')?.addEventListener('click', restoreDraft);
+            document.getElementById('clearDraftBtn')?.addEventListener('click', function () {
+                clearDraft();
+                checkDraftAvailable();
+            });
+
+            document.querySelectorAll('input, textarea').forEach(function (field) {
+                field.addEventListener('input', debouncedSaveDraft);
+            });
+
+            window.addEventListener('beforeunload', saveDraft);
+
+            if (publishSuccess) {
+                clearDraft();
+            }
+
+            checkDraftAvailable();
         });
     </script>
     <style>
@@ -562,6 +743,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .alert { padding: 12px; border-radius: 10px; margin-bottom: 14px; }
         .alert.error { background: #fee2e2; color: #991b1b; }
         .alert.success { background: #dcfce7; color: #166534; }
+        .alert.warning { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
         .small { color: #475569; font-size: 13px; }
         .hero { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
         .badge { display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 999px; background: #ecfdf5; color: #166534; border: 1px solid #a7f3d0; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
@@ -617,17 +799,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <?php if ($error !== ''): ?><div class="alert error"><?php echo safe($error); ?></div><?php endif; ?>
         <?php if ($success !== ''): ?><div class="alert success"><?php echo safe($success); ?></div><?php endif; ?>
+        <div class="alert warning">A valid API key is required to continue using TinyMCE. Please alert the admin to check the current API key.</div>
 
-        <div class="field-block" style="max-width: 280px; margin-bottom: 16px;">
-            <label for="editor_language">Editor Language</label>
-            <select id="editor_language">
-                <option value="en">English</option>
-                <option value="am">አማርኛ</option>
-                <option value="om">Afaan Oromoo</option>
-            </select>
+        <p class="small">TinyMCE is enabled for the editor fields below. Use the toolbar for headings, bold, italic, lists, links, tables, and code formatting.</p>
+        <div class="toolbar-note">Rich editor features: Undo / Redo, Word Count, image insertion, and table support.</div>
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:10px;">
+            <div id="draftStatus" class="small">Draft status will appear here.</div>
+            <button type="button" id="restoreDraftBtn" class="ghost-btn" style="background:#fef3c7; border-color:#fde68a;">Restore Draft</button>
+            <button type="button" id="clearDraftBtn" class="ghost-btn" style="background:#fee2e2; border-color:#fecaca;">Clear Draft</button>
         </div>
-        <p class="small">Choose the editor language and use the toolbar for headings, bold, italic, underline, strikethrough, subscript, superscript, font size, font family, text color, background highlight, numbered and bullet lists, nested lists, block quotes, horizontal lines, links, images, tables, and code blocks.</p>
-        <div class="toolbar-note">Advanced features enabled: Find &amp; Replace, Undo / Redo, Auto Save, Word Count, and Character Count.</div>
 
         <form method="post" enctype="multipart/form-data">
             <div class="grid">
@@ -698,7 +878,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <button type="button" id="addLessonModuleBtn" class="ghost-btn" style="background:#eff6ff; border-color:#bfdbfe;">+ Add Module</button>
                     <span class="small">Tip: Drag lesson cards to reorder the learning flow before you publish.</span>
                 </div>
-                <textarea id="builder_modules" name="builder_modules" hidden></textarea>
+                <div class="field-block">
+                    <label for="builder_modules">Generated Course Outline (Builder Output)</label>
+                    <textarea id="builder_modules" name="builder_modules" style="min-height:120px;" placeholder="This field is populated by the lesson builder."></textarea>
+                </div>
+                <div class="field-block">
+                    <label>Lesson Outline Preview</label>
+                    <div id="lessonBuilderPreview" class="builder-output-preview">No modules added yet.</div>
+                </div>
                 <div class="field-block" style="margin-top:12px;">
                     <label for="modules">Optional Rich Text Outline</label>
                     <textarea id="modules" name="modules" class="rich-editor" placeholder="Alternative outline text if you prefer the classic editor format."></textarea>
@@ -761,7 +948,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
                     <button type="button" id="addAssignmentItemBtn" class="ghost-btn" style="background:#eff6ff; border-color:#bfdbfe;">+ Add Assignment</button>
                 </div>
-                <textarea id="builder_assignment" name="builder_assignment" hidden></textarea>
+                <div class="field-block">
+                    <label for="builder_assignment">Generated Assignment Output</label>
+                    <textarea id="builder_assignment" name="builder_assignment" style="min-height:120px;" placeholder="This field is populated by the assignment builder."></textarea>
+                </div>
                 <div class="field-block" style="margin-top:12px;">
                     <label for="assignment">Optional Rich Text Assignment Notes</label>
                     <textarea id="assignment" name="assignment" class="rich-editor" placeholder="Add lesson notes, paragraph text, assignment instructions, or learner activities here."></textarea>
@@ -775,7 +965,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
                     <button type="button" id="addQuizItemBtn" class="ghost-btn" style="background:#eff6ff; border-color:#bfdbfe;">+ ጥያቄ ጨምር</button>
                 </div>
-                <textarea id="builder_quiz" name="builder_quiz" hidden></textarea>
+                <div class="field-block">
+                    <label for="builder_quiz">Generated Quiz Output</label>
+                    <textarea id="builder_quiz" name="builder_quiz" style="min-height:120px;" placeholder="This field is populated by the quiz builder."></textarea>
+                </div>
                 <div class="field-block" style="margin-top:12px;">
                     <label for="quiz">Optional Rich Text Quiz Questions</label>
                     <textarea id="quiz" name="quiz" class="rich-editor" placeholder="1. What is the main topic?&#10;2. Which action is most important?&#10;3. What should learners practice?"></textarea>
