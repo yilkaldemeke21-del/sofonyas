@@ -95,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         .toast-error { background: linear-gradient(135deg, #dc2626, #b91c1c); }
         .toast-info { background: linear-gradient(135deg, #2563eb, #4f46e5); }
         .hero-section { position: relative; overflow: hidden; border-radius: 28px; min-height: 760px; margin: 24px 0 28px; background: linear-gradient(135deg, rgba(15,23,42,0.86), rgba(30,41,59,0.76)); box-shadow: 0 25px 45px rgba(15,23,42,0.18); }
-        .hero-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: object-fit: contain; opacity: 0.4; filter: brightness(0.72) saturate(1.08); }
+        .hero-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; object-position: center; opacity: 1; filter: none; }
         .hero-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(2,6,23,0.24), rgba(15,23,42,0.24)); }
         .hero-content { position: relative; z-index: 2; display: grid; grid-template-columns: minmax(320px, 1.1fr) minmax(320px, 0.9fr); gap: 32px; padding: 60px 42px; align-items: center; }
         .hero-copy { color: #fff; max-width: 660px; }
@@ -302,16 +302,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         <div class="testimonial-slider">
             <div class="testimonial-track" id="testimonialTrack">
                 <div class="testimonial-card">
-                    <p>“The platform is easy to use, inspiring, and full of practical learning content.”</p>
-                    <strong>— Selam, Student</strong>
+                    <p>“"ይህ የመማሪያ መድረክ ለመጠቀም ቀላል፣ ተማሪዎችን የሚያነሳሳ እና በተግባር የሚጠቅሙ የትምህርት ይዘቶችን የያዘ ነው።”</p>
+                    <strong>— ማናየ(ዘደ/ማርቆስ), ተማሪ</strong>
+                </div>
+                  <div class="testimonial-card">
+                    <p>“"የቀጥታ መመሪያ አገልግሎቱ፣ ማራኪ ዲዛይኑ እና ለመጠቀም ቀላል የሆነው የአሰሳ ስርዓት በጣም ወድጄዋለሁ።".”</p>
+                    <strong>— M.r ወ/መርቆርዮስ(ዘሞጣ), መምህር</strong>
+                </div>
+<div class="testimonial-card">
+                    <p>“ይህ ድህረ ገጽ በጣም በቀላሉ ለመረዳት የሚችል እና የእምነት ትምህርትን በጥልቅ የሚያስተምር ነው። ዲያቆን ሶፎንያስ ደመቀ የሚያቀርበው ትምህርት በግልጽ እና በፍቅር የተሞላ ነው። በቤተ ክርስቲያን እውቀት ለመጨመር በጣም ጥሩ መንገድ ነው።”</p>
+                    <strong>— ማስተዋል(ዘጎንደር), ተማሪ</strong>
+                    </div>
+                <div class="testimonial-card">
+                    <p>“በዚህ በቤተ ገብርኤል የሚያቀርበው ትምህርት ዘመናዊ እና በጥሩ ስርዓት የተደረገ ነው። በቤት ቁጭ ብዬ እንኳ እምነትን እና ቤተ ክርስቲያንን በጥልቅ መማር ቻልኩ። እጅግ አመሰግናለሁ።”</p>
+                    <strong>— ክብር ተመስገን(ዘሞጣ), የማኅበር አባል</strong>
+                    </div>
+                     <div class="testimonial-card">
+                    <p>“በዚህ ኦንላይን ትምህርት መድረክ መማር ህይወቴን ቀይሮታል። ትምህርቶቹ ቀላል ናቸው፣ እና የኢትዮጵያ ኦርቶዶክስ እምነትን በትክክል እንድማር ረድቶኛል። በተለይ የዲያቆን ሶፎንያስ መግለጫ በጣም ግልጽ ነው።”</p>
+                    <strong>— ትእግስት(ዘቢቸና), ተማሪ</strong>
                 </div>
                 <div class="testimonial-card">
-                    <p>“The course experience feels modern and organized. I can learn at my own pace.”</p>
-                    <strong>— Henok, Learner</strong>
+                    <p>“የኮርሱ አቀራረብ ዘመናዊ፣ በጥሩ ሁኔታ የተደራጀ እና ለመረዳት ቀላል ነው። እንዲሁም በራሴ ጊዜና ፍጥነት መማር እችላለሁ።.”</p>
+                    <strong>— ፋሲካ(መክሊት), ተማሪ</strong>
                 </div>
                 <div class="testimonial-card">
-                    <p>“I love the live guidance, the beautiful design, and the simple navigation.”</p>
-                    <strong>— Meron, Community Member</strong>
+                    <p>“"የቀጥታ መመሪያ አገልግሎቱ፣ ማራኪ ዲዛይኑ እና ለመጠቀም ቀላል የሆነው የአሰሳ ስርዓት በጣም ወድጄዋለሁ።".”</p>
+                    <strong>— ፍቅረ, ተማሪ</strong>
                 </div>
             </div>
             <div class="testimonial-nav" id="testimonialNav"></div>
