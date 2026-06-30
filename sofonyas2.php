@@ -94,27 +94,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         .toast-success { background: linear-gradient(135deg, #16a34a, #15803d); }
         .toast-error { background: linear-gradient(135deg, #dc2626, #b91c1c); }
         .toast-info { background: linear-gradient(135deg, #2563eb, #4f46e5); }
-        .hero-section { position: relative; overflow: hidden; border-radius: 28px; min-height: 560px; margin: 24px 0 28px; background: linear-gradient(135deg, rgba(15,23,42,0.92), rgba(30,41,59,0.82)); box-shadow: 0 25px 45px rgba(15,23,42,0.18); }
-        .hero-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.25; filter: blur(2px); }
-        .hero-overlay { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(2,6,23,0.86), rgba(15,23,42,0.35)); }
-        .hero-content { position: relative; z-index: 2; display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 24px; padding: 48px 36px; align-items: center; }
-        .hero-copy { color: #fff; max-width: 620px; }
-        .hero-copy h1 { font-size: clamp(2rem, 4vw, 3.2rem); line-height: 1.1; margin-bottom: 14px; }
-        .hero-copy p { font-size: 1.05rem; color: #e2e8f0; line-height: 1.7; }
+        .hero-section { position: relative; overflow: hidden; border-radius: 28px; min-height: 760px; margin: 24px 0 28px; background: linear-gradient(135deg, rgba(15,23,42,0.86), rgba(30,41,59,0.76)); box-shadow: 0 25px 45px rgba(15,23,42,0.18); }
+        .hero-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: object-fit: contain; opacity: 0.4; filter: brightness(0.72) saturate(1.08); }
+        .hero-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(2,6,23,0.24), rgba(15,23,42,0.24)); }
+        .hero-content { position: relative; z-index: 2; display: grid; grid-template-columns: minmax(320px, 1.1fr) minmax(320px, 0.9fr); gap: 32px; padding: 60px 42px; align-items: center; }
+        .hero-copy { color: #fff; max-width: 660px; }
+        .hero-copy h1 { font-size: clamp(2.2rem, 4vw, 3.6rem); line-height: 1.05; margin-bottom: 16px; }
+        .hero-copy p { font-size: 1.05rem; color: #e2e8f0; line-height: 1.75; }
         .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
         .button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: linear-gradient(135deg, #2563eb, #4f46e5); color: white; text-decoration: none; padding: 12px 18px; border-radius: 999px; font-weight: 700; box-shadow: 0 12px 24px rgba(37,99,235,0.25); }
         .button.secondary { background: rgba(255,255,255,0.16); box-shadow: none; border: 1px solid rgba(255,255,255,0.2); }
         .hero-stats { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
-        .hero-stat { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.16); border-radius: 14px; padding: 10px 12px; font-size: 0.95rem; backdrop-filter: blur(8px); }
-        .hero-visual { position: relative; }
-        .hero-card { background: rgba(255,255,255,0.96); border-radius: 24px; padding: 16px; box-shadow: 0 18px 35px rgba(2,6,23,0.25); }
-        .hero-slide { display: none; animation: fadeIn 0.6s ease; }
-        .hero-slide.active { display: block; }
-        .hero-slide img { width: 100%; height: 280px; object-fit: cover; border-radius: 18px; }
-        .hero-slider-dots { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
+        .hero-stat { background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.18); border-radius: 14px; padding: 10px 12px; font-size: 0.95rem; backdrop-filter: blur(10px); }
+        .hero-visual { position: relative; display: flex; align-items: center; justify-content: center; margin: 0 auto 32px; max-width: 660px; }
+        /* Slider separation */
+        .slider-section { margin-top: 24px; }
+        /* Card becomes container for stacked slides */
+        .hero-card { position: relative; background: rgba(255,255,255,0.98); border-radius: 32px; padding: 18px; box-shadow: 0 28px 60px rgba(15,23,42,0.18); min-height: 520px; max-width: 660px; width: 100%; display: block; backdrop-filter: blur(16px); overflow: hidden; }
+        /* Stack slides absolutely and crossfade via opacity */
+        .hero-slide { position: absolute; inset: 0; opacity: 0; transition: opacity 0.8s ease; display: flex; align-items: center; justify-content: center; z-index: 1; }
+        .hero-slide.active { opacity: 1; z-index: 2; }
+        .hero-slide img { width: 100%; height: 100%; object-fit: contain; border-radius: 18px; display: block; }
+        .hero-slider-dots { display: flex; gap: 8px; justify-content: center; margin-top: 16px; }
         .hero-slider-dots button { width: 10px; height: 10px; border-radius: 999px; border: none; background: #cbd5e1; cursor: pointer; }
         .hero-slider-dots button.active { background: #2563eb; transform: scale(1.2); }
-        .floating-card { position: absolute; right: -18px; bottom: -18px; background: linear-gradient(135deg, #0f172a, #334155); color: white; border-radius: 18px; padding: 14px 16px; max-width: 220px; box-shadow: 0 18px 30px rgba(15,23,42,0.22); animation: floatUp 3.2s ease-in-out infinite; }
+        .floating-card { position: absolute; right: -18px; bottom: -18px; background: linear-gradient(135deg, #0f172a, #334155); color: white; border-radius: 18px; padding: 14px 16px; max-width: 240px; box-shadow: 0 18px 30px rgba(15,23,42,0.22); animation: floatUp 3.2s ease-in-out infinite; }
         .floating-card strong { display:block; margin-bottom:6px; }
         .card { background: rgba(255,255,255,0.9); border: 1px solid #e2e8f0; border-radius: 20px; padding: 20px; box-shadow: 0 12px 30px rgba(15,23,42,0.06); margin-bottom: 22px; }
         .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.8s ease, transform 0.8s ease; }
@@ -122,7 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         .course-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 16px; }
         .course-card { background: #fff; border-radius: 16px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 10px 20px rgba(15,23,42,0.05); transition: transform 0.25s ease, box-shadow 0.25s ease; }
         .course-card:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 16px 32px rgba(15,23,42,0.12); }
-        .course-card img { width: 100%; height: 150px; object-fit: cover; transition: transform 0.35s ease; }
+        .course-card img { width: 100%; height: 75%; object-fit: cover; transition: transform 0.35s ease; }
         .course-card:hover img { transform: scale(1.08); }
         .course-card .content { padding: 12px 14px; }
         .testimonial-slider { position: relative; overflow: hidden; margin-top: 16px; }
@@ -135,7 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         .zoomable-img:hover { transform: scale(1.04); }
         @keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
         @keyframes floatUp { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-        @media (max-width: 900px) { .hero-content { grid-template-columns: 1fr; padding: 28px 20px; } .floating-card { position: relative; right:auto; bottom:auto; margin-top:12px; } }
+        @media (max-width: 900px) { .hero-content { grid-template-columns: 1fr; padding: 28px 20px; } .hero-section { min-height: 860px; } .hero-card { min-height: auto; width: 100%; transform: translateY(0); } .hero-slide { min-height: 360px; } .floating-card { position: relative; right:auto; bottom:auto; margin-top:12px; } }
     </style>
 </head>
 <body>
@@ -146,16 +150,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
     <nav>
         <ul>
             <li><a href="https://t.me/+Bqeu85XkOu4yMzFk" data-am="መነሻ" data-en="Home">Home</a></li>
-            <li><a href="#about" data-am="ስለ እኛ" data-en="About">About</a></li>
-            <li><a href="student_login.php" data-am="የተማሪ ማዕከል" data-en="Student Center">exam center</a></li>
-            <li><a href="#view" data-am="እይታ" data-en="View">View</a></li>
-            <li><a href="contact.html" data-am="እናግራ" data-en="Contact">Contact</a></li>
+            <li><a href="#about" data-am="about" data-en="About">About</a></li>
+            <li><a href="student_login.php" data-am="Student Login" data-en="Student Center">exam center</a></li>
+            <li><a href="#view" data-am="view" data-en="View">View</a></li>
+            <li><a href="contact.html" data-am="contact" data-en="Contact">Contact</a></li>
              <li><a href="dashboard.php">Dashboard</a></li>
             <li><a href="exam20.php">exam portal</a></li>
             <li><a href="tutorial.php">Courses</a></li>
             <li><a href="discussion_forum.php">Forum</a></li>
             <li><a href="library.php">Library</a></li>
-            <li><a href="student_login.php">Student Login</a></li>
             <li><a href="admin_login.php">Admin Login</a></li>
             <li><a href="student_register.php">Register</a></li>
         </ul>
@@ -187,31 +190,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
                     <a class="button secondary" href="#about" data-am="ተጨማሪ ይወቁ" data-en="Learn More">Learn More</a>
                 </div>
                 <div class="hero-stats reveal">
-                    <div class="hero-stat">📚 100+ Lessons</div>
-                    <div class="hero-stat">🎯 Live Exams</div>
-                    <div class="hero-stat">🏅 Certificates</div>
-                </div>
-            </div>
-            <div class="hero-visual reveal">
-                <div class="hero-card">
-                    <div class="hero-slide active">
-                        <img src="10 .jpg" alt="Community preview">
-                    </div>
-                    <div class="hero-slide">
-                        <img src="sofi photo.jpg" alt="Sofoniyas community photo">
-                    </div>
-                    <div class="hero-slide">
-                        <img src="motta sofi.jpg" alt="Students learning">
-                    </div>
-                    <div class="hero-slider-dots" id="heroSliderDots"></div>
-                </div>
-                <div class="floating-card">
-                    <strong>✨ Student Favorite</strong>
-                    <span>Interactive lessons, guided exams, and community support in one place.</span>
+                    <div class="hero-stat">📚 100+ ሌሰኖች</div>
+                    <div class="hero-stat">🎯 ኦንላይን ፈተናዎች</div>
+                    <div class="hero-stat">🏅 ሰርተፊኬት</div>
                 </div>
             </div>
         </div>
     </header>
+
+    <section class="card reveal hero-visual slider-section" aria-label="Hero image slider">
+        <div class="hero-card">
+            <div class="hero-slide active">
+                <img src="10 .jpg" alt="Community preview">
+            </div>
+            <div class="hero-slide active">
+                <img src="IMG_20241202_031425_251.jpg" alt="Community preview">
+            </div>
+            <div class="hero-slide">
+                <img src="sofi photo.jpg" alt="Sofoniyas community photo">
+            </div>
+            <div class="hero-slide active">
+                <img src="sofi logo.jpg" alt="Community preview">
+            </div>
+            <div class="hero-slide">
+                <img src="motta sofi.jpg" alt="Students learning">
+            </div>
+            <div class="hero-slide active">
+                <img src="sofi2.jpg" alt="Community preview">
+            </div>
+            <div class="hero-slider-dots" id="heroSliderDots"></div>
+        </div>
+    </section>
 
     <section class="card reveal slider-section" aria-label="Featured gallery">
         <h2 data-am="የተመረጡ ምስሎች" data-en="Featured Images">Featured Images</h2>
@@ -238,7 +247,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
                 <img src="10 .jpg" alt="Religious teachings">
                 <div class="content">
                     <h3 data-am="ነገረ ሃይማኖት" data-en="Religious teachings">ነገረ ሃይማኖት</h3>
-                    <p data-am="የእምነት ትምህርት እና ማብራሪያ" data-en="Faith-based teachings and guidance">Faith-based teachings and guidance</p>
+                    <p data-am="የሃይማኖት ትምህርት እና ማብራሪያ" data-en="Faith-based teachings and guidance">Faith-based teachings and guidance</p>
                 </div>
             </div>
             <div class="course-card">
@@ -252,7 +261,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
                 <img src="motta sofi.jpg" alt="The message of anointing">
                 <div class="content">
                     <h3 data-am="ነገረ ቅባት" data-en="The message of anointing">ነገረ ቅባት</h3>
-                    <p data-am="ብልጥ የትምህርት እና ልምድ እድል" data-en="Deep learning experiences and practical insight">Deep learning experiences and practical insight</p>
+                    <p data-am="ጥልቅ የትምህርት እና ልምድ እድል" data-en="Deep learning experiences and practical insight">Deep learning experiences and practical insight</p>
                 </div>
             </div>
         </div>
@@ -489,10 +498,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
                 heroDotsContainer.appendChild(dot);
             });
             setInterval(() => {
-                heroSlideIndex = (heroSlideIndex + 1) % heroSlides.length;
+                heroSlideIndex = (heroSlideIndex - 1 + heroSlides.length) % heroSlides.length;
                 heroSlides.forEach((slide, slideIndex) => slide.classList.toggle('active', slideIndex === heroSlideIndex));
                 Array.from(heroDotsContainer.children).forEach((button, buttonIndex) => button.classList.toggle('active', buttonIndex === heroSlideIndex));
-            }, 5000);
+            }, 3000);
         }
 
         function startTestimonialSlider() {

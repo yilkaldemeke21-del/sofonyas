@@ -677,9 +677,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 tinymce.init({
                     selector: 'textarea.rich-editor',
                     height: 260,
-                    menubar: false,
+                    menubar: 'format',
                     plugins: 'advlist autolink lists link image charmap preview anchor searchreplace visualblocks code fullscreen insertdatetime media table wordcount help',
-                    toolbar: 'undo redo | formatselect | bold italic underline strikethrough | bullist numlist outdent indent | alignleft aligncenter alignright alignjustify | link image media table | removeformat | code',
+                    toolbar: 'undo redo | styleselect | bold italic underline strikethrough | bullist numlist outdent indent | alignleft aligncenter alignright alignjustify | link image media table | removeformat | code',
+                    block_formats: 'Paragraph=p;Heading 1=h1;Heading 2=h2;Heading 3=h3;Heading 4=h4;Heading 5=h5;Heading 6=h6',
+                    style_formats: [
+                        { title: 'Headings', items: [
+                            { title: 'Heading 1', format: 'h1' },
+                            { title: 'Heading 2', format: 'h2' },
+                            { title: 'Heading 3', format: 'h3' },
+                            { title: 'Heading 4', format: 'h4' },
+                            { title: 'Heading 5', format: 'h5' },
+                            { title: 'Heading 6', format: 'h6' }
+                        ]}
+                    ],
                     toolbar_mode: 'wrap',
                     branding: false,
                     automatic_uploads: true,
