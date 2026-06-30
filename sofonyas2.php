@@ -102,8 +102,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         .hero-copy h1 { font-size: clamp(2.2rem, 4vw, 3.6rem); line-height: 1.05; margin-bottom: 16px; }
         .hero-copy p { font-size: 1.05rem; color: #e2e8f0; line-height: 1.75; }
         .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
-        .button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: linear-gradient(135deg, #2563eb, #4f46e5); color: white; text-decoration: none; padding: 12px 18px; border-radius: 999px; font-weight: 700; box-shadow: 0 12px 24px rgba(37,99,235,0.25); }
-        .button.secondary { background: rgba(255,255,255,0.16); box-shadow: none; border: 1px solid rgba(255,255,255,0.2); }
+        .button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: linear-gradient(135deg, #f10eb1, #4f46e5); color: white; text-decoration: none; padding: 12px 18px; border-radius: 999px; font-weight: 700; box-shadow: 0 12px 24px rgba(37,99,235,0.25); }
+        .button.secondary { background: linear-gradient(135deg, #38bdf8, #e10bb3); color: white; box-shadow: 0 12px 24px rgba(56,189,248,0.2); border: none; }
+        .button.secondary:hover { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
         .hero-stats { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
         .hero-stat { background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.18); border-radius: 14px; padding: 10px 12px; font-size: 0.95rem; backdrop-filter: blur(10px); }
         .hero-visual { position: relative; display: flex; align-items: center; justify-content: center; margin: 0 auto 32px; max-width: 660px; }
@@ -130,6 +131,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         .floating-card { position: absolute; right: -18px; bottom: -18px; background: linear-gradient(135deg, #0f172a, #334155); color: white; border-radius: 18px; padding: 14px 16px; max-width: 240px; box-shadow: 0 18px 30px rgba(15,23,42,0.22); animation: floatUp 3.2s ease-in-out infinite; }
         .floating-card strong { display:block; margin-bottom:6px; }
         .card { background: rgba(255,255,255,0.9); border: 1px solid #e2e8f0; border-radius: 20px; padding: 20px; box-shadow: 0 12px 30px rgba(15,23,42,0.06); margin-bottom: 22px; }
+        .contact-form { background: linear-gradient(135deg, #edf2ff 0%, #dbeafe 42%, #eff6ff 100%); border: 1px solid #a5b4fc; padding: 32px; border-radius: 30px; box-shadow: 0 32px 70px rgba(15,23,42,0.16); max-width: 720px; margin: 0 auto; }
+        .contact-form h3 { margin-top: 0; margin-bottom: 20px; color: #1e40af; font-size: clamp(2rem, 2.6vw, 2.7rem); text-align: center; letter-spacing: 0.03em; background: linear-gradient(135deg, rgba(59,130,246,0.18), rgba(96,165,250,0.18)); display: inline-block; padding: 14px 24px; border-radius: 20px; box-shadow: 0 12px 24px rgba(59,130,246,0.16); }
+        .contact-form form { display: grid; gap: 18px; }
+        .contact-form .form-field { display: grid; gap: 8px; }
+        .contact-form label { font-weight: 700; color: #0f172a; }
+        .contact-form input,
+        .contact-form textarea { width: 100%; min-height: 54px; padding: 18px 20px; border: 1px solid #cbd5e1; border-radius: 18px; background: #f7fbff; color: #0f172a; font-size: 1rem; transition: all 0.2s ease; }
+        .contact-form input::placeholder,
+        .contact-form textarea::placeholder { color: #475569; opacity: 1; font-size: 1.1rem; font-weight: 500; }
+        .contact-form textarea { min-height: 140px; resize: vertical; }
+        .contact-form input:focus,
+        .contact-form textarea:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 4px rgba(37,99,235,0.16); background: #ffffff; }
+        .contact-form .controls { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; align-items: center; margin-top: 6px; }
+        .contact-form .button { min-width: 140px; }
+        .contact-form .small { font-size: 0.95rem; color: #475569; text-align: center; }
+        .contact-form .button:hover { transform: translateY(-1px); }
+        @media (max-width: 760px) { .contact-form { padding: 22px; } }
         .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.8s ease, transform 0.8s ease; }
         .reveal.visible { opacity: 1; transform: translateY(0); }
         .course-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 16px; }
@@ -158,7 +176,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
 
     <nav>
         <ul>
-            <li><a href="https://t.me/+Bqeu85XkOu4yMzFk" data-am="መነሻ" data-en="Home">Home</a></li>
+            <li><a href="https://t.me/+Bqeu85XkOu4yMzFk" data-am="tele_ join" data-en="Home">Home</a></li>
             <li><a href="#about" data-am="about" data-en="About">About</a></li>
             <li><a href="student_login.php" data-am="Student Login" data-en="Student Center">exam center</a></li>
             <li><a href="#view" data-am="view" data-en="View">View</a></li>
@@ -218,6 +236,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
                 <img src="10 .jpg" alt="Community preview">
             </div>
             <div class="hero-slide active">
+                <img src="sofi 3 photo.jpg" alt="Community preview">
+            </div>
+            <div class="hero-slide active">
                 <img src="IMG_20241202_031425_251.jpg" alt="Community preview">
             </div>
             <div class="hero-slide">
@@ -253,7 +274,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         <h2 data-am="ስለ ቤተ ገብርኤል" data-en="About the Community">ስለ ቤተ ገብርኤል</h2>
         <p data-am="ቤተ ገብርኤል በመቅደላ አምባ ዩኒቨርሲቲ በፈለገ ሰላም አዲስ አምባ ግቢ ጉባኤ የቤተሰብ እናት አባት አደረጃጀት ውስጥ አንዱና ተናፋቂው ቡድን ነው፣ይህ ድር ገፅ በእውነተኛ ባክኤንድ ገፆች ላይ የተመሰረተ ነው። ኮርስ መመዝገብ፣ ተማሪ እና አስተዳዳሪ ዳሽቦርድ፣ ፎርም ቀጥታ መግባት እና ማስታወቂያ በአንድ አጠቃቀም ይሰራሉ።" data-en="The community is a vibrant and active group within the family structure of the church, dedicated to spiritual growth and shared service.">ቤተ ገብርኤል በመቅደላ አምባ ዩኒቨርሲቲ በፈለገ ሰላም አዲስ አምባ ግቢ ጉባኤ የቤተሰብ እናት አባት አደረጃጀት ውስጥ አንዱና ተናፋቂው ቡድን ነው</p>
     </div>
-
+<section class="card reveal" aria-label="Quick Start">
+        <h2>አጭር ማሰስ / Quick Start</h2>
+        <div class="quick-grid">
+            <article class="quick-card"><h3>ተማሪ</h3><p>ኮርስ መመዝገብ እና ዳሽቦርድ ለመከታተል።</p><a class="button" href="student_login.php">ወደ ተማሪ መግቢያ</a> </article>
+            <article class="quick-card"><h3>አስተዳዳሪ</h3><p>ኮርስ፣ ጥያቄዎች እና አስተዳደር ፍርግርግ ለመቆጣጠር።</p><a class="button secondary" href="admin_login.php">ወደ አስተዳዳሪ</a></article>
+            <article class="quick-card"><h3>ኮርሶች</h3><p>የትምህርት እና የPDF መረጃዎችን ለመመልከት።</p><a class="button" href="tutorial.php">ወደ ኮርሶች</a></article>
+            <article class="quick-card"><h3>ፎርም</h3><p>ለተማሪዎች እና ለአስተዳዳሪዎች ማስታወቂያ እና ክፍል ለመጠየቅ።</p><a class="button" href="discussion_forum.php">ወደ ፎርም</a></article>
+        </div>
+    </section>
     <div class="card reveal">
         <h2 data-am="በዚህ ዌቭሳይት የሚካተቱ ትምህርቶች" data-en="Courses Included on This Website">በዚህ ዌቭሳይት የሚካተቱ ትምህርቶች</h2>
         <div class="course-grid">
@@ -351,24 +380,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
     <section class="card contact-form reveal">
         <h3 data-am="እንኳን ወደ ቤተ ገብርኤል በደህና መጡ!" data-en="Welcome to the Community!">እንኳን ወደ ቤተ ገብርኤል በደህና መጡ!</h3>
         <form id="contactForm" action="register.php" method="post" novalidate>
-            <label for="name" data-am="ስም" data-en="Name">ስም</label>
-            <input id="name" name="name" required placeholder="ስምዎን እዚህ ያስገቡ"><br><br>
-
-            <label for="email" data-am="ኢሜይል" data-en="Email">ኢሜይል</label>
-            <input id="email" name="email" type="email" required placeholder="እባክዎ ኢሜይሎን ያስገቡ"><br><br>
-
-            <label for="student_id" data-am="የተማሪ መለያ ቁጥር" data-en="Student ID">የተማሪ መለያ ቁጥር</label>
-            <input type="text" id="student_id" name="student_id" placeholder="እባክዎ መለያ ቁጥር ያስገቡ" required><br><br>
-
-            <label for="password" data-am="ፓስወርድ" data-en="Password">ፓስወርድ</label>
-            <input id="password" name="password" type="password" placeholder="ፓስወርድ ያስገቡ" required><br><br>
-
-            <div class="controls"><br>
+            <div class="form-field">
+                <label for="name" data-am="ስም" data-en="Name">ስም</label>
+                <input id="name" name="name" required placeholder="ስምዎን እዚህ ያስገቡ">
+            </div>
+            <div class="form-field">
+                <label for="email" data-am="ኢሜይል" data-en="Email">ኢሜይል</label>
+                <input id="email" name="email" type="email" required placeholder="እባክዎ ኢሜይሎን ያስገቡ">
+            </div>
+            <div class="form-field">
+                <label for="student_id" data-am="የተማሪ መለያ ቁጥር" data-en="Student ID">የተማሪ መለያ ቁጥር</label>
+                <input type="text" id="student_id" name="student_id" placeholder="እባክዎ መለያ ቁጥር ያስገቡ" required>
+            </div>
+            <div class="form-field">
+                <label for="password" data-am="ፓስወርድ" data-en="Password">ፓስወርድ</label>
+                <input id="password" name="password" type="password" placeholder="ፓስወርድ ያስገቡ" required>
+            </div>
+            <div class="controls">
                 <button type="submit" class="button" data-am="ግባ" data-en="Register"><span class="loading" aria-hidden="true"></span>ግባ</button>
-                <button type="reset" class="button" data-am="አጥፋ" data-en="Clear">አጥፋ</button>
+                <button type="reset" class="button secondary" data-am="አጥፋ" data-en="Clear">አጥፋ</button>
             </div>
         </form>
-        <div id="formMsg" class="small" aria-live="polite" style="margin-top:10px"></div>
+        <div id="formMsg" class="small" aria-live="polite"></div>
     </section>
 
     <div class="card reveal">
