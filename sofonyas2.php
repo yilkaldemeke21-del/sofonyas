@@ -109,6 +109,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         .hero-visual { position: relative; display: flex; align-items: center; justify-content: center; margin: 0 auto 32px; max-width: 660px; }
         /* Slider separation */
         .slider-section { margin-top: 24px; }
+        .hero-stats-section { background: linear-gradient(180deg, #09c522 0%, #eef2ff 100%); padding: 18px; border-radius: 16px; margin: 18px 0; }
+        .hero-stats-section h2 { margin-bottom: 12px; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: center; color: #0b1220; direction: ltr; }
+        .stats-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-top: 8px; }
+        .stat-card { background: linear-gradient(135deg, #93c208, #2c049b); border-radius: 12px; padding: 18px; box-shadow: 0 12px 30px rgba(11,18,32,0.06); text-align: center; transition: transform 250ms ease, box-shadow 250ms ease, background 250ms ease; cursor: default; }
+        .stat-card:hover { transform: translateY(-8px); box-shadow: 0 26px 60px rgba(11,18,32,0.12); background: linear-gradient(135deg, #a50d96, #eef2ff); }
+        .stat-card strong { display:block; font-size: 1.6rem; color: #0b1220; }
+        .stat-card span { display:block; margin-top:8px; color:#334155; font-weight:600; }
+        /* make stats friendly for Amharic RTL when page lang is am */
+        html[lang="am"] .hero-stats-section, html[lang="am"] .stat-card { direction: rtl; text-align: center; }
         /* Card becomes container for stacked slides */
         .hero-card { position: relative; background: rgba(255,255,255,0.98); border-radius: 32px; padding: 18px; box-shadow: 0 28px 60px rgba(15,23,42,0.18); min-height: 520px; max-width: 660px; width: 100%; display: block; backdrop-filter: blur(16px); overflow: hidden; }
         /* Stack slides absolutely and crossfade via opacity */
@@ -189,14 +198,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
                     <a class="button" href="student_login.php" data-am="የተማሪ ግባ" data-en="Student Access">Student Access</a>
                     <a class="button secondary" href="#about" data-am="ተጨማሪ ይወቁ" data-en="Learn More">Learn More</a>
                 </div>
-                <div class="hero-stats reveal">
-                    <div class="hero-stat">📚 100+ ሌሰኖች</div>
-                    <div class="hero-stat">🎯 ኦንላይን ፈተናዎች</div>
-                    <div class="hero-stat">🏅 ሰርተፊኬት</div>
-                </div>
             </div>
         </div>
     </header>
+
+    <section class="card reveal hero-stats-section" aria-label="LMS stats">
+        <h2 data-am="የቤተ ገብርኤል አጠቃላይ ዕይታ" data-en="Professional LMS Features">Professional LMS Features</h2>
+        <section class="stats-grid" aria-label="Detailed stats">
+            <article class="stat-card"><strong>500+</strong><span>የተመዘገቡ ተማሪዎች</span></article>
+            <article class="stat-card"><strong>25</strong><span>የተለያዩ ኮርሶች</span></article>
+            <article class="stat-card"><strong>12</strong><span>የተማሪ ዳሽቦርዶች</span></article>
+            <article class="stat-card"><strong>100%</strong><span>የእምነት እና የትምህርት ማዕከል</span></article>
+        </section>
+    </section>
 
     <section class="card reveal hero-visual slider-section" aria-label="Hero image slider">
         <div class="hero-card">
@@ -237,7 +251,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
 
     <div class="card reveal" id="about">
         <h2 data-am="ስለ ቤተ ገብርኤል" data-en="About the Community">ስለ ቤተ ገብርኤል</h2>
-        <p data-am="ቤተ ገብርኤል በመቅደላ አምባ ዩኒቨርሲቲ በፈለገ ሰላም አዲስ አምባ ግቢ ጉባኤ የቤተሰብ እናት አባት አደረጃጀት ውስጥ አንዱና ተናፋቂው ቡድን ነው" data-en="The community is a vibrant and active group within the family structure of the church, dedicated to spiritual growth and shared service.">ቤተ ገብርኤል በመቅደላ አምባ ዩኒቨርሲቲ በፈለገ ሰላም አዲስ አምባ ግቢ ጉባኤ የቤተሰብ እናት አባት አደረጃጀት ውስጥ አንዱና ተናፋቂው ቡድን ነው</p>
+        <p data-am="ቤተ ገብርኤል በመቅደላ አምባ ዩኒቨርሲቲ በፈለገ ሰላም አዲስ አምባ ግቢ ጉባኤ የቤተሰብ እናት አባት አደረጃጀት ውስጥ አንዱና ተናፋቂው ቡድን ነው፣ይህ ድር ገፅ በእውነተኛ ባክኤንድ ገፆች ላይ የተመሰረተ ነው። ኮርስ መመዝገብ፣ ተማሪ እና አስተዳዳሪ ዳሽቦርድ፣ ፎርም ቀጥታ መግባት እና ማስታወቂያ በአንድ አጠቃቀም ይሰራሉ።" data-en="The community is a vibrant and active group within the family structure of the church, dedicated to spiritual growth and shared service.">ቤተ ገብርኤል በመቅደላ አምባ ዩኒቨርሲቲ በፈለገ ሰላም አዲስ አምባ ግቢ ጉባኤ የቤተሰብ እናት አባት አደረጃጀት ውስጥ አንዱና ተናፋቂው ቡድን ነው</p>
     </div>
 
     <div class="card reveal">
@@ -303,31 +317,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
             <div class="testimonial-track" id="testimonialTrack">
                 <div class="testimonial-card">
                     <p>“"ይህ የመማሪያ መድረክ ለመጠቀም ቀላል፣ ተማሪዎችን የሚያነሳሳ እና በተግባር የሚጠቅሙ የትምህርት ይዘቶችን የያዘ ነው።”</p>
-                    <strong>— ማናየ(ዘደ/ማርቆስ), ተማሪ</strong>
+                    <strong> ማናየ(ዘደ/ማርቆስ), ተማሪ</strong>
                 </div>
                   <div class="testimonial-card">
-                    <p>“"የቀጥታ መመሪያ አገልግሎቱ፣ ማራኪ ዲዛይኑ እና ለመጠቀም ቀላል የሆነው የአሰሳ ስርዓት በጣም ወድጄዋለሁ።".”</p>
-                    <strong>— M.r ወ/መርቆርዮስ(ዘሞጣ), መምህር</strong>
+                    <p>“"በዌብሳይት መንፈሳዊ ትምህርት መማር ሕይወትን እና ጊዜን በአግባቡ መጠቀም እና ቴክኖሎጅን አሳላጭ ማድረግ የቤተ ክርስቲያን ሁለንተናዊ እድገት ነው።”</p>
+                    <strong> M.r ወ/መርቆርዮስ(ዘሞጣ), መምህር</strong>
                 </div>
 <div class="testimonial-card">
                     <p>“ይህ ድህረ ገጽ በጣም በቀላሉ ለመረዳት የሚችል እና የእምነት ትምህርትን በጥልቅ የሚያስተምር ነው። ዲያቆን ሶፎንያስ ደመቀ የሚያቀርበው ትምህርት በግልጽ እና በፍቅር የተሞላ ነው። በቤተ ክርስቲያን እውቀት ለመጨመር በጣም ጥሩ መንገድ ነው።”</p>
-                    <strong>— ማስተዋል(ዘጎንደር), ተማሪ</strong>
+                    <strong>ማስተዋል(ዘጎንደር), ተማሪ</strong>
                     </div>
                 <div class="testimonial-card">
                     <p>“በዚህ በቤተ ገብርኤል የሚያቀርበው ትምህርት ዘመናዊ እና በጥሩ ስርዓት የተደረገ ነው። በቤት ቁጭ ብዬ እንኳ እምነትን እና ቤተ ክርስቲያንን በጥልቅ መማር ቻልኩ። እጅግ አመሰግናለሁ።”</p>
-                    <strong>— ክብር ተመስገን(ዘሞጣ), የማኅበር አባል</strong>
+                    <strong>ክብር ተመስገን(ዘሞጣ), የማኅበር አባል</strong>
                     </div>
                      <div class="testimonial-card">
                     <p>“በዚህ ኦንላይን ትምህርት መድረክ መማር ህይወቴን ቀይሮታል። ትምህርቶቹ ቀላል ናቸው፣ እና የኢትዮጵያ ኦርቶዶክስ እምነትን በትክክል እንድማር ረድቶኛል። በተለይ የዲያቆን ሶፎንያስ መግለጫ በጣም ግልጽ ነው።”</p>
-                    <strong>— ትእግስት(ዘቢቸና), ተማሪ</strong>
+                    <strong>ትእግስት(ዘቢቸና), ተማሪ</strong>
                 </div>
                 <div class="testimonial-card">
                     <p>“የኮርሱ አቀራረብ ዘመናዊ፣ በጥሩ ሁኔታ የተደራጀ እና ለመረዳት ቀላል ነው። እንዲሁም በራሴ ጊዜና ፍጥነት መማር እችላለሁ።.”</p>
-                    <strong>— ፋሲካ(መክሊት), ተማሪ</strong>
+                    <strong>ፋሲካ(መክሊት), ተማሪ</strong>
                 </div>
                 <div class="testimonial-card">
                     <p>“"የቀጥታ መመሪያ አገልግሎቱ፣ ማራኪ ዲዛይኑ እና ለመጠቀም ቀላል የሆነው የአሰሳ ስርዓት በጣም ወድጄዋለሁ።".”</p>
-                    <strong>— ፍቅረ, ተማሪ</strong>
+                    <strong>ፍቅረ, ተማሪ</strong>
                 </div>
             </div>
             <div class="testimonial-nav" id="testimonialNav"></div>
