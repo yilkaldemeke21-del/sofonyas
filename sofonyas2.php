@@ -355,16 +355,76 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
                 <p style="margin:6px 0 0; color:#475569;" data-am="ተማሪዎች በአቅጣጫ የተዘጋጀ የመማር ፍሰት ውስጥ እንዲሄዱ ያስችላል" data-en="Guide learners through a clear and structured study journey.">Guide learners through a clear and structured study journey.</p>
             </div>
             <div style="background:#fff; border-radius:12px; padding:14px; box-shadow:0 8px 20px rgba(15,23,42,0.05);">
-                <strong data-am="የሰርተፊኬት ማረጋገጫ" data-en="Certificate Verification">Certificate Verification</strong>
-                <p style="margin:6px 0 0; color:#475569;" data-am="የተሰጡ ሰርተፊኬቶች በውስጥ በቀላሉ ሊፈተሹ ይችላሉ" data-en="Allow completed certificates to be validated quickly and reliably.">Allow completed certificates to be validated quickly and reliably.</p>
+                <strong data-am="የሰርቲፊኬት ስርዓት" data-en="Certificate System">Certificate System</strong>
+                <ul style="margin:8px 0 0 16px; padding:0; color:#475569; line-height:1.6;">
+                    <li data-am="አውቶ ሰርቲፊኬት ማመንጨት" data-en="Auto Certificate Generation">Auto Certificate Generation</li>
+                    <li data-am="PDF ሰርቲፊኬት" data-en="PDF Certificate">PDF Certificate</li>
+                    <li data-am="QR ማረጋገጫ" data-en="QR Verification">QR Verification</li>
+                    <li data-am="የሰርቲፊኬት ቁጥር" data-en="Certificate Number">Certificate Number</li>
+                    <li data-am="የሰርቲፊኬት ውርድ" data-en="Certificate Download">Certificate Download</li>
+                    <li data-am="የሰርቲፊኬት ማረጋገጫ ገፅ" data-en="Certificate Validation Page">Certificate Validation Page</li>
+                </ul>
             </div>
             <div style="background:#fff; border-radius:12px; padding:14px; box-shadow:0 8px 20px rgba(15,23,42,0.05);">
                 <strong data-am="አለም አቀፍ ፍለጋ" data-en="Global Search">Global Search</strong>
                 <p style="margin:6px 0 0; color:#475569;" data-am="በአጭሩ የእርስዎን መረጃ የሚያገኙበት የፍለጋ ስርዓት" data-en="Provide a fast search experience so learners can instantly find the information they need.">Provide a fast search experience so learners can instantly find the information they need.</p>
             </div>
             <div style="background:#fff; border-radius:12px; padding:14px; box-shadow:0 8px 20px rgba(15,23,42,0.05);">
-                <strong data-am="PWA ድጋፍ" data-en="PWA Support">PWA Support</strong>
-                <p style="margin:6px 0 0; color:#475569;" data-am="እንደ ሞባይል አፕ የሚጫኑ እና ከመስመር ውጭ የሚሰሩ ባህሪያት" data-en="Support installable mobile app experiences with offline-friendly access.">Support installable mobile app experiences with offline-friendly access.</p>
+                <strong data-am="የሞባይል አፕ ድጋፍ" data-en="Mobile App Support">Mobile App Support</strong>
+                <ul style="margin:8px 0 0 16px; padding:0; color:#475569; line-height:1.6;">
+                    <li data-am="PWA – እንደ አፕ ማጫን ይቻላል" data-en="PWA – install as an app">PWA – install as an app</li>
+                    <li data-am="Android App – ለAndroid ተመራጭ ተግባር" data-en="Android App – optimized for Android">Android App – optimized for Android</li>
+                    <li data-am="iOS App – ለiPhone እና iPad ተመራጭ" data-en="iOS App – designed for iPhone and iPad">iOS App – designed for iPhone and iPad</li>
+                    <li data-am="Offline Learning – ያለ በይነመረብ በቀላሉ ማጥናት" data-en="Offline Learning – continue studying without internet">Offline Learning – continue studying without internet</li>
+                </ul>
+            </div>
+            <div style="background:#fff; border-radius:12px; padding:14px; box-shadow:0 8px 20px rgba(15,23,42,0.05);">
+                <strong data-am="የማሳወቂያ ስርዓት" data-en="Notification System">Notification System</strong>
+                <ul style="margin:8px 0 0 16px; padding:0; color:#475569; line-height:1.6;">
+                    <li data-am="ኢሜይል ማሳወቂያዎች" data-en="Email Notifications">Email Notifications</li>
+                    <li data-am="SMS ማሳወቂያዎች" data-en="SMS Notifications">SMS Notifications</li>
+                    <li data-am="Push ማሳወቂያዎች" data-en="Push Notifications">Push Notifications</li>
+                    <li data-am="አዲስ ኮርስ ሲጨመር የሚላከው ማሳወቂያ" data-en="New Course Alert">New Course Alert</li>
+                    <li data-am="አዲስ ፈተና ማስጠንቀቂያ" data-en="New Exam Alert">New Exam Alert</li>
+                    <li data-am="ሰርቲፊኬት እድር ማሳወቂያ" data-en="Certificate Ready">Certificate Ready</li>
+                    <li data-am="የሥራ ማስጠንቀቂያ" data-en="Assignment Reminder">Assignment Reminder</li>
+                </ul>
+            </div>
+            <div style="background:#fff; border-radius:12px; padding:14px; box-shadow:0 8px 20px rgba(15,23,42,0.05);">
+                <strong data-am="ኢሜይል ማርኬቲንግ" data-en="Email Marketing">Email Marketing</strong>
+                <ul style="margin:8px 0 0 16px; padding:0; color:#475569; line-height:1.6;">
+                    <li data-am="የዜና ጋዜጣ ማስታወቂያ" data-en="Newsletter">Newsletter</li>
+                    <li data-am="የኮርስ ማስታወቂያዎች" data-en="Course Promotions">Course Promotions</li>
+                    <li data-am="የተማሪ ዝግጅቶች" data-en="Student Updates">Student Updates</li>
+                </ul>
+            </div>
+            <div style="background:#fff; border-radius:12px; padding:14px; box-shadow:0 8px 20px rgba(15,23,42,0.05);">
+                <strong data-am="ተዋናይ ቪዲዮ" data-en="Interactive Video">Interactive Video</strong>
+                <p style="margin:6px 0 0; color:#475569;" data-am="ቪዲዮ መካከል Quiz ይወጣል" data-en="Video-based quizzes appear during playback.">Video-based quizzes appear during playback.</p>
+            </div>
+            <div style="background:#fff; border-radius:12px; padding:14px; box-shadow:0 8px 20px rgba(15,23,42,0.05);">
+                <strong data-am="የማድረጊያ ቪዲዮ ትምህርቶች" data-en="Screen Recording Lessons">Screen Recording Lessons</strong>
+                <p style="margin:6px 0 0; color:#475569;" data-am="መምህራን በዌብሳይቱ ውስጥ ቀጥታ ቪዲዮ እንዲቀዱ" data-en="Instructors can record lessons directly on the website.">Instructors can record lessons directly on the website.</p>
+            </div>
+            <div style="background:#fff; border-radius:12px; padding:14px; box-shadow:0 8px 20px rgba(15,23,42,0.05);">
+                <strong data-am="ምዘና ማስገባት" data-en="Assignment Submission">Assignment Submission</strong>
+                <ul style="margin:8px 0 0 16px; padding:0; color:#475569; line-height:1.6;">
+                    <li data-am="ፋይል ማስገባት" data-en="File Upload">File Upload</li>
+                    <li data-am="PDF ማስገባት" data-en="PDF Submission">PDF Submission</li>
+                    <li data-am="የክፍያ ስርዓት" data-en="Grading System">Grading System</li>
+                </ul>
+            </div>
+            <div style="background:#fff; border-radius:12px; padding:14px; box-shadow:0 8px 20px rgba(15,23,42,0.05);">
+                <strong data-am="የክፍያ ስርዓት" data-en="Payment System">Payment System</strong>
+                <ul style="margin:8px 0 0 16px; padding:0; color:#475569; line-height:1.6;">
+                    <li data-am="Telebirr" data-en="Telebirr">Telebirr</li>
+                    <li data-am="CBE Birr" data-en="CBE Birr">CBE Birr</li>
+                    <li data-am="Chapa" data-en="Chapa">Chapa</li>
+                    <li data-am="ArifPay" data-en="ArifPay">ArifPay</li>
+                    <li data-am="የክፍያ ማረጋገጫ" data-en="Payment Verification">Payment Verification</li>
+                    <li data-am="የክፍያ መጠየቂያ / ኢንቮይስ" data-en="Invoice Generation">Invoice Generation</li>
+                    <li data-am="የግብይት ታሪክ" data-en="Transaction History">Transaction History</li>
+                </ul>
             </div>
             <div style="background:#fff; border-radius:12px; padding:14px; box-shadow:0 8px 20px rgba(15,23,42,0.05);">
                 <strong data-am="ሳምንታዊ እንቅስቃሴ ሪፖርት" data-en="Weekly Activity Reports">Weekly Activity Reports</strong>
@@ -385,7 +445,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
                     <p>“"በዌብሳይት መንፈሳዊ ትምህርት መማር ሕይወትን እና ጊዜን በአግባቡ መጠቀም እና ቴክኖሎጅን አሳላጭ ማድረግ የቤተ ክርስቲያን ሁለንተናዊ እድገት ነው።”</p>
                     <strong> M.r ወ/መርቆርዮስ(ዘሞጣ), መምህር</strong>
                 </div>
-<div class="testimonial-card">
+                  <div class="testimonial-card">
                     <p>“ይህ ድህረ ገጽ በጣም በቀላሉ ለመረዳት የሚችል እና የእምነት ትምህርትን በጥልቅ የሚያስተምር ነው። ዲያቆን ሶፎንያስ ደመቀ የሚያቀርበው ትምህርት በግልጽ እና በፍቅር የተሞላ ነው። በቤተ ክርስቲያን እውቀት ለመጨመር በጣም ጥሩ መንገድ ነው።”</p>
                     <strong>ማስተዋል(ዘጎንደር), ተማሪ</strong>
                     </div>
@@ -404,6 +464,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
                 <div class="testimonial-card">
                     <p>“እመብርሃንን ይዞ ተስፋ የሰነቀ፣ዘላለም ይኖራል ፍቅሯን እያወቀ፣እኛም እንድንድን ሶፎንያስ ደመቀ፣ሕይወትን እንድናይ ይህን አሳወቀ”</p>
                     <strong>MR አዱኛው, ተማሪ ፕሬዘዳንት</strong>
+                </div>
+                <div class="testimonial-card">
+                    <p>“በጉጉት የምንጠብቀው ዌብሳይት አልቆ በማየቴ ደስታየን እየገለጽኩ እግዚአብሔር አምላክ በዲ/ን ሶፎንያስ ላይ አድሮ እያስተማረን ነውና እኛም ተምረን ተለውጠን እግዚአብሔርን የምናመሰግንበት ስለሃይማኖታችን በጥልቁ የምናዉቅበት እንዲሆን ከልብ አመኛለው!!”</p>
+                    <strong>እታገኘሁ, ተማሪ</strong>
                 </div>
                 <div class="testimonial-card">
                     <p>“አህዛብ መናፍቅ ሲከበን በተራ፣እውነት ለመሸርሸር ሲወጡ ሲወርዱ የእምነት ባላጋራ፣ስህተት ሲገነቡ የውሸት ተራራ፣ደረሰልን ሶፊ ዌብሳይቱን ሰርቶ መንጥሮ እያጣራ፣ሁሉም  በመሰለው ሲያስተምር እንዳሻው፣መጣባቸው ሶፊ የቅባት መዶሻው፣የለም ብለው ነበር ከኛ በላይ ሰው፣ለስለስ ብሎ ገብቶ እውነቱን አወጣው”</p>
@@ -486,30 +550,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         <div style="margin-top:4px; font-size:14px;"><?php echo safe(translateText('ይህ ዌብሳይት ለእርስዎ በቀላሉ እና በጥሩ ቅርጸት መረጃ ይሰጣል።', 'This website provides clear and easy-to-follow information for you.')); ?></div>
     </div>
 
-    <footer style="background:#0f172a; color:#e2e8f0; padding:24px 20px 32px; margin-top:24px;">
-        <div style="max-width:1100px; margin:0 auto; display:grid; gap:16px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); align-items:start;">
+    <footer style="background:#0f172a; color:#e2e8f0; padding:28px 20px 36px; margin-top:28px;">
+        <div style="max-width:1100px; margin:0 auto; display:grid; gap:24px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); align-items:start;">
             <div>
-                <h3 style="margin:0 0 8px; color:#fff;" data-am="የእኛ አድራሻ" data-en="Contact Us">Contact Us</h3>
-                <p style="margin:4px 0;">Phone: <?php echo safe($phoneNumber); ?></p>
-                <p style="margin:4px 0;"><a href="mailto:<?php echo safe($contactEmail); ?>" style="color:#bfdbfe; text-decoration:none;">Email: <?php echo safe($contactEmail); ?></a></p>
-                <p style="margin:4px 0;"><?php echo safe($footerText); ?></p>
+                <h3 style="margin:0 0 10px; color:#fff;" data-am="ስለ እኛ" data-en="About Us">About Us</h3>
+                <p style="margin:4px 0 14px; max-width:320px; color:#cbd5e1;" data-am="በቤተ ክርስቲያን እና በመመሪያ ከፍተኛ ጥናት የተመሰረተ ዌብሳይት ነው።" data-en="A church-centered learning platform built for trusted knowledge and community growth.">A church-centered learning platform built for trusted knowledge and community growth.</p>
+                <a href="sofonyas2.php#about" style="color:#93c5fd; text-decoration:none; font-weight:600;" data-am="ይህን ይጎብኙ" data-en="Visit About">Visit About</a>
             </div>
             <div>
-                <h3 style="margin:0 0 8px; color:#fff;" data-am="ማህበራዊ መረብ" data-en="Follow Us">Follow Us</h3>
-                <div style="display:flex; flex-wrap:wrap; gap:10px;">
-                    <a href="https://t.me/sophonyasbetmichael" style="color:#bfdbfe; text-decoration:none;" data-am="ቴሌግራም" data-en="Telegram">Telegram</a>
-                    <a href="https://www.facebook.com/" style="color:#bfdbfe; text-decoration:none;" data-am="ፌስቡክ" data-en="Facebook">Facebook</a>
-                    <a href="https://www.instagram.com/" style="color:#bfdbfe; text-decoration:none;" data-am="Instagram" data-en="Instagram">Instagram</a>
+                <h3 style="margin:0 0 10px; color:#fff;" data-am="ኮርሶች" data-en="Courses">Courses</h3>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <a href="tutorial.php" style="color:#bfdbfe; text-decoration:none;" data-am="የቅድመ ትምህርቶች" data-en="Featured Courses">Featured Courses</a>
+                    <a href="course_details.php" style="color:#bfdbfe; text-decoration:none;" data-am="ኮርስ ዝርዝር" data-en="Course Catalog">Course Catalog</a>
+                    <a href="student_register.php" style="color:#bfdbfe; text-decoration:none;" data-am="ከእኛ ጋር ይቀላቀሉ" data-en="Join Now">Join Now</a>
                 </div>
             </div>
             <div>
-                <h3 style="margin:0 0 8px; color:#fff;" data-am="ህጋዊ መረጃ" data-en="Legal">Legal</h3>
-                <div style="display:flex; flex-direction:column; gap:6px;">
-                    <a href="terms.php" style="color:#bfdbfe; text-decoration:none;" data-am="የአገልግሎት ውል" data-en="Terms and Conditions">Terms and Conditions</a>
+                <h3 style="margin:0 0 10px; color:#fff;" data-am="ሰርቲፊኬቶች" data-en="Certificates">Certificates</h3>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <a href="certificate_verification.php" style="color:#bfdbfe; text-decoration:none;" data-am="የሰርቲፊኬት የማረጋገጫ ገፅ" data-en="Certificate Validation">Certificate Validation</a>
+                    <a href="admin_certificate.php" style="color:#bfdbfe; text-decoration:none;" data-am="የሰርቲፊኬት አስተዳደር" data-en="Certificate Management">Certificate Management</a>
+                    <a href="download_center.php" style="color:#bfdbfe; text-decoration:none;" data-am="የሰርቲፊኬት ውርድ" data-en="Download Certificates">Download Certificates</a>
+                </div>
+            </div>
+            <div>
+                <h3 style="margin:0 0 10px; color:#fff;" data-am="ህጋዊ ፈቃዶች" data-en="Legal">Legal</h3>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <a href="terms.php" style="color:#bfdbfe; text-decoration:none;" data-am="ውሎችና ውሎች" data-en="Terms & Conditions">Terms & Conditions</a>
                     <a href="privacy.php" style="color:#bfdbfe; text-decoration:none;" data-am="የግላዊነት ፖሊሲ" data-en="Privacy Policy">Privacy Policy</a>
-                    <a href="cookie_policy.php" style="color:#bfdbfe; text-decoration:none;" data-am="የኩኪ ፖሊሲ" data-en="Cookie Policy">Cookie Policy</a>
                 </div>
-                <p style="margin-top:12px;"><b data-am="ይህ ዌቭሳይት የተሰራው በዲ/ን ሶፎንያስ ደመቀ (ወ/ጊዮርጊስ) ነው።" data-en="This website was created by Dr. Sofoniyas Demeke (W/Georgis).">ይህ ዌቭሳይት የተሰራው በዲ/ን ሶፎንያስ ደመቀ (ወ/ጊዮርጊስ) ነው።</b></p>
+                <div style="margin-top:16px;">
+                    <h4 style="margin:0 0 10px; color:#fff;" data-am="ማህበራዊ መረብ" data-en="Social Links">Social Links</h4>
+                    <div style="display:flex; flex-wrap:wrap; gap:10px;">
+                        <a href="https://t.me/sophonyasbetmichael" style="color:#bfdbfe; text-decoration:none;" data-am="ቴሌግራም" data-en="Telegram">Telegram</a>
+                        <a href="https://t.me/sophonyasbetmichael" style="color:#bfdbfe; text-decoration:none;" data-am="ፌስቡክ" data-en="Facebook">Facebook</a>
+                        <a href="https://www.instagram.com/" style="color:#bfdbfe; text-decoration:none;" data-am="Instagram" data-en="Instagram">Instagram</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div style="margin-top:26px; border-top:1px solid rgba(255,255,255,0.12); padding-top:18px; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:14px; color:#94a3b8; font-size:0.95rem;">
+            <span data-am="© 2026 ሶፊ ፕሮጀክት. መብቶች የተጠበቁ" data-en="© 2026 Sofi Project. All rights reserved.">© 2026 Sofi Project. All rights reserved.</span>
+            <div style="display:flex; flex-wrap:wrap; gap:12px;">
+                <a href="about.php" style="color:#94a3b8; text-decoration:none;" data-am="ስለ እኛ" data-en="About Us">About Us</a>
+                <a href="tutorial.php" style="color:#94a3b8; text-decoration:none;" data-am="ኮርሶች" data-en="Courses">Courses</a>
+                <a href="certificate_verification.php" style="color:#94a3b8; text-decoration:none;" data-am="ሰርቲፊኬቶች" data-en="Certificates">Certificates</a>
+                <a href="privacy.php" style="color:#94a3b8; text-decoration:none;" data-am="የግላዊነት ፖሊሲ" data-en="Privacy Policy">Privacy Policy</a>
+                <a href="terms.php" style="color:#94a3b8; text-decoration:none;" data-am="ውሎችና ውሎች" data-en="Terms & Conditions">Terms & Conditions</a>
             </div>
         </div>
     </footer>

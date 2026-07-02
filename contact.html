@@ -1,146 +1,297 @@
 <!DOCTYPE html>
-</html>
+<html lang="am">
 <head>
-  <meta charset="UTF-8">
-  <title>የቤተ ገብርኤል መረጃ</title>
-    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>የተማሪ እና አስተዳዳሪ አገናኝ ገጽ</title>
+    <style>
+        :root {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #0f172a;
+            background: linear-gradient(180deg, #eef2ff 0%, #f8fafc 100%);
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; line-height: 1.6; }
+        header {
+            padding: 40px 24px 24px;
+            background: linear-gradient(135deg, #4f46e5 0%, #0f172a 100%);
+            color: #fff;
+            text-align: center;
+        }
+        header h1 { margin: 0 0 12px; font-size: clamp(2.3rem, 4vw, 3.4rem); letter-spacing: -0.04em; }
+        header p { margin: 0 auto; max-width: 760px; opacity: 0.95; font-size: 1.05rem; }
+        .container { max-width: 1180px; margin: 0 auto; padding: 24px; }
+        .hero-actions { margin: 24px auto 0; display:flex; justify-content:center; gap:12px; flex-wrap:wrap; }
+        .hero-actions button { border: none; border-radius: 999px; padding: 14px 22px; background: #8b5cf6; color: #fff; font-weight: 700; cursor: pointer; transition: transform 0.2s ease, background 0.2s ease; }
+        .hero-actions button:hover { transform: translateY(-2px); background: #7c3aed; }
+        .section-title { margin-top: 36px; margin-bottom: 18px; font-size: clamp(1.6rem, 2.5vw, 2.25rem); color: #0f172a; }
+        .intro-card { display:grid; gap:18px; background:#fff; border:1px solid #e2e8f0; border-radius: 28px; padding: 28px; box-shadow: 0 24px 60px rgba(15,23,42,0.08); }
+        .intro-card p { margin:0; color:#334155; }
+        .stats-grid { display:grid; gap:16px; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); margin-top: 18px; }
+        .stat-card { background:#fff; border-radius:22px; padding:22px; border:1px solid rgba(99,102,241,0.14); box-shadow:0 18px 40px rgba(15,23,42,0.06); }
+        .stat-card strong { display:block; font-size:2rem; margin-bottom: 8px; color:#4338ca; }
+        .stat-card span { color:#475569; }
+        .search-panel { display:flex; flex-wrap:wrap; align-items:center; gap:14px; margin-top:22px; }
+        .search-panel input { flex:1; min-width:220px; padding:14px 16px; border-radius:18px; border:1px solid #cbd5e1; outline:none; font-size:1rem; }
+        .search-panel button { padding:14px 18px; border:none; border-radius:18px; background:#4338ca; color:#fff; cursor:pointer; font-weight:700; }
+        .cards-grid { display:grid; gap:20px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); margin-top: 24px; }
+        .team-card { background:#fff; border-radius:24px; border:1px solid #e2e8f0; overflow:hidden; box-shadow:0 18px 40px rgba(15,23,42,0.08); transition:transform 0.25s ease, box-shadow 0.25s ease; display:flex; flex-direction:column; }
+        .team-card:hover { transform: translateY(-4px); box-shadow:0 24px 50px rgba(15,23,42,0.12); }
+        .team-card img { width: 100%; display:block; height: 220px; object-fit: contain; }
+        .team-card .content { padding: 20px 22px 24px; display:flex; flex-direction:column; gap:10px; flex:1; }
+        .team-card h3 { margin:0 0 8px; font-size:1.35rem; color:#111827; }
+        .team-card .role { display:inline-flex; gap:8px; align-items:center; margin-bottom:14px; font-size:0.95rem; color:#4338ca; font-weight:700; }
+        .team-card .teacher-info { margin:0; flex:1; }
+        .teacher-info { background:#eef2ff; border:1px solid #c7d2fe; border-radius:18px; padding:18px 20px; color:#0f172a; margin-top:12px; }
+        .teacher-info p { margin:0 0 12px; line-height:1.6; }
+        .teacher-info p:last-child { margin-bottom:0; }
+        .teacher-info p strong { display:inline-block; min-width:120px; font-weight:700; color:#4338ca; }
+        .teacher-info a { color:#4338ca; text-decoration:none; }
+        .contact-grid { display:grid; gap:24px; grid-template-columns: 1.15fr 0.85fr; margin-top:18px; }
+        .contact-card, .contact-form { background:#fff; border:1px solid #e2e8f0; border-radius: 22px; padding: 24px; box-shadow:0 18px 40px rgba(15,23,42,0.08); }
+        .contact-card h3, .contact-form h3 { margin-top:0; color:#111827; }
+        .contact-card p { color:#475569; line-height:1.8; }
+        .contact-card dl { margin:18px 0 0; color:#475569; }
+        .contact-card dt { font-weight:700; margin-top:14px; }
+        .contact-card dd { margin:4px 0 0 0; }
+        .contact-form label { display:block; margin-top:16px; color:#334155; font-weight:700; }
+        .contact-form input, .contact-form textarea { width:100%; margin-top:8px; padding:14px 16px; border:1px solid #cbd5e1; border-radius:16px; background:#f8fafc; color:#0f172a; outline:none; font-size:1rem; }
+        .contact-form textarea { min-height:150px; resize:vertical; }
+        .contact-form button { margin-top:20px; width:100%; padding:14px 18px; border:none; border-radius:18px; background:#4f46e5; color:#fff; cursor:pointer; font-weight:700; transition:background 0.2s ease; }
+        .contact-form button:hover { background:#4338ca; }
+        footer { margin-top:40px; padding:26px 0 40px; text-align:center; color:#64748b; }
+        footer a { color:#4338ca; text-decoration:none; }
+        @media (max-width: 960px) { .contact-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 720px) { .intro-card { padding:20px; } }
+    </style>
 </head>
 <body>
- <div class="contact" id="contact" style="background-color: rgb(167, 135, 222);">
-   <pre>ይህ ዌቭሳይት በመቅደላ አምባ ዩኒቨርሲቲ ለሚገኙ ተማሪዎች በ2018ዓ.ም
-     በዲ/ን ሶፎንያስ ደመቀ የተዘጋጀ ሲሆን ከአባላቶች መካከል የሚከተሉት
-     የሚገኙበት ሲሆን አጭ መረጃቸው ይሄንን ይመስላል። 
-     </pre>
-        <pre>
-      <img src="" alt=""> 
-      ስም:ዲ/ን ሶፎንያስ ደመቀ
-      መንፈሳዊ ስም:ወ/ጊዮርጊስ
-      የመጣበት ልዩ ቦታ:-ም/ጎጃም ዞን-፪ እጁ እነሴ ወረዳ
-      ስ.ቁጥር:0927603731/0935535937
-      ኢሜይል:yilkaldemeke21@gmail.com
-      የትምህርት ክፍል:ኮምፒውተር ሳይንስ
-      የስራ ድርሻ:አባት
-   
-      </pre>
-  
-   <pre>
-      <img src="" alt=""> 
-      ስም:ዳሳሽ ምሕረት
-      መንፈሳዊ ስም:ወለተ ተክለ ሃይማኖት
-      የመጣበት ልዩ ቦታ:ደ/ጎንደር-ደብረ ታቦር ማኅደረ ማርያም
-      ስ.ቁጥር:0965644745
-      ኢሜይል:dasashmihiret0@gmail.com
-      የትምህርት ክፍል:አግሮ ኢኮኖሚክስ
-     የስራ ድርሻ:እናት
-      </pre>
+    <header>
+        <h1>የዲ/ን ሶፎንያስ ደመቀ(ቤተ ገብርኤል) በድር አገናኝ ገጽ</h1>
+        <p>ይህን ገጽ ለተማሪዎችና ለአስተዳዳሪዎች በጥሩ ስርዓት የተዘጋጀ የእውቀት እና የግንኙነት ቦታ ነው።</p>
+        <div class="hero-actions">
+            <button type="button" onclick="document.getElementById('teamSection').scrollIntoView({behavior:'smooth'})">አባላትን ይመልከቱ</button>
+            <button type="button" onclick="document.getElementById('contactSection').scrollIntoView({behavior:'smooth'})">እውቀት ያግኙ</button>
+        </div>
+    </header>
 
-      <pre>
-      <img src="" alt=""> 
-      ስም:ማናየህ ባይሌ
-      መንፈሳዊ ስም:ገ/ሥላሴ
-      የመጣበት ልዩ ቦታ:ደ/ማርቆስ ጎዛምን ወረዳ ቸር ተከል ቀበሌ
-      ስ.ቁጥር:0924392994
-      ኢሜይል:manayehtenaw@gmail.com
-      የትምህርት ክፍል:ኮምፒውተር ሳይንስ
-    
-      </pre>
+    <main class="container">
+        <section class="intro-card" aria-label="Page introduction">
+            <h2 class="section-title">የማስታወቂያ እና የአገናኝ ፅንሰ-ሀሳብ</h2>
+            <p>እኛ ለተማሪዎች እና ለአስተዳዳሪዎች የተስፋ ሕይወት የሚሰነቅበት፣በሃይማኖት እና በምግባር የሚታነጹበት ከመሰረቱ ተነስተው ብዙ ነገር የሚያዉቁበት አገናኝ ገጽ እንደምንሰጥ ስናሳዉቅ ደስታችን እጅግ ታላቅ ነው።እዚህ የተሞላ መረጃ፣የሚሰራ የፍለጋ ገጽ፣እና አስተዳደር ባለሞያዎችን የሚገልጹ አጫጭር መረጃ ፅንሰ-ሐሳቦች አሉት።</p>
+            <div class="stats-grid">
+                <div class="stat-card"><strong>12+</strong><span>የአባላት መረጃ</span></div>
+                <div class="stat-card"><strong>100%</strong><span>እውቀት የሚሰጥ</span></div>
+                <div class="stat-card"><strong>አስተማማኝ</strong><span>በፍጥነት እና በቅን እርዳታ</span></div>
+            </div>
+        </section>
 
-      <pre>
-      <img src="" alt=""> 
-      ስም:ማስተዋል ባለው
-      መንፈሳዊ ስም:ወለተ እግዚእ
-      የመጣበት ልዩ ቦታ:ደ/ጎንደር እስቴ ረቻ ቁስቋም
-      ስ.ቁጥር:0929557954
-      ኢሜይል:mastewalbalew08@gmail.com
-      የትምህርት ክፍል:አግሮ ቢዝነስ
-      </pre>
+        <section id="teamSection">
+            <div class="section-title">የአባላት መረጃ እና አገናኝ ዝርዝር</div>
+            <div class="search-panel">
+                <input id="staffSearch" type="search" placeholder="እባክዎን እዚህ ስም ወይም የትምህርት ክፍል ያስገቡ..." aria-label="Search staff" />
+                <button type="button" onclick="filterTeam()">ፈልግ</button>
+            </div>
+            <div class="cards-grid" id="teamGrid">
+                <article class="team-card" data-name="ዲ/ን ሶፎንያስ ደመቀ" data-subject="ኮምፒውተር ሳይንስ">
+                    <img src="yesofi 3 photo.jpg" alt="ዲ/ን ሶፎንያስ ደመቀ">
+                    <div class="content">
+                        <h3>ዲ/ን ሶፎንያስ ደመቀ</h3>
+                        <div class="role">የመጀመሪያ መምህር:-ኮምፒውተር ሳይንስ</div>
+                        <div class="teacher-info">
+                            <p><strong>መንፈሳዊ ስም</strong> ወ/ጊዮርጊስ</p>
+                            <p><strong>ስልክ</strong> 0927603731</p>
+                            <p><strong>ኢሜይል</strong>yilkaldemeke21@gmail.com</p>
+                        </div>
+                    </div>
+                </article>
+                <article class="team-card" data-name="ዳሳሽ ምሕረት" data-subject="አግሪ ኢኮኖሚክስ">
+                    <img src="emaye photo.jpg" alt="ዳሳሽ ምሕረት">
+                    <div class="content">
+                        <h3>ዳሳሽ ምሕረት</h3>
+                        <div class="role">የትምህርት ክፍል:-አግሪ ኢኮኖሚክስ</div>
+                        <div class="teacher-info">
+                            <p><strong>መንፈሳዊ ስም:-</strong> ወለተ ተክለ ሃይማኖት</p>
+                            <p><strong>ስልክ:-</strong> 0965644745</p>
+                            <p><strong>ኢሜይል:-</strong> <a href="mailto:dasashmihiret0@gmail.com">dasashmihiret0@gmail.com</a></p>
+                        </div>
+                    </div>
+                </article>
+                <article class="team-card" data-name="ማናየህ ባይሌ" data-subject="ኮምፒውተር ሳይንስ">
+                    <img src="manaye photo.jpg" alt="ማናየህ ባይሌ">
+                    <div class="content">
+                        <h3>ማናየህ ባይሌ</h3>
+                        <div class="role">የትምህርት ክፍል:-ኮምፒውተር ሳይንስ</div>
+                        <div class="teacher-info">
+                            <p><strong>መንፈሳዊ ስም:-</strong> ገ/ሥላሴ</p>
+                            <p><strong>ስልክ:-</strong> 0924392994</p>
+                            <p><strong>ኢሜይል:-</strong> <a href="mailto:manayehtenaw@gmail.com">manayehtenaw@gmail.com</a></p>
+                        </div>
+                    </div>
+                </article>
+                <article class="team-card" data-name="ማስተዋል ባለው" data-subject="አግሪ ቢዝነስ">
+                    <img src="mastie photo.jpg" alt="ማስተዋል ባለው">
+                    <div class="content">
+                        <h3>ማስተዋል ባለው</h3>
+                        <div class="role">የትምህርት ክፍል:-አግሪ ቢዝነስ</div>
+                        <div class="teacher-info">
+                            <p><strong>መንፈሳዊ ስም:-</strong> ወለተ እግዚእ</p>
+                            <p><strong>ስልክ:-</strong> 0929557954</p>
+                            <p><strong>ኢሜይል:-</strong> <a href="mailto:mastewalbalew08@gmail.com">mastewalbalew08@gmail.com</a></p>
+                        </div>
+                    </div>
+                </article>
+                <article class="team-card" data-name="ትዕግስት ይበልጣል" data-subject="አግሪ ቢዝነስ">
+                    <img src="tigist photo.jpg" alt="ትዕግስት ይበልጣል">
+                    <div class="content">
+                        <h3>ትዕግስት ይበልጣል</h3>
+                        <div class="role">የትምህርት ክፍል:-አግሪ ቢዝነስ</div>
+                        <div class="teacher-info">
+                            <p><strong>መንፈሳዊ ስም:-</strong> ወለተ ጊዮርጊስ</p>
+                            <p><strong>ስልክ:-</strong> 0935800013</p>
+                            <p><strong>ኢሜይል:-</strong> <a href="mailto:tigstyibeltal1000@gmail.com">tigstyibeltal1000@gmail.com</a></p>
+                        </div>
+                    </div>
+                </article>
+                <article class="team-card" data-name="ፈጠነች ወርቁ" data-subject="ኮምፒውተር ሳይንስ">
+                    <img src="fetenech photo.jpg" alt="ፈጠነች ወርቁ">
+                    <div class="content">
+                        <h3>ፈጠነች ወርቁ</h3>
+                        <div class="role">የትምህርት ክፍል:-ኮምፒውተር ሳይንስ</div>
+                        <div class="teacher-info">
+                            <p><strong>መንፈሳዊ ስም:-</strong> አመተ ሥላሴ</p>
+                            <p><strong>ስልክ:-</strong> 0960691640</p>
+                            <p><strong>ኢሜይል:-</strong> <a href="mailto:tesfa8289@gmail.com">tesfa8289@gmail.com</a></p>
+                        </div>
+                    </div>
+                </article>
+                <article class="team-card" data-name="አማረቺ አበባዉ" data-subject="RDAE">
+                    <img src="amarech photo.jpg" alt="አማረቺ አበባዉ">
+                    <div class="content">
+                        <h3>አማረቺ አበባዉ</h3>
+                        <div class="role">የትምህርት ክፍል:-RDAE</div>
+                        <div class="teacher-info">
+                            <p><strong>መንፈሳዊ ስም:-</strong> ማይነው</p>
+                            <p><strong>ስልክ:-</strong> 0915673930</p>
+                            <p><strong>ኢሜይል:-</strong> <a href="mailto:amarechibaba@gmail.com">amarechibaba@gmail.com</a></p>
+                        </div>
+                    </div>
+                </article>
+                <article class="team-card" data-name="አለሚቱ ድረስ" data-subject="አግሪ ቢዝነስ">
+                    <img src="alemitu photo.jpg" alt="አለሚቱ ድረስ">
+                    <div class="content">
+                        <h3>አለሚቱ ድረስ</h3>
+                        <div class="role">የትምህርት ክፍል:-አግሪ ቢዝነስ</div>
+                        <div class="teacher-info">
+                            <p><strong>መንፈሳዊ ስም:-</strong> ወለተ ሥላሴ</p>
+                            <p><strong>ስልክ:-</strong> 0960463813</p>
+                            <p><strong>ኢሜይል:-</strong> <a href="mailto:alemitudires@gmail.com">alemitudires@gmail.com</a></p>
+                        </div>
+                    </div>
+                </article>
+                <article class="team-card" data-name="አለሚቱ ፈንታ" data-subject="እፅዋት ሳይንስ">
+                    <img src="alemitu fenta photo.jpg" alt="አለሚቱ ፈንታ">
+                    <div class="content">
+                        <h3>አለሚቱ ፈንታ</h3>
+                        <div class="role">የትምህርት ክፍል:-እፅዋት ሳይንስ</div>
+                        <div class="teacher-info">
+                            <p><strong>መንፈሳዊ ስም:-</strong> አመተ ሥላሴ</p>
+                            <p><strong>ስልክ:-</strong> 0906175164</p>
+                            <p><strong>ኢሜይል:-</strong> <a href="mailto:alemitufenta92@gmail.com">alemitufenta92@gmail.com</a></p>
+                        </div>
+                    </div>
+                </article>
+                <article class="team-card" data-name="አለምእሸት ናቄ" data-subject="አግሪ ቢዝነስ">
+                    <img src="alem.jpg" alt="አለምእሸት ናቄ">
+                    <div class="content">
+                        <h3>አለምእሸት ናቄ</h3>
+                        <div class="role">የትምህርት ክፍል:-አግሪ ቢዝነስ</div>
+                        <div class="teacher-info">
+                            <p><strong>መንፈሳዊ ስም:-</strong>ወለተ ጻድቅ</p>
+                            <p><strong>ስልክ:-</strong>0989241211</p>
+                            <p><strong>ኢሜይል:-</strong> <a href="mailto:nakealemsht@gmail.com">nakealemsht@gmail.com</a></p>
+                        </div>
+                    </div>
+                </article>
+                <article class="team-card" data-name="በለጠች አሌ" data-subject="አግሪ ቢዝነስ">
+                    <img src="beletech photo.jpg" alt="በለጠች አሌ">
+                    <div class="content">
+                        <h3>በለጠች አሌ</h3>
+                        <div class="role">የትምህርት ክፍል:-አግሪ ቢዝነስ</div>
+                        <div class="teacher-info">
+                            <p><strong>መንፈሳዊ ስም:-</strong>ወለተ ትንሳኤ</p>
+                            <p><strong>ስልክ:-</strong> 0900704711</p>
+                            <p><strong>ኢሜይል:-</strong> <a href="mailto:@gmail.com">@gmail.com</a></p>
+                        </div>
+                    </div>
+                </article>
+                <article class="team-card" data-name="ልጅሐውልት ባዩህ" data-subject="ሒሳብ">
+                    <img src="ligihawult photo.jpg" alt="ልጅሐውልት ባዩህ">
+                    <div class="content">
+                        <h3>ልጅሐውልት ባዩህ</h3>
+                        <div class="role">የትምህርት ክፍል፦ሒሳብ</div>
+                        <div class="teacher-info">
+                            <p><strong>መንፈሳዊ ስም</strong> ገ/መድኅን</p>
+                            <p><strong>ስልክ</strong>0966654487</p>
+                            <p><strong>ኢሜይል</strong> <a href="mailto:lijhawultbayuh2721@gmail.com">lijhawultbayuh2721@gmail.com</a></p>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </section>
 
-      <pre>
-      <img src="" alt=""> 
-      ስም:ትዕግስት ይበልጣል
-      መንፈሳዊ ስም:ወለተ ጊዮርጊስ
-      የመጣበት ልዩ ቦታ:ም/ጎጃም ዞን ደባይ ጥላት ወረዳ
-      ስ.ቁጥር:0935800013
-      ኢሜይል:tigstyibeltal1000@gmail.com
-      የትምህርት ክፍል:አግሪ ቢዝነዝ
-      
-      </pre>
-     <pre>
-      <img src="" alt=""> 
-      ስም:ፈጠነች ወርቁ
-      መንፈሳዊ ስም:አመተ ሥላሴ
-      የመጣበት ልዩ ቦታ:ደ/ጎንደር እስቴ ወረዳ
-      ስ.ቁጥር:0960691640
-      ኢሜይል:tesfa8289@gmail.com
-      የትምህርት ክፍል:ኮምፒውተር ሳይንስ
-      
-      </pre>
-  
-    <pre>
-      <img src="" alt=""> 
-      ስም:አማረቺ አበባዉ
-      መንፈሳዊ ስም:
-      የመጣበት ልዩ ቦታ:እስቴ ወረዳ አምጃየ ቀበሌ
-      ስ.ቁጥር:0915673930
-      ኢሜይል:amarechibaba@gmail.com
-      የትምህርት ክፍል:RDAE
-      
-      </pre>
-  
-    <pre>
-      <img src="" alt=""> 
-      ስም:አለሚቱ ድረስ
-      መንፈሳዊ ስም:ወለተ ሥላሴ
-      የመጣበት ልዩ ቦታ:ምዕ/ጎጃም ጃቢ ጣና ወረዳ ፍ/ሠላም
-      ስ.ቁጥር:0960463813
-      ኢሜይል:alemitudires@gmail.com
-      የትምህርት ክፍል:አግሪ ቢዝነስ
-      
-      </pre>
-  
-    <pre>
-      <img src="" alt=""> 
-      ስም:አለሚቱ ፈንታ
-      መንፈሳዊ ስም:አመተ ሥላሴ
-      የመጣበት ልዩ ቦታ:ምስ/ጎጃም ደ/ማርቆስ
-      ስ.ቁጥር:0906175164
-      ኢሜይል:alemitufenta92@gmail.com
-      የትምህርት ክፍል:እፅዋት ሳይንስ
-      
-      </pre>
-   
-      <pre>
-      <img src="" alt=""> 
-      ስም:አለምእሸት ናቄ
-      መንፈሳዊ ስም:ወለተ ጻድቅ
-      የመጣበት ልዩ ቦታ:ሸዋሮቢት
-      ስ.ቁጥር:0989241211
-      ኢሜይል:nakealemsht@gmail.com
-      የትምህርት ክፍል:
-      
-      </pre>
-  
-    <pre>
-      <img src="" alt=""> 
-      ስም:በለጠች አሌ
-      መንፈሳዊ ስም:ወለተ ትንሳኤ
-      የመጣበት ልዩ ቦታ:ደ/ጎንደር እስቴ ወረዳ
-      ስ.ቁጥር:0900704711
-      ኢሜይል:@gmail.com
-      የትምህርት ክፍል:አግሪ ቢዝነስ
-      
-      </pre>
-  
-    <pre>
-      <img src="" alt=""> 
-      ስም:ልጅሐውልት ባዩህ
-      መንፈሳዊ ስም:ገ/መድኅን
-      የመጣበት ልዩ ቦታ:ሰ/ጎንደር(ድልየበዛ)
-      ስ.ቁጥር:0966654487
-      ኢሜይል:lijhawultbayuh2721@gmail.com
-      የትምህርት ክፍል:ሒሳብ
-      
-      </pre>
- 
-</div> 
+        <section id="contactSection" class="intro-card">
+            <h2 class="section-title">የእኛ እውቀት እና እርዳታ ማስተዳደር</h2>
+            <p>እዚህ የተለያዩ ምንጮችን በቅርብ እና በሙያዊ እንዲገናኙ እንረዳዎታለን። እባክዎን ጥያቄዎን እና እንዲሁም የመማር አስፈላጊ መረጃዎችን በቀላሉ ይላኩ።</p>
+            <div class="contact-grid">
+                <div class="contact-card">
+                    <h3>እኛን ይገናኙ</h3>
+                    <p>ለማንኛውም የትምህርት ጥያቄ፣በኮርስ፣በእርዳታ ወይም ለሁሉም የማስታወቂያ ጉዳዮች እንግናኝላችኋለን።</p>
+                    <div class="teacher-info">
+                        <p><strong>አድራሻ</strong> ሞጣ፣ኢትዮጵያ</p>
+                        <p><strong>ስልክ</strong> 0927 603 731/0935535937</p>
+                        <p><strong>ኢሜይል</strong> <a href="mailto:sofonyasdemeke21@gmail.com">sofonyasdemeke21@gmail.com</a></p>
+                        <p><strong>የትምህርት ሰዓት</strong> ሰኞ - አርብ 01:00AM - 18:00PM</p>
+                    </div>
+                </div>
+                <form class="contact-form" action="#" method="post">
+                    <h3>እባክዎን ማስታወቂያዎን ይላኩ</h3>
+                    <label for="name">ስም</label>
+                    <input id="name" name="name" type="text" placeholder="ሙሉ ስምዎን ያስገቡ" required />
+                    <label for="email">ኢሜይል</label>
+                    <input id="email" name="email" type="email" placeholder="example@mail.com" required />
+                    <label for="subject">ጉዳይ</label>
+                    <input id="subject" name="subject" type="text" placeholder="የሚፈልጉትን ጉዳይ ያስቀምጡ" required />
+                    <label for="message">መልእክት</label>
+                    <textarea id="message" name="message" placeholder="የጥያቄዎን ዝርዝር እዚህ ያስገቡ" required></textarea>
+                    <button type="submit">መልእክት ላክ</button>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>© 2026 የሶፊ(ቤተ ገብርኤል) እና የተማሪ እርዳታ ድር ገጽ ሁሉም መብቶች የተጠበቁ ናቸው.</p>
+        <p>በእርዳታ የሚደረገው የግንኙነት ስራ ለአማርኛና የእንግሊዝኛ ተጠቃሚዎች የተዘጋጀ ነው።</p>
+    </footer>
+
+    <script>
+        const searchInput = document.getElementById('staffSearch');
+        const teamCards = Array.from(document.querySelectorAll('#teamGrid .team-card'));
+
+        function filterTeam() {
+            const query = searchInput.value.trim().toLowerCase();
+            teamCards.forEach(card => {
+                const name = card.dataset.name.toLowerCase();
+                const subject = card.dataset.subject.toLowerCase();
+                const matches = name.includes(query) || subject.includes(query);
+                card.style.display = matches ? 'block' : 'none';
+            });
+        }
+
+        searchInput.addEventListener('input', filterTeam);
+    </script>
 </body>
+</html>
+      </pre>
+  
