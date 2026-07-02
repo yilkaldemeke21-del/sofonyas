@@ -111,6 +111,22 @@ $notes = $noteStmt->fetchAll();
         <?php if (!empty($course['pdf_file'])): ?>
             <p><a class="button secondary" href="<?php echo htmlspecialchars($course['pdf_file'], ENT_QUOTES, 'UTF-8'); ?>" target="_blank">Open PDF</a></p>
         <?php endif; ?>
+
+        <div class="card" style="margin-top: 20px;">
+            <h3>AI Study Tools</h3>
+            <p>Use smart study support to generate a study guide or a short quiz for this course.</p>
+            <?php if (isset($_SESSION['student_id'])): ?>
+                <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:12px;">
+                    <button class="button" type="button" id="generateStudyGuideButton">Generate Study Guide</button>
+                    <button class="button secondary" type="button" id="generateQuizButton">Generate Quiz</button>
+                </div>
+                <div id="aiResponseMessage" style="margin-top:16px; display:none; padding:12px 14px; border-radius:12px; background:#eff6ff; color:#0f172a; border:1px solid #c7d2fe;"></div>
+                <div id="aiStudyGuidePanel" style="display:none; margin-top:16px;"></div>
+                <div id="aiQuizPanel" style="display:none; margin-top:16px;"></div>
+            <?php else: ?>
+                <p class="muted">እባኮትን እንደ ተማሪ ይግቡ እና ከዚያ በኋላ AI ማስተዋወቂያዎችን ይጠቀሙ።</p>
+            <?php endif; ?>
+        </div>
     </section>
 
     <section class="card">
@@ -164,5 +180,99 @@ $notes = $noteStmt->fetchAll();
             </ul>
         <?php endif; ?>
     </section>
+    <script>
+        (function () {
+            const courseId = <?php echo (int)$courseId; ?>;
+            const showMessage = (message) => {
+                const responseBox = document.getElementById('aiResponseMessage');
+                if (!responseBox) return;
+                responseBox.style.display = 'block';
+                responseBox.textContent = message;
+            };
+
+            const renderStudyGuide = (guide) => {
+                const panel = document.getElementById('aiStudyGuidePanel');
+                const responseBox = document.getElementById('aiResponseMessage');
+                if (!panel || !responseBox) return;
+                panel.style.display = 'block';
+                responseBox.style.display = 'none';
+
+                const objectives = guide.learning_objectives.map(item => `<li>${item}</li>`).join('');
+                const plan = guide.recommended_plan.map(item => `<li>${item}</li>`).join('');
+                const topics = guide.key_topics.map(item => `<li>${item}</li>`).join('');
+                const checklist = guide.revision_checklist.map(item => `<li>${item}</li>`).join('');
+
+                panel.innerHTML = `
+                    <div style="padding:16px; border-radius:16px; border:1px solid #c7d2fe; background:#f8fbff;">
+                        <h3 style="margin-top:0;">${guide.title}</h3>
+                        <p>${guide.introduction}</p>
+                        <h4>Course summary</h4>
+                        <p>${guide.course_summary}</p>
+                        <h4>Learning objectives</h4>
+                        <ul>${objectives}</ul>
+                        <h4>Recommended study plan</h4>
+                        <ul>${plan}</ul>
+                        <h4>Key topics</h4>
+                        <ul>${topics}</ul>
+                        <h4>Revision checklist</h4>
+                        <ul>${checklist}</ul>
+                    </div>
+                `;
+            };
+
+            const renderQuiz = (quiz) => {
+                const panel = document.getElementById('aiQuizPanel');
+                const responseBox = document.getElementById('aiResponseMessage');
+                if (!panel || !responseBox) return;
+                panel.style.display = 'block';
+                responseBox.style.display = 'none';
+
+                const questions = quiz.questions.map((item, index) => {
+                    const options = item.options.map(option => `<li>${option}</li>`).join('');
+                    return `
+                        <div style="margin-bottom:18px; padding:16px; border-radius:14px; border:1px solid #e0e7ff; background:#ffffff;">
+                            <h4>Question ${index + 1}</h4>
+                            <p>${item.question}</p>
+                            <ol>${options}</ol>
+                        </div>
+                    `;
+                }).join('');
+
+                panel.innerHTML = `
+                    <div style="padding:16px; border-radius:16px; border:1px solid #c7d2fe; background:#f8fbff;">
+                        <h3 style="margin-top:0;">Quiz for ${quiz.course_name}</h3>
+                        ${questions}
+                    </div>
+                `;
+            };
+
+            const apiCall = (action, onSuccess) => {
+                showMessage('Loading AI content...');
+                fetch(`ai_tools.php?action=${encodeURIComponent(action)}&course_id=${encodeURIComponent(courseId)}`, {
+                    credentials: 'same-origin',
+                })
+                    .then((response) => response.json())
+                    .then((data) => {
+                        if (!data.success) {
+                            showMessage(data.message || 'Failed to generate AI content.');
+                            return;
+                        }
+                        onSuccess(data[action === 'generate_study_guide' ? 'study_guide' : 'quiz']);
+                    })
+                    .catch(() => {
+                        showMessage('Unable to connect to AI tools.');
+                    });
+            };
+
+            const studyGuideButton = document.getElementById('generateStudyGuideButton');
+            const quizButton = document.getElementById('generateQuizButton');
+            if (studyGuideButton) {
+                studyGuideButton.addEventListener('click', () => apiCall('generate_study_guide', renderStudyGuide));
+            }
+            if (quizButton) {
+                quizButton.addEventListener('click', () => apiCall('generate_quiz', renderQuiz));
+            }
+        })();
+    </script>
 </body>
 </html>

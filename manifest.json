@@ -2,9 +2,10 @@
   "name": "Sofoniyas Learning Platform",
   "short_name": "Sofoniyas",
   "description": "A modern learning and community website with offline-friendly access.",
-  "start_url": "sofonyas2.php",
-  "scope": "/",
+  "start_url": "./sofonyas2.php",
+  "scope": "./",
   "display": "standalone",
+  "display_override": ["standalone", "fullscreen"],
   "background_color": "#f8fafc",
   "theme_color": "#0f172a",
   "orientation": "portrait",
@@ -13,7 +14,7 @@
       "src": "icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ]
 }

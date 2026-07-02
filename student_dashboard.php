@@ -92,6 +92,158 @@ if ($enrolled_courses > 0) {
     $progress_percentage = (int)min(100, round((($completed_lessons * 20) + ($certificates * 30) + ($paid_courses * 10)) / max(1, $enrolled_courses * 10) ));
 }
 
+$quizAttempts = 0;
+$perfect_quiz_scores = 0;
+$quiz_total_score = 0;
+$quiz_total_questions = 0;
+$avg_quiz_percentage = 0;
+$examAttempts = 0;
+$exam_total_score = 0;
+$exam_total_questions = 0;
+$exam_percentage = 0;
+
+try {
+    $stmt = $pdo->prepare('SELECT COUNT(*) as total, SUM(score) as score_sum, SUM(total_questions) as total_questions, SUM(CASE WHEN score = total_questions AND total_questions > 0 THEN 1 ELSE 0 END) as perfect_scores FROM quiz_results WHERE student_id = :student_id');
+    $stmt->execute([':student_id' => $studentId]);
+    $quizData = $stmt->fetch();
+    $quizAttempts = (int)$quizData['total'];
+    $quiz_total_score = (int)$quizData['score_sum'];
+    $quiz_total_questions = (int)$quizData['total_questions'];
+    $perfect_quiz_scores = (int)$quizData['perfect_scores'];
+    if ($quiz_total_questions > 0) {
+        $avg_quiz_percentage = (int)round(($quiz_total_score / $quiz_total_questions) * 100);
+    }
+} catch (Throwable $e) {
+    $avg_quiz_percentage = 0;
+}
+
+try {
+    $stmt = $pdo->prepare('SELECT COUNT(*) as total, SUM(score) as score_sum, SUM(total_questions) as total_questions FROM exam_submissions WHERE student_id = :student_id');
+    $stmt->execute([':student_id' => $studentId]);
+    $examData = $stmt->fetch();
+    $examAttempts = (int)$examData['total'];
+    $exam_total_score = (int)$examData['score_sum'];
+    $exam_total_questions = (int)$examData['total_questions'];
+    if ($exam_total_questions > 0) {
+        $exam_percentage = (int)round(($exam_total_score / $exam_total_questions) * 100);
+    }
+} catch (Throwable $e) {
+    $exam_percentage = 0;
+}
+
+$activityDates = [];
+try {
+    $stmt = $pdo->prepare('SELECT activity_date FROM (
+        SELECT DATE(completed_at) AS activity_date FROM lesson_progress WHERE student_id = :student_id
+        UNION
+        SELECT DATE(created_at) AS activity_date FROM quiz_results WHERE student_id = :student_id
+        UNION
+        SELECT DATE(submitted_at) AS activity_date FROM exam_submissions WHERE student_id = :student_id
+    ) AS activity_dates ORDER BY activity_date DESC');
+    $stmt->execute([':student_id' => $studentId]);
+    $activityDates = array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'activity_date');
+} catch (Throwable $e) {
+    $activityDates = [];
+}
+
+$activitySet = array_fill_keys($activityDates, true);
+$learningStreak = 0;
+$today = new DateTime('today');
+for ($day = 0; $day < 14; $day++) {
+    $dateKey = $today->modify($day === 0 ? 'today' : '-1 day')->format('Y-m-d');
+    if (isset($activitySet[$dateKey])) {
+        $learningStreak++;
+    } else {
+        break;
+    }
+}
+
+$gamificationPoints = (int)($completed_lessons * 10 + $certificates * 80 + $paid_courses * 30 + $learningStreak * 25 + round($avg_quiz_percentage * 2.4) + round($exam_percentage * 3) + $perfect_quiz_scores * 40 + $quizAttempts * 5 + $examAttempts * 8);
+
+$gamificationLevel = 'Novice';
+$levelThresholds = [
+    'Novice' => 0,
+    'Apprentice' => 100,
+    'Learner' => 250,
+    'Scholar' => 500,
+    'Master' => 900,
+    'Champion' => 1500,
+];
+foreach ($levelThresholds as $levelName => $threshold) {
+    if ($gamificationPoints >= $threshold) {
+        $gamificationLevel = $levelName;
+    }
+}
+
+$nextLevelName = '';
+$pointsToNextLevel = 0;
+foreach ($levelThresholds as $levelName => $threshold) {
+    if ($gamificationPoints < $threshold) {
+        $nextLevelName = $levelName;
+        $pointsToNextLevel = $threshold - $gamificationPoints;
+        break;
+    }
+}
+if ($nextLevelName === '') {
+    $nextLevelName = 'Champion';
+}
+
+$gamificationBadges = [];
+if ($enrolled_courses > 0) {
+    $gamificationBadges[] = ['name' => 'የመጀመሪያ ኮርስ ተመዝገበ', 'description' => 'ነዳጅ መጀመሪያ ኮርስዎን አሳዩ።'];
+}
+if ($completed_lessons >= 1) {
+    $gamificationBadges[] = ['name' => 'Lesson Starter', 'description' => 'ከመጀመሪያ የትምህርት ክፍል ተጠናቀቀ.'];
+}
+if ($quizAttempts >= 3) {
+    $gamificationBadges[] = ['name' => 'Quiz Challenger', 'description' => 'በQuiz ላይ 3 ወይም ከዚያ በላይ ጥያቄ ሰርተዋል.'];
+}
+if ($examAttempts >= 1) {
+    $gamificationBadges[] = ['name' => 'Exam Finisher', 'description' => 'ከፈተና ጋር ስራ የጨረሱ.'];
+}
+if ($certificates >= 1) {
+    $gamificationBadges[] = ['name' => 'Certificate Collector', 'description' => 'ከፈለጉት ትምህርቶች ሠርተፊኬት አንዱ አገኙ.'];
+}
+if ($perfect_quiz_scores >= 1) {
+    $gamificationBadges[] = ['name' => 'Perfect Score', 'description' => 'ኩይዝ ውስጥ 100% ውጤት ሰርተዋል.'];
+}
+if ($paid_courses >= 1) {
+    $gamificationBadges[] = ['name' => 'Payment Pro', 'description' => 'ከኮርስ ክፍያ ደረሱ.'];
+}
+if ($learningStreak >= 3) {
+    $gamificationBadges[] = ['name' => 'Learning Streak', 'description' => 'ለቀጣይ 3 ቀናት ዕለታዊ እንቅስቃሴ አደረጉ.'];
+}
+if ($gamificationPoints >= 900) {
+    $gamificationBadges[] = ['name' => 'Master Learner', 'description' => 'እርስዎ ከ900 የጎን ነው.'];
+}
+if (empty($gamificationBadges)) {
+    $gamificationBadges[] = ['name' => 'Welcome Starter', 'description' => 'እርስዎ የመጀመሪያ እርምጃዎችን እየወሰነ ነው.'];
+}
+
+try {
+    $pdo->prepare('INSERT INTO student_gamification (student_id, points, level, streak_days, last_activity) VALUES (:student_id, :points, :level, :streak_days, :last_activity) ON DUPLICATE KEY UPDATE points = VALUES(points), level = VALUES(level), streak_days = VALUES(streak_days), last_activity = VALUES(last_activity), updated_at = NOW()')
+        ->execute([
+            ':student_id' => $studentId,
+            ':points' => $gamificationPoints,
+            ':level' => $gamificationLevel,
+            ':streak_days' => $learningStreak,
+            ':last_activity' => date('Y-m-d H:i:s'),
+        ]);
+
+    foreach ($gamificationBadges as $badge) {
+        $badgeKey = strtolower(preg_replace('/[^a-z0-9]+/', '_', $badge['name']));
+        $pdo->prepare('INSERT IGNORE INTO student_badges (student_id, badge_key, badge_name, description) VALUES (:student_id, :badge_key, :badge_name, :description)')
+            ->execute([
+                ':student_id' => $studentId,
+                ':badge_key' => $badgeKey,
+                ':badge_name' => $badge['name'],
+                ':description' => $badge['description'],
+            ]);
+    }
+} catch (Throwable $e) {
+    // Preserve dashboard display even if gamification persistence fails.
+}
+
 $stmt = $pdo->prepare('SELECT * FROM notifications WHERE student_id = :student_id ORDER BY created_at DESC LIMIT 5');
 $stmt->execute([':student_id' => $studentId]);
 $notifications = $stmt->fetchAll();
@@ -494,6 +646,48 @@ if (empty($notifications)) {
         <div class="card"><h2>የትምህርት የእድገት ማሽሽያ (%)</h2><p><?php echo $progress_percentage; ?>%</p></div>
     </div>
 
+    <div class="card" id="aiRecommendationCard" style="margin-bottom: 24px;">
+        <h2 class="section-title">🤖 AI Course Recommendations</h2>
+        <p class="section-sub">የትምህርት ማስረጃዎችን እና ኮርስ ማጣሪያዎችን እንዲሁም የሚገባዎትን ኮርሶች ይገናኙ።</p>
+        <div id="aiRecommendations" style="display:grid; gap:14px; margin-top: 16px;">
+            <p class="muted">Loading personalized recommendations...</p>
+        </div>
+    </div>
+
+    <div class="grid-3" style="margin-bottom: 24px;">
+        <div class="card">
+            <h2 class="section-title">🎖️ Gamification Points</h2>
+            <p class="section-sub">የተማሪ እርምጃ እና ማስተዋል ስሜት</p>
+            <p class="muted" style="font-size: 28px; font-weight: 800; color: #2563eb; margin: 14px 0 8px;"><?php echo $gamificationPoints; ?> pts</p>
+            <div class="progress-track"><div class="progress-fill" style="width: <?php echo min(100, $gamificationPoints / 15); ?>%;"></div></div>
+            <p class="muted" style="margin-top: 10px;">Level: <strong><?php echo safe($gamificationLevel); ?></strong></p>
+            <?php if ($pointsToNextLevel > 0): ?>
+                <p class="muted"><?php echo $pointsToNextLevel; ?> points to <?php echo safe($nextLevelName); ?></p>
+            <?php else: ?>
+                <p class="muted">You are at the top level.</p>
+            <?php endif; ?>
+        </div>
+        <div class="card">
+            <h2 class="section-title">🔥 Learning Streak</h2>
+            <p class="section-sub">ቀን በቀን የመማር ስኬት</p>
+            <p class="muted" style="font-size: 28px; font-weight: 800; color: #7c3aed; margin: 14px 0 8px;"><?php echo $learningStreak; ?> days</p>
+            <p class="muted">Keep the momentum going with daily activity from lessons, quizzes, or exams.</p>
+            <div style="margin-top: 12px;"><span class="pill success">Active days tracked</span></div>
+        </div>
+        <div class="card">
+            <h2 class="section-title">🏅 Current Badges</h2>
+            <p class="section-sub">እንደ እርስዎ ተገናኝቷል ምልክቶች</p>
+            <div style="display:grid; gap: 10px; margin-top: 12px;">
+                <?php foreach ($gamificationBadges as $badge): ?>
+                    <div class="mini-card" style="padding: 12px 14px; border-radius: 16px; background: #eef2ff; border: 1px solid #c7d2fe;">
+                        <strong><?php echo safe($badge['name']); ?></strong>
+                        <p class="muted" style="margin: 6px 0 0; font-size: 14px; line-height: 1.5;"><?php echo safe($badge['description']); ?></p>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+
     <div class="card" style="margin-bottom: 24px;">
         <h2 class="section-title">🧠 Exam Portal</h2>
         <p class="section-sub">በአድሚኑ የተፈጠሩ ሴክሽኖችን እና ጥያቄዎችን እዚህ ይመልከቱ። እባኮትን በዚህ ወቅት የሚገኙትን የፈተና ሊንኮች ተጠቀሙ።</p>
@@ -860,6 +1054,7 @@ if (empty($notifications)) {
                     <tr>
                         <th>ኮርስ</th>
                         <th>መጠን</th>
+                        <th>የክፍያ መንገድ</th>
                         <th>የክፍያ ሁኔታ</th>
                         <th>ቀን</th>
                         <th>እርምጃ</th>
@@ -876,6 +1071,7 @@ if (empty($notifications)) {
                                 <?php endif; ?>
                             </td>
                             <td><?php echo safe($row['amount'] ?? $row['course_price'] ?? 0); ?> ብር</td>
+                            <td><?php echo safe($row['payment_method'] ? ucwords(str_replace('_', ' ', $row['payment_method'])) : '—'); ?></td>
                             <td><span class="badge <?php echo ($row['payment_status'] === 'paid' ? 'paid' : 'unpaid'); ?>"><?php echo safe($row['payment_status']); ?></span></td>
                             <td><?php echo date('Y-m-d', strtotime($row['created_at'])); ?></td>
                             <td><?php if ($row['payment_status'] !== 'paid'): ?><a class="action-link" href="payment.php?id=<?php echo urlencode($row['id']); ?>">ክፍያ አረጋግጥ</a><?php else: ?>ተከፍሏል<?php endif; ?></td>

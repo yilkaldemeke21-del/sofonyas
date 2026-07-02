@@ -80,6 +80,7 @@ $registrations = $stmt->fetchAll();
                         <th>የተማሪ መለያ</th>
                         <th>ኮርስ</th>
                         <th>መጠን</th>
+                        <th>የክፍያ መንገድ</th>
                         <th>የክፍያ ሁኔታ</th>
                         <th>እርምጃ</th>
                     </tr>
@@ -92,6 +93,7 @@ $registrations = $stmt->fetchAll();
                             <td><?php echo safe($row['student_id']); ?></td>
                             <td><?php echo safe($row['course']); ?></td>
                             <td><?php echo number_format($row['amount'], 2); ?> ብር</td>
+                            <td><?php echo safe($row['payment_method'] ? ucwords(str_replace('_', ' ', $row['payment_method'])) : '—'); ?></td>
                             <td><span class="badge <?php echo ($row['payment_status'] === 'paid' ? 'paid' : 'unpaid'); ?>"><?php echo safe($row['payment_status']); ?></span></td>
                             <td>
                                 <?php if ($row['payment_status'] !== 'paid'): ?>

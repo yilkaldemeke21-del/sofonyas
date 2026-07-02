@@ -1,6 +1,13 @@
 <?php
 require_once __DIR__ . '/db.php';
 
+$paymentMethods = [
+    'telebirr' => 'Telebirr',
+    'cbe_birr' => 'CBE Birr',
+    'chapa' => 'Chapa',
+    'arifpay' => 'ArifPay',
+];
+
 $current = null;
 
 if (isset($_GET['id'])) {
@@ -12,9 +19,15 @@ if (isset($_GET['id'])) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $id = $_POST['id'] ?? '';
-    $stmt = $pdo->prepare('UPDATE registrations SET payment_status = :status, paid_at = :paid_at WHERE id = :id');
+    $paymentMethod = $_POST['payment_method'] ?? null;
+    if (!isset($paymentMethods[$paymentMethod])) {
+        $paymentMethod = null;
+    }
+
+    $stmt = $pdo->prepare('UPDATE registrations SET payment_status = :status, payment_method = :payment_method, paid_at = :paid_at WHERE id = :id');
     $stmt->execute([
         ':status' => 'paid',
+        ':payment_method' => $paymentMethod,
         ':paid_at' => date('Y-m-d H:i:s'),
         ':id' => $id,
     ]);
@@ -54,10 +67,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <p class="badge <?php echo ($current['payment_status'] === 'paid' ? 'paid' : 'unpaid'); ?>">
             የክፍያ ሁኔታ: <?php echo safe($current['payment_status']); ?>
         </p>
+        <?php if (!empty($current['payment_method'])): ?>
+            <p><strong>የክፍያ መንገድ:</strong> <?php echo safe(ucwords(str_replace('_', ' ', $current['payment_method']))); ?></p>
+        <?php endif; ?>
 
         <?php if ($current['payment_status'] !== 'paid'): ?>
             <form method="post" style="margin-top: 20px;">
                 <input type="hidden" name="id" value="<?php echo safe($current['id']); ?>">
+                <label for="payment_method" style="display:block; margin-bottom:10px; font-weight:700;">የክፍያ ዘዴ ይምረጡ</label>
+                <select id="payment_method" name="payment_method" required style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:16px;">
+                    <option value="">-- ይምረጡ --</option>
+                    <?php foreach ($paymentMethods as $key => $label): ?>
+                        <option value="<?php echo safe($key); ?>"><?php echo safe($label); ?></option>
+                    <?php endforeach; ?>
+                </select>
                 <button type="submit" class="button">ክፍያ አረጋግጥ</button>
             </form>
         <?php else: ?>

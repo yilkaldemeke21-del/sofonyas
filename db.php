@@ -236,6 +236,7 @@ function ensureRegistrationTable(PDO $pdo): void
         course_id INT DEFAULT NULL,
         amount DECIMAL(10,2) NOT NULL DEFAULT 0,
         payment_status VARCHAR(30) NOT NULL DEFAULT "unpaid",
+        payment_method VARCHAR(60) DEFAULT NULL,
         created_at DATETIME NOT NULL,
         paid_at DATETIME DEFAULT NULL,
         INDEX idx_reg_student (student_id),
@@ -245,6 +246,9 @@ function ensureRegistrationTable(PDO $pdo): void
 
     if (!columnExists($pdo, 'registrations', 'course_id')) {
         $pdo->exec('ALTER TABLE registrations ADD COLUMN course_id INT DEFAULT NULL');
+    }
+    if (!columnExists($pdo, 'registrations', 'payment_method')) {
+        $pdo->exec('ALTER TABLE registrations ADD COLUMN payment_method VARCHAR(60) DEFAULT NULL');
     }
 }
 
@@ -294,6 +298,57 @@ function ensureAssignmentTables(PDO $pdo): void
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_assignments_student (student_id),
         INDEX idx_assignments_course (course_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+}
+
+function ensureExamSubmissionsTable(PDO $pdo): void
+{
+    $pdo->exec('CREATE TABLE IF NOT EXISTS exam_submissions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id VARCHAR(100) NOT NULL,
+        student_name VARCHAR(255) NOT NULL,
+        exam_type VARCHAR(50) NOT NULL,
+        access_code VARCHAR(50) DEFAULT NULL,
+        score INT NOT NULL DEFAULT 0,
+        total_questions INT NOT NULL DEFAULT 0,
+        answers JSON DEFAULT NULL,
+        submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_exam_submissions_student (student_id),
+        INDEX idx_exam_submissions_exam_type (exam_type)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+}
+
+function ensureGamificationTables(PDO $pdo): void
+{
+    $pdo->exec('CREATE TABLE IF NOT EXISTS student_gamification (
+        student_id VARCHAR(100) NOT NULL PRIMARY KEY,
+        points INT NOT NULL DEFAULT 0,
+        level VARCHAR(50) NOT NULL DEFAULT "Novice",
+        streak_days INT NOT NULL DEFAULT 0,
+        last_activity DATETIME DEFAULT NULL,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_student_gamification_student (student_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+
+    $pdo->exec('CREATE TABLE IF NOT EXISTS student_badges (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id VARCHAR(100) NOT NULL,
+        badge_key VARCHAR(80) NOT NULL,
+        badge_name VARCHAR(255) NOT NULL,
+        description TEXT DEFAULT NULL,
+        awarded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_student_badges (student_id, badge_key),
+        INDEX idx_student_badges_student (student_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+
+    $pdo->exec('CREATE TABLE IF NOT EXISTS gamification_events (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id VARCHAR(100) NOT NULL,
+        event_type VARCHAR(80) NOT NULL,
+        points INT NOT NULL DEFAULT 0,
+        detail VARCHAR(255) DEFAULT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_gamification_events_student (student_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 }
 
@@ -405,6 +460,21 @@ function ensureNotificationSupportTables(PDO $pdo): void
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         UNIQUE KEY uq_email_verification_token (token),
         INDEX idx_email_verification_email (email)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+}
+
+function ensureAiTables(PDO $pdo): void
+{
+    $pdo->exec('CREATE TABLE IF NOT EXISTS student_ai_activity (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id VARCHAR(100) NOT NULL,
+        action VARCHAR(100) NOT NULL,
+        course_id INT DEFAULT NULL,
+        detail TEXT DEFAULT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_student_ai_activity_student (student_id),
+        INDEX idx_student_ai_activity_course (course_id),
+        INDEX idx_student_ai_activity_action (action)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 }
 
@@ -582,6 +652,18 @@ if ($pdo instanceof PDO) {
     }
 
     try {
+        ensureExamSubmissionsTable($pdo);
+    } catch (Throwable $e) {
+        error_log('Exam submissions schema validation failed: ' . $e->getMessage());
+    }
+
+    try {
+        ensureGamificationTables($pdo);
+    } catch (Throwable $e) {
+        error_log('Gamification schema validation failed: ' . $e->getMessage());
+    }
+
+    try {
         ensureSiteChatTables($pdo);
     } catch (Throwable $e) {
         error_log('Site chat schema validation failed: ' . $e->getMessage());
@@ -615,6 +697,12 @@ if ($pdo instanceof PDO) {
         ensureSiteSettingsTable($pdo);
     } catch (Throwable $e) {
         error_log('Site settings schema validation failed: ' . $e->getMessage());
+    }
+
+    try {
+        ensureAiTables($pdo);
+    } catch (Throwable $e) {
+        error_log('AI tables schema validation failed: ' . $e->getMessage());
     }
 
     try {

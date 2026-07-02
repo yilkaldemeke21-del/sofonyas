@@ -81,9 +81,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
     <meta name="description" content="<?php echo safe(translateText('የሶፎንያስ የመማሪያ እና ኮሚዩኒቲ ዌብሳይት', 'Sofoniyas learning and community website')); ?>">
     <meta name="keywords" content="Sofoniyas, learning, church, community, education, Ethiopia">
     <meta name="theme-color" content="#0f172a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="icon.svg">
+    <link rel="mask-icon" href="icon.svg" color="#0f172a">
     <link rel="stylesheet" href="sofonyas (1).css">
     <link rel="sitemap" type="application/xml" href="sitemap.xml">
     <style>
@@ -95,9 +99,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         nav ul { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: center; margin: 0; padding: 14px 18px; list-style: none; }
         nav a { color: #0f172a; text-decoration: none; font-weight: 600; transition: color 0.2s ease, transform 0.2s ease; }
         nav a:hover { color: #4338ca; transform: translateY(-1px); }
-        .card { background: rgba(255,255,255,0.88); border: 1px solid rgba(255,255,255,0.42); border-radius: 28px; box-shadow: 0 34px 80px rgba(15,23,42,0.1); padding: 26px; backdrop-filter: blur(18px); }
+        .card { background: rgba(216, 11, 124, 0.88); border: 1px solid rgba(236, 13, 191, 0.42); border-radius: 28px; box-shadow: 0 34px 80px rgba(15,23,42,0.1); padding: 26px; backdrop-filter: blur(18px); }
         .card h2 { margin-top: 0; }
-        .quick-card { background: rgba(255,255,255,0.9); border: 1px solid rgba(148,163,184,0.18); border-radius: 24px; padding: 24px; box-shadow: 0 24px 50px rgba(15,23,42,0.08); transition: transform 0.25s ease, box-shadow 0.25s ease; }
+        .quick-card { background: rgba(229, 11, 175, 0.9); border: 1px solid rgba(148,163,184,0.18); border-radius: 24px; padding: 24px; box-shadow: 0 24px 50px rgba(15,23,42,0.08); transition: transform 0.25s ease, box-shadow 0.25s ease; }
         .quick-card:hover { transform: translateY(-4px); box-shadow: 0 28px 60px rgba(15,23,42,0.12); }
         .button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: linear-gradient(135deg, #f10eb1, #4f46e5); color: white; text-decoration: none; padding: 14px 22px; border-radius: 999px; font-weight: 800; letter-spacing: 0.01em; box-shadow: 0 16px 40px rgba(37,99,235,0.22); transition: transform 0.24s ease, box-shadow 0.24s ease, filter 0.24s ease; }
         .button:hover { transform: translateY(-2px); filter: brightness(1.05); }
@@ -237,6 +241,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
                 <div class="hero-actions reveal">
                     <a class="button" href="student_login.php" data-am="የተማሪ ግባ" data-en="Student Access">Student Access</a>
                     <a class="button secondary" href="#about" data-am="ተጨማሪ ይወቁ" data-en="Learn More">Learn More</a>
+                    <button id="installAppBtn" class="button secondary" style="display:none;" type="button">Install App</button>
                 </div>
             </div>
         </div>
@@ -533,6 +538,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         const heroDotsContainer = document.getElementById('heroSliderDots');
         const testimonialTrack = document.getElementById('testimonialTrack');
         const testimonialNav = document.getElementById('testimonialNav');
+        const installBtn = document.getElementById('installAppBtn');
+        let deferredPrompt = null;
         let currentSlide = 0;
         let heroSlideIndex = 0;
         let testimonialIndex = 0;
@@ -655,6 +662,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
                 }
             });
         }
+
+        window.addEventListener('beforeinstallprompt', (event) => {
+            event.preventDefault();
+            deferredPrompt = event;
+            if (installBtn) {
+                installBtn.style.display = 'inline-flex';
+            }
+        });
+
+        if (installBtn) {
+            installBtn.addEventListener('click', async () => {
+                if (!deferredPrompt) {
+                    return;
+                }
+                deferredPrompt.prompt();
+                const choice = await deferredPrompt.userChoice;
+                deferredPrompt = null;
+                installBtn.style.display = 'none';
+                if (choice.outcome === 'accepted') {
+                    showToast('App installed successfully!', 'success');
+                }
+            });
+        }
+
+        window.addEventListener('appinstalled', () => {
+            showToast('App installed. Thank you!', 'success');
+        });
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
