@@ -14,6 +14,16 @@ $courseStmt = $pdo->prepare('SELECT * FROM courses WHERE id = :id LIMIT 1');
 $courseStmt->execute([':id' => $courseId]);
 $course = $courseStmt->fetch();
 
+if (!$course) {
+    header('Location: courses.php');
+    exit;
+}
+
+if (!isStudentEnrolled($pdo, (string)$_SESSION['student_id'], $courseId)) {
+    header('Location: course_details.php?id=' . $courseId);
+    exit;
+}
+
 $lessonStmt = $pdo->prepare('SELECT * FROM course_lessons WHERE id = :id AND course_id = :course_id LIMIT 1');
 $lessonStmt->execute([':id' => $lessonId, ':course_id' => $courseId]);
 $lesson = $lessonStmt->fetch();

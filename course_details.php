@@ -7,47 +7,6 @@ if (!isset($_SESSION['student_id'])) {
     exit;
 }
 
-function ensureRegistrationTable(PDO $pdo): void
-{
-    $pdo->exec('CREATE TABLE IF NOT EXISTS registrations (
-        id VARCHAR(50) NOT NULL PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        email VARCHAR(255) NOT NULL,
-        student_id VARCHAR(100) NOT NULL,
-        course VARCHAR(255) NOT NULL,
-        amount DECIMAL(10,2) NOT NULL DEFAULT 0,
-        payment_status VARCHAR(30) NOT NULL DEFAULT "unpaid",
-        created_at DATETIME NOT NULL,
-        paid_at DATETIME DEFAULT NULL,
-        INDEX idx_reg_student (student_id),
-        INDEX idx_reg_course (course)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
-
-    $existingColumns = [];
-    foreach ($pdo->query('SHOW COLUMNS FROM registrations') as $column) {
-        $existingColumns[$column['Field']] = true;
-    }
-
-    $columnMigrations = [
-        'name' => 'ALTER TABLE registrations ADD COLUMN name VARCHAR(255) NOT NULL DEFAULT ""',
-        'email' => 'ALTER TABLE registrations ADD COLUMN email VARCHAR(255) NOT NULL DEFAULT ""',
-        'created_at' => 'ALTER TABLE registrations ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
-        'paid_at' => 'ALTER TABLE registrations ADD COLUMN paid_at DATETIME DEFAULT NULL',
-    ];
-
-    foreach ($columnMigrations as $columnName => $sql) {
-        if (!isset($existingColumns[$columnName])) {
-            try {
-                $pdo->exec($sql);
-            } catch (PDOException $e) {
-                error_log('Registration schema migration warning for ' . $columnName . ': ' . $e->getMessage());
-            }
-        }
-    }
-}
-
-ensureRegistrationTable($pdo);
-
 $message = '';
 $messageType = '';
 
@@ -66,20 +25,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['enroll_course_id']))
     $course = $stmt->fetch();
 
     if ($course) {
-        $checkStmt = $pdo->prepare('SELECT id FROM registrations WHERE student_id = :student_id AND course = :course LIMIT 1');
-        $checkStmt->execute([':student_id' => $_SESSION['student_id'], ':course' => $course['course_name']]);
+        $checkStmt = $pdo->prepare('SELECT id FROM registrations WHERE student_id = :student_id AND (course_id = :course_id OR course = :course) LIMIT 1');
+        $checkStmt->execute([':student_id' => $_SESSION['student_id'], ':course_id' => $courseId, ':course' => $course['course_name']]);
         if ($checkStmt->fetch()) {
             $message = 'You are already enrolled in this course.';
             $messageType = 'info';
         } else {
             $recordId = uniqid('reg_', true);
-            $insertStmt = $pdo->prepare('INSERT INTO registrations (id, name, email, student_id, course, amount, payment_status, created_at) VALUES (:id, :name, :email, :student_id, :course, :amount, :payment_status, :created_at)');
+            $insertStmt = $pdo->prepare('INSERT INTO registrations (id, name, email, student_id, course, course_id, amount, payment_status, created_at) VALUES (:id, :name, :email, :student_id, :course, :course_id, :amount, :payment_status, :created_at)');
             $insertStmt->execute([
                 ':id' => $recordId,
                 ':name' => $studentName,
                 ':email' => $studentEmail,
                 ':student_id' => $_SESSION['student_id'],
                 ':course' => $course['course_name'],
+                ':course_id' => $courseId,
                 ':amount' => $course['price'] ?? 0,
                 ':payment_status' => 'unpaid',
                 ':created_at' => date('Y-m-d H:i:s'),
@@ -94,6 +54,13 @@ $courseId = (int)($_GET['id'] ?? 0);
 $stmt = $pdo->prepare('SELECT * FROM courses WHERE id = :id LIMIT 1');
 $stmt->execute([':id' => $courseId]);
 $course = $stmt->fetch();
+
+$isEnrolled = false;
+$registrationRecord = null;
+if (!empty($_SESSION['student_id']) && $course) {
+    $isEnrolled = isStudentEnrolled($pdo, (string)$_SESSION['student_id'], $courseId);
+    $registrationRecord = $isEnrolled ? getStudentRegistration($pdo, (string)$_SESSION['student_id'], $courseId) : null;
+}
 
 if (!$course) {
     header('Location: courses.php');
@@ -134,9 +101,12 @@ $notes = $noteStmt->fetchAll();
         <p><?php echo nl2br(htmlspecialchars($course['description'] ?? $course['short_description'] ?? '', ENT_QUOTES, 'UTF-8')); ?></p>
         <p><strong>Instructor:</strong> <?php echo htmlspecialchars($course['instructor'] ?? 'Staff', ENT_QUOTES, 'UTF-8'); ?></p>
         <p><strong>Price:</strong> <?php echo number_format((float)($course['price'] ?? 0), 2); ?></p>
+        <?php if ($isEnrolled): ?>
+            <p style="color:#166534; font-weight:700;">Status: Enrolled</p>
+        <?php endif; ?>
         <form method="post" style="display:inline-block; margin:8px 0 12px;">
             <input type="hidden" name="enroll_course_id" value="<?php echo (int)$courseId; ?>">
-            <button class="button" type="submit">Enroll Now</button>
+            <button class="button" type="submit" <?php echo $isEnrolled ? 'disabled style="opacity:.6;cursor:not-allowed;"' : ''; ?>><?php echo $isEnrolled ? 'Enrolled' : 'Enroll Now'; ?></button>
         </form>
         <?php if (!empty($course['pdf_file'])): ?>
             <p><a class="button secondary" href="<?php echo htmlspecialchars($course['pdf_file'], ENT_QUOTES, 'UTF-8'); ?>" target="_blank">Open PDF</a></p>
@@ -184,7 +154,11 @@ $notes = $noteStmt->fetchAll();
                 <?php foreach ($lessons as $lesson): ?>
                     <li style="margin-bottom:10px;">
                         <strong><?php echo htmlspecialchars($lesson['title'] ?? 'Lesson', ENT_QUOTES, 'UTF-8'); ?></strong>
-                        <div><a href="lesson.php?course_id=<?php echo (int)$courseId; ?>&lesson_id=<?php echo (int)$lesson['id']; ?>">Open Lesson</a></div>
+                        <?php if ($isEnrolled): ?>
+                            <div><a href="course_content.php?course_id=<?php echo (int)$courseId; ?>&lesson_id=<?php echo (int)$lesson['id']; ?>">Open Lesson</a></div>
+                        <?php else: ?>
+                            <div style="color:#64748b;">Enroll to access this lesson.</div>
+                        <?php endif; ?>
                     </li>
                 <?php endforeach; ?>
             </ul>

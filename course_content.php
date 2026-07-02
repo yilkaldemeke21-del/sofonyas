@@ -19,6 +19,12 @@ if (!$course) {
     exit;
 }
 
+$isEnrolled = isStudentEnrolled($pdo, (string)$_SESSION['student_id'], $courseId);
+if (!$isEnrolled) {
+    header('Location: course_details.php?id=' . $courseId);
+    exit;
+}
+
 $moduleStmt = $pdo->prepare('SELECT * FROM course_modules WHERE course_id = :course_id ORDER BY sort_order ASC, id ASC');
 $moduleStmt->execute([':course_id' => $courseId]);
 $modules = $moduleStmt->fetchAll();
@@ -87,11 +93,11 @@ $lessonContent = renderRichText($selectedLesson['content'] ?? $course['tutorial_
 $lessonModuleName = $selectedLesson['module_name'] ?: 'General';
 $lessonPosition = $lessonIndex !== null ? $lessonIndex + 1 : 0;
 $totalLessons = count($lessons);
+recordLessonProgress($pdo, (string)$_SESSION['student_id'], $courseId, $currentLessonId);
 
-$progressStmt = $pdo->prepare('SELECT COUNT(*) AS total FROM lesson_bookmarks WHERE student_id = :student_id AND course_id = :course_id');
-$progressStmt->execute([':student_id' => $_SESSION['student_id'], ':course_id' => $courseId]);
-$completedLessons = (int)($progressStmt->fetch()['total'] ?? 0);
-$progressPercent = $totalLessons > 0 ? min(100, (int)round(($completedLessons / $totalLessons) * 100)) : 0;
+$progressData = getCourseLessonProgress($pdo, (string)$_SESSION['student_id'], $courseId);
+$completedLessons = $progressData['completed'] ?? 0;
+$progressPercent = $progressData['total'] > 0 ? min(100, (int)round(($completedLessons / $progressData['total']) * 100)) : 0;
 
 ?>
 <!DOCTYPE html>

@@ -63,7 +63,7 @@ try {
 } catch (PDOException $e) {
 }
 
-$stmt = $pdo->prepare('SELECT r.*, c.id AS course_id, c.course_code, c.short_description, c.description, c.instructor, c.thumbnail, c.price AS course_price, c.category, c.level FROM registrations r LEFT JOIN courses c ON c.course_name = r.course WHERE r.student_id = :student_id ORDER BY r.created_at DESC');
+$stmt = $pdo->prepare('SELECT r.*, c.id AS course_id, c.course_code, c.short_description, c.description, c.instructor, c.thumbnail, c.price AS course_price, c.category, c.level FROM registrations r LEFT JOIN courses c ON c.id = r.course_id OR c.course_name = r.course WHERE r.student_id = :student_id ORDER BY r.created_at DESC');
 $stmt->execute([':student_id' => $studentId]);
 $registrations = $stmt->fetchAll();
 
@@ -79,7 +79,7 @@ foreach ($registrations as $row) {
 
 $summary = ['total' => $enrolled_courses, 'paid' => $paid_courses, 'unpaid' => $enrolled_courses - $paid_courses, 'revenue' => $revenue];
 
-$stmt = $pdo->prepare('SELECT COUNT(*) as total FROM exam_submissions WHERE student_id = :student_id');
+$stmt = $pdo->prepare('SELECT COUNT(*) as total FROM lesson_progress WHERE student_id = :student_id');
 $stmt->execute([':student_id' => $studentId]);
 $completed_lessons = (int)$stmt->fetch()['total'];
 
@@ -477,6 +477,7 @@ if (empty($notifications)) {
             <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle theme">🌙 Dark</button>
             <a class="button" href="sofonyas%20(2).html">መጀመሪያ</a>
             <a class="button" href="tutorial.php">ኮርሶች</a>
+            <a class="button" href="my_courses.php">My Courses</a>
             <a class="button" href="live_class.php">Live Class</a>
             <a class="button" href="discussion_forum.php">ፎርም</a>
             <a class="button" href="library.php">ላይብራሪ</a>

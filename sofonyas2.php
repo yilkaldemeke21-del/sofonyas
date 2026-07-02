@@ -87,8 +87,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
     <link rel="stylesheet" href="sofonyas (1).css">
     <link rel="sitemap" type="application/xml" href="sitemap.xml">
     <style>
-        :root { color-scheme: light; }
-        body { background: linear-gradient(135deg, #f8fbff 0%, #eef2ff 100%); color: #0f172a; }
+        :root { color-scheme: light; scroll-behavior: smooth; }
+        html { min-height: 100%; scroll-behavior: smooth; }
+        body { min-height: 100%; background: radial-gradient(circle at top left, rgba(124,58,237,0.18), transparent 22%), radial-gradient(circle at bottom right, rgba(59,130,246,0.12), transparent 18%), linear-gradient(135deg, #f8fbff 0%, #eef2ff 100%); color: #0f172a; }
+        body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(circle at 25% 20%, rgba(99,102,241,0.12), transparent 16%), radial-gradient(circle at 80% 10%, rgba(236,72,153,0.1), transparent 14%), radial-gradient(circle at 50% 90%, rgba(14,165,233,0.08), transparent 16%); pointer-events: none; z-index: 0; }
+        nav { position: sticky; top: 0; z-index: 20; background: rgba(248,251,255,0.78); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(148,163,184,0.18); }
+        nav ul { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: center; margin: 0; padding: 14px 18px; list-style: none; }
+        nav a { color: #0f172a; text-decoration: none; font-weight: 600; transition: color 0.2s ease, transform 0.2s ease; }
+        nav a:hover { color: #4338ca; transform: translateY(-1px); }
+        .card { background: rgba(255,255,255,0.88); border: 1px solid rgba(255,255,255,0.42); border-radius: 28px; box-shadow: 0 34px 80px rgba(15,23,42,0.1); padding: 26px; backdrop-filter: blur(18px); }
+        .card h2 { margin-top: 0; }
+        .quick-card { background: rgba(255,255,255,0.9); border: 1px solid rgba(148,163,184,0.18); border-radius: 24px; padding: 24px; box-shadow: 0 24px 50px rgba(15,23,42,0.08); transition: transform 0.25s ease, box-shadow 0.25s ease; }
+        .quick-card:hover { transform: translateY(-4px); box-shadow: 0 28px 60px rgba(15,23,42,0.12); }
+        .button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: linear-gradient(135deg, #f10eb1, #4f46e5); color: white; text-decoration: none; padding: 14px 22px; border-radius: 999px; font-weight: 800; letter-spacing: 0.01em; box-shadow: 0 16px 40px rgba(37,99,235,0.22); transition: transform 0.24s ease, box-shadow 0.24s ease, filter 0.24s ease; }
+        .button:hover { transform: translateY(-2px); filter: brightness(1.05); }
         .toast { position: fixed; right: 20px; top: 20px; max-width: 360px; padding: 14px 16px; border-radius: 12px; color: #fff; box-shadow: 0 16px 35px rgba(15,23,42,0.2); z-index: 9999; opacity: 0; transform: translateY(-8px); pointer-events: none; transition: all 0.3s ease; }
         .toast.show { opacity: 1; transform: translateY(0); }
         .toast-success { background: linear-gradient(135deg, #16a34a, #15803d); }
@@ -99,14 +111,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         .hero-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(2,6,23,0.24), rgba(15,23,42,0.24)); }
         .hero-content { position: relative; z-index: 2; display: grid; grid-template-columns: minmax(320px, 1.1fr) minmax(320px, 0.9fr); gap: 32px; padding: 60px 42px; align-items: center; }
         .hero-copy { color: #fff; max-width: 660px; }
-        .hero-copy h1 { font-size: clamp(2.2rem, 4vw, 3.6rem); line-height: 1.05; margin-bottom: 16px; }
-        .hero-copy p { font-size: 1.05rem; color: #e2e8f0; line-height: 1.75; }
+        .hero-copy h1 { font-size: clamp(2.4rem, 4vw, 3.8rem); line-height: 1.02; margin-bottom: 18px; text-shadow: 0 16px 45px rgba(15,23,42,0.3); letter-spacing: -0.03em; }
+        .hero-copy p { font-size: 1.05rem; color: rgba(226,232,240,0.96); line-height: 1.75; max-width: 620px; }
         .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
-        .button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: linear-gradient(135deg, #f10eb1, #4f46e5); color: white; text-decoration: none; padding: 12px 18px; border-radius: 999px; font-weight: 700; box-shadow: 0 12px 24px rgba(37,99,235,0.25); }
-        .button.secondary { background: linear-gradient(135deg, #38bdf8, #e10bb3); color: white; box-shadow: 0 12px 24px rgba(56,189,248,0.2); border: none; }
+        .button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: linear-gradient(135deg, #f10eb1, #4f46e5); color: white; text-decoration: none; padding: 14px 22px; border-radius: 999px; font-weight: 800; letter-spacing: 0.01em; box-shadow: 0 16px 40px rgba(37,99,235,0.22); transition: transform 0.24s ease, box-shadow 0.24s ease, filter 0.24s ease; }
+        .button:hover { transform: translateY(-2px); filter: brightness(1.05); }
+        .button.secondary { background: linear-gradient(135deg, #38bdf8, #e10bb3); color: white; box-shadow: 0 16px 40px rgba(59,130,246,0.2); border: none; }
         .button.secondary:hover { background: linear-gradient(135deg, #0ea5e9, #0284c7); }
         .hero-stats { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
-        .hero-stat { background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.18); border-radius: 14px; padding: 10px 12px; font-size: 0.95rem; backdrop-filter: blur(10px); }
+        .hero-stat { background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.22); border-radius: 18px; padding: 12px 14px; font-size: 0.95rem; backdrop-filter: blur(12px); }
         .hero-visual { position: relative; display: flex; align-items: center; justify-content: center; margin: 0 auto 32px; max-width: 660px; }
         /* Slider separation */
         .slider-section { margin-top: 24px; }
@@ -120,9 +133,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         /* make stats friendly for Amharic RTL when page lang is am */
         html[lang="am"] .hero-stats-section, html[lang="am"] .stat-card { direction: rtl; text-align: center; }
         /* Card becomes container for stacked slides */
-        .hero-card { position: relative; background: rgba(255,255,255,0.98); border-radius: 32px; padding: 18px; box-shadow: 0 28px 60px rgba(15,23,42,0.18); min-height: 520px; max-width: 660px; width: 100%; display: block; backdrop-filter: blur(16px); overflow: hidden; }
-        /* Stack slides absolutely and crossfade via opacity */
-        .hero-slide { position: absolute; inset: 0; opacity: 0; transition: opacity 0.8s ease; display: flex; align-items: center; justify-content: center; z-index: 1; }
+        .hero-card { position: relative; background: rgba(255,255,255,0.78); border: 1px solid rgba(255,255,255,0.24); border-radius: 32px; padding: 24px; box-shadow: 0 40px 90px rgba(15,23,42,0.16); min-height: 540px; max-width: 660px; width: 100%; display: block; backdrop-filter: blur(20px); overflow: hidden; }
+        .hero-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,0.42), rgba(196,181,253,0.08)); pointer-events: none; }
+        .hero-card .hero-slide { position: absolute; inset: 0; opacity: 0; transition: opacity 0.9s ease; display: flex; align-items: center; justify-content: center; z-index: 1; }
         .hero-slide.active { opacity: 1; z-index: 2; }
         .hero-slide img { width: 100%; height: 100%; object-fit: contain; border-radius: 18px; display: block; }
         .hero-slider-dots { display: flex; gap: 8px; justify-content: center; margin-top: 16px; }
@@ -131,9 +144,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         .floating-card { position: absolute; right: -18px; bottom: -18px; background: linear-gradient(135deg, #0f172a, #334155); color: white; border-radius: 18px; padding: 14px 16px; max-width: 240px; box-shadow: 0 18px 30px rgba(15,23,42,0.22); animation: floatUp 3.2s ease-in-out infinite; }
         .floating-card strong { display:block; margin-bottom:6px; }
         .card { background: rgba(255,255,255,0.9); border: 1px solid #e2e8f0; border-radius: 20px; padding: 20px; box-shadow: 0 12px 30px rgba(15,23,42,0.06); margin-bottom: 22px; }
-        .contact-form { background: linear-gradient(135deg, #edf2ff 0%, #dbeafe 42%, #eff6ff 100%); border: 1px solid #a5b4fc; padding: 32px; border-radius: 30px; box-shadow: 0 32px 70px rgba(15,23,42,0.16); max-width: 720px; margin: 0 auto; }
-        .contact-form h3 { margin-top: 0; margin-bottom: 20px; color: #1e40af; font-size: clamp(2rem, 2.6vw, 2.7rem); text-align: center; letter-spacing: 0.03em; background: linear-gradient(135deg, rgba(59,130,246,0.18), rgba(96,165,250,0.18)); display: inline-block; padding: 14px 24px; border-radius: 20px; box-shadow: 0 12px 24px rgba(59,130,246,0.16); }
-        .contact-form form { display: grid; gap: 18px; }
+        .contact-form { background: linear-gradient(135deg, rgba(247,250,255,0.92), rgba(226,232,255,0.82)); border: 1px solid rgba(148,163,184,0.26); padding: 36px; border-radius: 32px; box-shadow: 0 42px 90px rgba(15,23,42,0.14); max-width: 760px; margin: 0 auto; }
+        .contact-form h3 { margin-top: 0; margin-bottom: 24px; color: #0f172a; font-size: clamp(2rem, 2.6vw, 2.7rem); text-align: center; letter-spacing: 0.02em; background: rgba(59,130,246,0.12); display: inline-block; padding: 14px 24px; border-radius: 20px; box-shadow: 0 14px 30px rgba(59,130,246,0.12); }
+        .contact-form form { display: grid; gap: 20px; }
         .contact-form .form-field { display: grid; gap: 8px; }
         .contact-form label { font-weight: 700; color: #0f172a; }
         .contact-form input,
@@ -147,7 +160,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         .contact-form .button { min-width: 140px; }
         .contact-form .small { font-size: 0.95rem; color: #475569; text-align: center; }
         .contact-form .button:hover { transform: translateY(-1px); }
+        @media (max-width: 980px) { .hero-content { grid-template-columns: 1fr; padding: 48px 24px; } .hero-visual { max-width: 100%; margin-bottom: 24px; } .hero-stats { flex-direction: column; } }
         @media (max-width: 760px) { .contact-form { padding: 22px; } }
+
         .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.8s ease, transform 0.8s ease; }
         .reveal.visible { opacity: 1; transform: translateY(0); }
         .course-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 16px; }
@@ -160,8 +175,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         .testimonial-track { display: flex; transition: transform 0.45s ease; }
         .testimonial-card { min-width: 100%; background: linear-gradient(135deg, #ffffff, #f8fafc); border-radius: 18px; border: 1px solid #e2e8f0; padding: 18px; box-shadow: 0 8px 18px rgba(15,23,42,0.05); }
         .testimonial-nav { display:flex; justify-content:center; gap:10px; margin-top:12px; }
-        .testimonial-nav button { border:none; width: 36px; height: 36px; border-radius: 999px; background:#e2e8f0; color:#0f172a; cursor:pointer; }
-        .testimonial-nav button.active { background:#2563eb; color:white; }
+        .testimonial-nav button { border:none; width: 36px; height: 36px; border-radius: 999px; background:#e2e8f0; color:#0f172a; cursor:pointer; transition: transform 0.24s ease, background 0.24s ease; }
+        .testimonial-nav button.active { background:#2563eb; color:white; transform: scale(1.05); }
+        .slider-frame { position: relative; overflow: hidden; border-radius: 26px; margin-top: 18px; }
+        .slider-track { display: flex; transition: transform 0.5s ease; }
+        .slide { min-width: 100%; opacity: 0; transition: opacity 0.45s ease; position: absolute; inset: 0; }
+        .slide.active { opacity: 1; position: relative; }
+        .slider-frame img { width: 100%; height: auto; display: block; border-radius: 22px; }
+        .button .loading { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.6); border-top-color: rgba(255,255,255,1); border-radius: 50%; animation: spin 0.9s linear infinite; margin-right: 8px; vertical-align: middle; }
+        .button:disabled { opacity: 0.88; cursor: not-allowed; }
         .zoomable-img { transition: transform 0.3s ease; }
         .zoomable-img:hover { transform: scale(1.04); }
         @keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
@@ -235,22 +257,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
             <div class="hero-slide active">
                 <img src="10 .jpg" alt="Community preview">
             </div>
-            <div class="hero-slide active">
+            <div class="hero-slide">
+                <img src="yesofi 3 photo.jpg" alt="Community preview">
+            </div>
+            <div class="hero-slide">
                 <img src="sofi 3 photo.jpg" alt="Community preview">
             </div>
-            <div class="hero-slide active">
-                <img src="IMG_20241202_031425_251.jpg" alt="Community preview">
+            <div class="hero-slide">
+                <img src="yesofi 1 photo.jpg" alt="Community preview">
             </div>
             <div class="hero-slide">
                 <img src="sofi photo.jpg" alt="Sofoniyas community photo">
             </div>
-            <div class="hero-slide active">
+            <div class="hero-slide">
+                <img src="yesofi 2 photo.jpg" alt="Community preview">
+            </div>
+            <div class="hero-slide">
                 <img src="sofi logo.jpg" alt="Community preview">
             </div>
             <div class="hero-slide">
                 <img src="motta sofi.jpg" alt="Students learning">
             </div>
-            <div class="hero-slide active">
+            <div class="hero-slide">
                 <img src="sofi2.jpg" alt="Community preview">
             </div>
             <div class="hero-slider-dots" id="heroSliderDots"></div>
@@ -262,9 +290,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         <div class="slider-frame">
             <div class="slider-track">
                 <div class="slide active"><img src="10 .jpg" alt="Community preview"></div>
-                <div class="slide"><img src="sofi photo.jpg" alt="sofonyas bete gebriel"></div>
+                <div class="slide"><img src="sofi 3 photo.jpg" alt="sofonyas bete gebriel"></div>
                 <div class="slide"><img src="motta sofi.jpg" alt="Students learning"></div>
-                <div class="slide"><img src="sofi2.jpg" alt="Community preview"></div>
+                <div class="slide"><img src="yesofi 1 photo.jpg" alt="Community preview"></div>
             </div>
             <div class="slider-dots" role="tablist" aria-label="Image slider controls"></div>
         </div>
@@ -369,8 +397,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
                     <strong>ፋሲካ(መክሊት), ተማሪ</strong>
                 </div>
                 <div class="testimonial-card">
-                    <p>“"የቀጥታ መመሪያ አገልግሎቱ፣ ማራኪ ዲዛይኑ እና ለመጠቀም ቀላል የሆነው የአሰሳ ስርዓት በጣም ወድጄዋለሁ።".”</p>
-                    <strong>ፍቅረ, ተማሪ</strong>
+                    <p>“እመብርሃንን ይዞ ተስፋ የሰነቀ፣ዘላለም ይኖራል ፍቅሯን እያወቀ፣እኛም እንድንድን ሶፎንያስ ደመቀ፣ሕይወትን እንድናይ ይህን አሳወቀ”</p>
+                    <strong>MR አዱኛው, ተማሪ ፕሬዘዳንት</strong>
+                </div>
+                <div class="testimonial-card">
+                    <p>“አህዛብ መናፍቅ ሲከበን በተራ፣እውነት ለመሸርሸር ሲወጡ ሲወርዱ የእምነት ባላጋራ፣ስህተት ሲገነቡ የውሸት ተራራ፣ደረሰልን ሶፊ ዌብሳይቱን ሰርቶ መንጥሮ እያጣራ፣ሁሉም  በመሰለው ሲያስተምር እንዳሻው፣መጣባቸው ሶፊ የቅባት መዶሻው፣የለም ብለው ነበር ከኛ በላይ ሰው፣ለስለስ ብሎ ገብቶ እውነቱን አወጣው”</p>
+                    <strong>ፍቅረ ግርማ, ተማሪ</strong>
                 </div>
             </div>
             <div class="testimonial-nav" id="testimonialNav"></div>

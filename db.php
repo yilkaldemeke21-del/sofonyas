@@ -11,6 +11,7 @@ $options = [
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
     PDO::ATTR_EMULATE_PREPARES => false,
     PDO::ATTR_TIMEOUT => 2,
+    PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8mb4',
 ];
 
 $pdo = null;
@@ -91,6 +92,8 @@ if (!function_exists('ensureCourseColumns')) {
 if ($pdo instanceof PDO) {
     try {
         ensureCourseColumns($pdo);
+        ensureUtf8mb4CourseSchema($pdo);
+        ensureUtf8mb4TextColumns($pdo, 'courses', ['description', 'short_description', 'tutorial_text', 'assignment', 'quiz', 'certificate_requirements']);
     } catch (Throwable $e) {
         error_log('Course schema validation failed: ' . $e->getMessage());
     }
@@ -138,6 +141,62 @@ if ($pdo instanceof PDO) {
     }
 }
 
+function columnExists(PDO $pdo, string $tableName, string $columnName): bool
+{
+    $stmt = $pdo->prepare('SELECT COUNT(*) FROM information_schema.columns WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :table AND COLUMN_NAME = :column');
+    $stmt->execute([':table' => $tableName, ':column' => $columnName]);
+    return (int)$stmt->fetchColumn() > 0;
+}
+
+function getStudentRegistration(PDO $pdo, string $studentId, int $courseId)
+{
+    $stmt = $pdo->prepare(
+        'SELECT r.* FROM registrations r WHERE r.student_id = :student_id AND (r.course_id = :course_id OR r.course = (SELECT course_name FROM courses WHERE id = :course_id_name)) LIMIT 1'
+    );
+    $stmt->execute([
+        ':student_id' => $studentId,
+        ':course_id' => $courseId,
+        ':course_id_name' => $courseId,
+    ]);
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+}
+
+function isStudentEnrolled(PDO $pdo, string $studentId, int $courseId): bool
+{
+    return (bool)getStudentRegistration($pdo, $studentId, $courseId);
+}
+
+function getCourseLessonProgress(PDO $pdo, string $studentId, int $courseId): array
+{
+    $stmt = $pdo->prepare('SELECT COUNT(*) AS completed_lessons FROM lesson_progress WHERE student_id = :student_id AND course_id = :course_id');
+    $stmt->execute([':student_id' => $studentId, ':course_id' => $courseId]);
+    $completed = (int)$stmt->fetchColumn();
+
+    $stmt = $pdo->prepare('SELECT COUNT(*) AS total_lessons FROM course_lessons WHERE course_id = :course_id');
+    $stmt->execute([':course_id' => $courseId]);
+    $total = (int)$stmt->fetchColumn();
+
+    return ['completed' => $completed, 'total' => $total];
+}
+
+function recordLessonProgress(PDO $pdo, string $studentId, int $courseId, int $lessonId): void
+{
+    if ($studentId === '' || $courseId <= 0 || $lessonId <= 0) {
+        return;
+    }
+
+    try {
+        $stmt = $pdo->prepare('INSERT IGNORE INTO lesson_progress (student_id, course_id, lesson_id, completed_at) VALUES (:student_id, :course_id, :lesson_id, NOW())');
+        $stmt->execute([
+            ':student_id' => $studentId,
+            ':course_id' => $courseId,
+            ':lesson_id' => $lessonId,
+        ]);
+    } catch (PDOException $e) {
+        error_log('Lesson progress record failed: ' . $e->getMessage());
+    }
+}
+
 function ensureCourseStructureTables(PDO $pdo): void
 {
     $pdo->exec('CREATE TABLE IF NOT EXISTS course_modules (
@@ -155,13 +214,120 @@ function ensureCourseStructureTables(PDO $pdo): void
         module_id INT DEFAULT NULL,
         title VARCHAR(255) NOT NULL,
         sort_order INT NOT NULL DEFAULT 0,
+        content TEXT DEFAULT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_course_lessons_course (course_id),
         INDEX idx_course_lessons_module (module_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+
+    if (!columnExists($pdo, 'course_lessons', 'content')) {
+        $pdo->exec('ALTER TABLE course_lessons ADD COLUMN content TEXT DEFAULT NULL');
+    }
 }
 
-function ensureLessonBookmarkTables(PDO $pdo): void
+function ensureRegistrationTable(PDO $pdo): void
+{
+    $pdo->exec('CREATE TABLE IF NOT EXISTS registrations (
+        id VARCHAR(50) NOT NULL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        student_id VARCHAR(100) NOT NULL,
+        course VARCHAR(255) NOT NULL,
+        course_id INT DEFAULT NULL,
+        amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+        payment_status VARCHAR(30) NOT NULL DEFAULT "unpaid",
+        created_at DATETIME NOT NULL,
+        paid_at DATETIME DEFAULT NULL,
+        INDEX idx_reg_student (student_id),
+        INDEX idx_reg_course (course),
+        INDEX idx_reg_course_id (course_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+
+    if (!columnExists($pdo, 'registrations', 'course_id')) {
+        $pdo->exec('ALTER TABLE registrations ADD COLUMN course_id INT DEFAULT NULL');
+    }
+}
+
+function ensureLessonProgressTable(PDO $pdo): void
+{
+    $pdo->exec('CREATE TABLE IF NOT EXISTS lesson_progress (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id VARCHAR(100) NOT NULL,
+        course_id INT NOT NULL,
+        lesson_id INT NOT NULL,
+        completed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uniq_lesson_progress (student_id, course_id, lesson_id),
+        INDEX idx_lesson_progress_student (student_id),
+        INDEX idx_lesson_progress_course (course_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+}
+
+function ensureCourseQuizTables(PDO $pdo): void
+{
+    $pdo->exec('CREATE TABLE IF NOT EXISTS quiz_results (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id VARCHAR(100) NOT NULL,
+        quiz_name VARCHAR(255) NOT NULL,
+        course_id INT DEFAULT NULL,
+        score INT NOT NULL DEFAULT 0,
+        total_questions INT NOT NULL DEFAULT 0,
+        status VARCHAR(30) NOT NULL DEFAULT "pending",
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_quiz_results_student (student_id),
+        INDEX idx_quiz_results_course (course_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+}
+
+function ensureAssignmentTables(PDO $pdo): void
+{
+    $pdo->exec('CREATE TABLE IF NOT EXISTS assignments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id VARCHAR(100) NOT NULL,
+        course_id INT DEFAULT NULL,
+        course_name VARCHAR(255) DEFAULT NULL,
+        title VARCHAR(255) NOT NULL,
+        description TEXT DEFAULT NULL,
+        file_path VARCHAR(255) DEFAULT NULL,
+        status VARCHAR(30) NOT NULL DEFAULT "pending",
+        due_date DATETIME DEFAULT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_assignments_student (student_id),
+        INDEX idx_assignments_course (course_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+}
+
+function ensureUtf8mb4CourseSchema(PDO $pdo): void
+{
+    try {
+        $stmt = $pdo->prepare('SELECT TABLE_COLLATION FROM information_schema.tables WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :table');
+        $stmt->execute([':table' => 'courses']);
+        $collation = $stmt->fetchColumn();
+        if ($collation !== 'utf8mb4_unicode_ci') {
+            $pdo->exec('ALTER TABLE courses CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
+        }
+    } catch (PDOException $e) {
+        error_log('Utf8mb4 course schema enforcement failed: ' . $e->getMessage());
+    }
+}
+
+function ensureUtf8mb4TextColumns(PDO $pdo, string $tableName, array $columns): void
+{
+    foreach ($columns as $columnName) {
+        try {
+            $stmt = $pdo->prepare('SELECT CHARACTER_SET_NAME FROM information_schema.columns WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :table AND COLUMN_NAME = :column');
+            $stmt->execute([':table' => $tableName, ':column' => $columnName]);
+            $charset = $stmt->fetchColumn();
+            if ($charset !== 'utf8mb4') {
+                $pdo->exec("ALTER TABLE $tableName MODIFY $columnName TEXT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+            }
+        } catch (PDOException $e) {
+            error_log('Utf8mb4 column enforcement failed for ' . $tableName . '.' . $columnName . ': ' . $e->getMessage());
+        }
+    }
+}
+
+function ensureSiteChatTables(PDO $pdo): void
 {
     $pdo->exec('CREATE TABLE IF NOT EXISTS lesson_bookmarks (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -239,6 +405,19 @@ function ensureNotificationSupportTables(PDO $pdo): void
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         UNIQUE KEY uq_email_verification_token (token),
         INDEX idx_email_verification_email (email)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+}
+
+function ensureGalleryTables(PDO $pdo): void
+{
+    $pdo->exec('CREATE TABLE IF NOT EXISTS gallery_images (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(255) DEFAULT NULL,
+        file_path VARCHAR(255) NOT NULL,
+        uploaded_by VARCHAR(255) DEFAULT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_gallery_images_created_at (created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 }
 
@@ -379,9 +558,33 @@ if ($pdo instanceof PDO) {
     }
 
     try {
-        ensureLessonBookmarkTables($pdo);
+        ensureRegistrationTable($pdo);
     } catch (Throwable $e) {
-        error_log('Lesson bookmark schema validation failed: ' . $e->getMessage());
+        error_log('Registration schema validation failed: ' . $e->getMessage());
+    }
+
+    try {
+        ensureLessonProgressTable($pdo);
+    } catch (Throwable $e) {
+        error_log('Lesson progress schema validation failed: ' . $e->getMessage());
+    }
+
+    try {
+        ensureCourseQuizTables($pdo);
+    } catch (Throwable $e) {
+        error_log('Course quiz schema validation failed: ' . $e->getMessage());
+    }
+
+    try {
+        ensureAssignmentTables($pdo);
+    } catch (Throwable $e) {
+        error_log('Assignment schema validation failed: ' . $e->getMessage());
+    }
+
+    try {
+        ensureSiteChatTables($pdo);
+    } catch (Throwable $e) {
+        error_log('Site chat schema validation failed: ' . $e->getMessage());
     }
 
     try {
@@ -394,6 +597,12 @@ if ($pdo instanceof PDO) {
         ensureNotificationSupportTables($pdo);
     } catch (Throwable $e) {
         error_log('Notification support schema validation failed: ' . $e->getMessage());
+    }
+
+    try {
+        ensureGalleryTables($pdo);
+    } catch (Throwable $e) {
+        error_log('Gallery schema validation failed: ' . $e->getMessage());
     }
 
     try {
@@ -423,21 +632,6 @@ if ($pdo instanceof PDO) {
 
 function cleanText($value): string {
     return trim((string)($value ?? ''));
-}
-
-function ensureSiteChatTables(PDO $pdo): void
-{
-    $pdo->exec('CREATE TABLE IF NOT EXISTS site_chat_messages (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        sender_type VARCHAR(30) NOT NULL DEFAULT "guest",
-        sender_name VARCHAR(255) NOT NULL,
-        message TEXT NOT NULL,
-        reply_message TEXT DEFAULT NULL,
-        status VARCHAR(30) NOT NULL DEFAULT "new",
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        INDEX idx_site_chat_created_at (created_at)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 }
 
 function sanitizeRichText($value): string {

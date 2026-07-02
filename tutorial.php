@@ -36,9 +36,22 @@ if (isset($_POST['save_lesson']) && isset($_SESSION['student_id'])) {
 
 $courseId = (int)($_GET['course_id'] ?? 0);
 $lessonId = (int)($_GET['lesson_id'] ?? 0);
+$isEnrolled = false;
 
 $stmt = $pdo->query('SELECT * FROM courses ORDER BY created_at DESC LIMIT 12');
 $courses = $stmt->fetchAll();
+
+$enrolledCourseKeys = [];
+$enrolledStmt = $pdo->prepare('SELECT course_id, course FROM registrations WHERE student_id = :student_id');
+$enrolledStmt->execute([':student_id' => $_SESSION['student_id']]);
+foreach ($enrolledStmt->fetchAll() as $entry) {
+    if (!empty($entry['course_id'])) {
+        $enrolledCourseKeys[(int)$entry['course_id']] = true;
+    }
+    if (!empty($entry['course'])) {
+        $enrolledCourseKeys['name:' . $entry['course']] = true;
+    }
+}
 
 $moduleMap = [];
 $lessonMap = [];
@@ -75,14 +88,14 @@ if ($courseId > 0) {
   $selectedCourse = $courseStmt->fetch();
 
   if ($selectedCourse) {
-    $moduleStmt = $pdo->prepare('SELECT * FROM course_modules WHERE course_id = :course_id ORDER BY sort_order ASC, id ASC');
-    $moduleStmt->execute([':course_id' => $courseId]);
-    $courseModules = $moduleStmt->fetchAll();
+      $isEnrolled = isset($_SESSION['student_id']) && isStudentEnrolled($pdo, (string)$_SESSION['student_id'], $courseId);
+      $moduleStmt = $pdo->prepare('SELECT * FROM course_modules WHERE course_id = :course_id ORDER BY sort_order ASC, id ASC');
+      $moduleStmt->execute([':course_id' => $courseId]);
+      $courseModules = $moduleStmt->fetchAll();
 
-    $lessonStmt = $pdo->prepare('SELECT cl.*, cm.name AS module_name FROM course_lessons cl LEFT JOIN course_modules cm ON cm.id = cl.module_id WHERE cl.course_id = :course_id ORDER BY COALESCE(cl.module_id, 999999) ASC, cl.sort_order ASC, cl.id ASC');
-    $lessonStmt->execute([':course_id' => $courseId]);
-    $allLessons = $lessonStmt->fetchAll();
-
+      $lessonStmt = $pdo->prepare('SELECT cl.*, cm.name AS module_name FROM course_lessons cl LEFT JOIN course_modules cm ON cm.id = cl.module_id WHERE cl.course_id = :course_id ORDER BY COALESCE(cl.module_id, 999999) ASC, cl.sort_order ASC, cl.id ASC');
+      $lessonStmt->execute([':course_id' => $courseId]);
+      $allLessons = $lessonStmt->fetchAll();
     if ($lessonId > 0) {
       foreach ($allLessons as $lesson) {
         if ((int)$lesson['id'] === $lessonId) {
@@ -96,7 +109,7 @@ if ($courseId > 0) {
       $selectedLesson = $allLessons[0];
     }
 
-    if ($selectedLesson) {
+    if ($selectedLesson && $isEnrolled) {
       $showLessonView = true;
       $currentLessonId = (int)$selectedLesson['id'];
       foreach ($allLessons as $index => $lesson) {
@@ -273,8 +286,14 @@ if ($courseId > 0) {
         <?php if (!empty($selectedCourse['thumbnail'])): ?>
           <img src="<?php echo htmlspecialchars($selectedCourse['thumbnail']); ?>" alt="<?php echo htmlspecialchars($selectedCourse['course_name']); ?>" style="width:100%; max-height:220px; object-fit:cover; border-radius:12px; margin-bottom:12px;">
         <?php endif; ?>
-        <div class="pill" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;">No lessons have been added for this course yet.</div>
-        <p class="muted" style="margin-top:10px;">The course is ready for students, and the lesson content will appear here once it is published.</p>
+        <?php if (empty($isEnrolled)): ?>
+          <div class="pill warning" style="margin-bottom:12px; display:inline-flex;">ይህን ኮርስ ለማግኘት እባክዎ ይመዝገቡ።</div>
+          <p class="muted" style="margin-top:10px;">የትምህርት ክፍሎችን ለማግኘት ኮርሱን መመዝገብ አለብዎት።</p>
+          <a class="btn" href="course_details.php?id=<?php echo (int)$selectedCourse['id']; ?>">Enroll Now</a>
+        <?php else: ?>
+          <div class="pill" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;">No lessons have been added for this course yet.</div>
+          <p class="muted" style="margin-top:10px;">The course is ready for students, and the lesson content will appear here once it is published.</p>
+        <?php endif; ?>
       </div>
     <?php else: ?>
       <h2>የሚገኙ ኮርሶች</h2>

@@ -12,6 +12,7 @@ $email = '';
 $studentId = '';
 $confirmPassword = '';
 $course = trim($_GET['course'] ?? '');
+$courseId = (int)($_GET['course_id'] ?? 0);
 $amount = trim($_GET['amount'] ?? '0');
 
 if ($course === '' && isset($_GET['course'])) {
@@ -28,6 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $password = $_POST['password'] ?? '';
         $confirmPassword = $_POST['confirm_password'] ?? '';
         $course = trim($_POST['course'] ?? '');
+        $courseId = (int)($_POST['course_id'] ?? $courseId);
         $amount = trim($_POST['amount'] ?? '0');
         $captchaResponse = $_POST['g-recaptcha-response'] ?? '';
 
@@ -87,13 +89,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
 
                 $registrationId = uniqid('reg_', true);
-                $stmt = $pdo->prepare('INSERT INTO registrations (`id`, `name`, `email`, `student_id`, `course`, `amount`, `payment_status`, `created_at`) VALUES (:id, :name, :email, :student_id, :course, :amount, :payment_status, :created_at)');
+                $stmt = $pdo->prepare('INSERT INTO registrations (`id`, `name`, `email`, `student_id`, `course`, `course_id`, `amount`, `payment_status`, `created_at`) VALUES (:id, :name, :email, :student_id, :course, :course_id, :amount, :payment_status, :created_at)');
                 $stmt->execute([
                     ':id' => $registrationId,
                     ':name' => $name,
                     ':email' => $email,
                     ':student_id' => $studentId,
                     ':course' => $course,
+                    ':course_id' => $courseId > 0 ? $courseId : null,
                     ':amount' => $amount,
                     ':payment_status' => 'unpaid',
                     ':created_at' => date('Y-m-d H:i:s'),
@@ -214,6 +217,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div>
                 <label for="course">ኮርስ</label>
                 <input id="course" name="course" value="<?php echo safe($course); ?>" required placeholder="ኮርስ ስም ያስገቡ">
+                <input type="hidden" name="course_id" value="<?php echo (int)$courseId; ?>">
             </div>
             <div>
                 <label for="amount">ክፍያ መጠን (ብር)</label>
