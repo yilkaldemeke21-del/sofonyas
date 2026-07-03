@@ -148,6 +148,26 @@ function columnExists(PDO $pdo, string $tableName, string $columnName): bool
     return (int)$stmt->fetchColumn() > 0;
 }
 
+function ensureStudentLocationColumns(PDO $pdo): void
+{
+    $definitions = [
+        'country' => 'ALTER TABLE students ADD COLUMN country VARCHAR(100) DEFAULT NULL',
+        'city' => 'ALTER TABLE students ADD COLUMN city VARCHAR(100) DEFAULT NULL',
+        'latitude' => 'ALTER TABLE students ADD COLUMN latitude DECIMAL(10,7) DEFAULT NULL',
+        'longitude' => 'ALTER TABLE students ADD COLUMN longitude DECIMAL(10,7) DEFAULT NULL',
+    ];
+
+    foreach ($definitions as $columnName => $sql) {
+        if (!columnExists($pdo, 'students', $columnName)) {
+            try {
+                $pdo->exec($sql);
+            } catch (PDOException $e) {
+                error_log('Student location schema migration warning for students.' . $columnName . ': ' . $e->getMessage());
+            }
+        }
+    }
+}
+
 function getStudentRegistration(PDO $pdo, string $studentId, int $courseId)
 {
     $stmt = $pdo->prepare(
@@ -301,21 +321,23 @@ function ensureAssignmentTables(PDO $pdo): void
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 }
 
-function ensureExamSubmissionsTable(PDO $pdo): void
-{
-    $pdo->exec('CREATE TABLE IF NOT EXISTS exam_submissions (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        student_id VARCHAR(100) NOT NULL,
-        student_name VARCHAR(255) NOT NULL,
-        exam_type VARCHAR(50) NOT NULL,
-        access_code VARCHAR(50) DEFAULT NULL,
-        score INT NOT NULL DEFAULT 0,
-        total_questions INT NOT NULL DEFAULT 0,
-        answers JSON DEFAULT NULL,
-        submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_exam_submissions_student (student_id),
-        INDEX idx_exam_submissions_exam_type (exam_type)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+if (!function_exists('sofonyas_ensureExamSubmissionsTable')) {
+    function sofnyas_ensureExamSubmissionsTable(PDO $pdo): void
+    {
+        $pdo->exec('CREATE TABLE IF NOT EXISTS exam_submissions (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            student_id VARCHAR(100) NOT NULL,
+            student_name VARCHAR(255) NOT NULL,
+            exam_type VARCHAR(50) NOT NULL,
+            access_code VARCHAR(50) DEFAULT NULL,
+            score INT NOT NULL DEFAULT 0,
+            total_questions INT NOT NULL DEFAULT 0,
+            answers JSON DEFAULT NULL,
+            submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_exam_submissions_student (student_id),
+            INDEX idx_exam_submissions_exam_type (exam_type)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+    }
 }
 
 function ensureGamificationTables(PDO $pdo): void
@@ -460,6 +482,18 @@ function ensureNotificationSupportTables(PDO $pdo): void
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         UNIQUE KEY uq_email_verification_token (token),
         INDEX idx_email_verification_email (email)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+}
+
+function ensurePushSubscriptionTable(PDO $pdo): void
+{
+    $pdo->exec('CREATE TABLE IF NOT EXISTS push_subscriptions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        endpoint TEXT NOT NULL,
+        p256dh VARCHAR(255) DEFAULT NULL,
+        auth VARCHAR(255) DEFAULT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_push_endpoint (endpoint(255))
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 }
 
@@ -652,7 +686,7 @@ if ($pdo instanceof PDO) {
     }
 
     try {
-        ensureExamSubmissionsTable($pdo);
+        sofnyas_ensureExamSubmissionsTable($pdo);
     } catch (Throwable $e) {
         error_log('Exam submissions schema validation failed: ' . $e->getMessage());
     }
@@ -682,6 +716,12 @@ if ($pdo instanceof PDO) {
     }
 
     try {
+        ensurePushSubscriptionTable($pdo);
+    } catch (Throwable $e) {
+        error_log('Push subscription schema validation failed: ' . $e->getMessage());
+    }
+
+    try {
         ensureGalleryTables($pdo);
     } catch (Throwable $e) {
         error_log('Gallery schema validation failed: ' . $e->getMessage());
@@ -691,6 +731,12 @@ if ($pdo instanceof PDO) {
         ensureSecurityTables($pdo);
     } catch (Throwable $e) {
         error_log('Security schema validation failed: ' . $e->getMessage());
+    }
+
+    try {
+        ensureStudentLocationColumns($pdo);
+    } catch (Throwable $e) {
+        error_log('Student location schema validation failed: ' . $e->getMessage());
     }
 
     try {

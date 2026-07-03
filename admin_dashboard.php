@@ -47,6 +47,8 @@ $course_breakdown = $pdo->query('SELECT course, COUNT(*) as total FROM registrat
 
 $recent_students = $pdo->query('SELECT * FROM students ORDER BY created_at DESC LIMIT 5')->fetchAll();
 $recent_courses = $pdo->query('SELECT * FROM courses ORDER BY created_at DESC LIMIT 5')->fetchAll();
+$stmt = $pdo->query('SELECT name, email, country, city FROM students WHERE country IS NOT NULL OR city IS NOT NULL ORDER BY created_at DESC LIMIT 150');
+$student_locations = $stmt->fetchAll();
 
 // Create notifications tables if they don't exist
 try {
@@ -346,6 +348,7 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>አስተዳዳሪ ዳሽቦርድ</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-xodZBNTC5n17Xt2Lw3xCw4M6/ngv3fMMwC8a0650mYk=" crossorigin=""/>
     <style>
         :root {
             --bg: #f5f7fa;
@@ -358,14 +361,38 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
             --primary: #667eea;
             --primary-2: #764ba2;
             --primary-text: #ffffff;
+            --font-family: Arial, sans-serif;
+            --layout-gap: 20px;
+            --card-radius: 12px;
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: Arial, sans-serif;
+            font-family: var(--font-family);
             background: var(--bg);
             color: var(--text);
             transition: background 0.2s ease, color 0.2s ease;
         }
+        body.layout-standard .container { max-width: 1200px; }
+        body.layout-spacious .container { max-width: 1320px; }
+        body.layout-compact .container { max-width: 1080px; }
+        body.layout-spacious .stats-grid,
+        body.layout-spacious .analytics-grid,
+        body.layout-spacious .actions,
+        body.layout-spacious .report-grid { gap: 28px; }
+        body.layout-compact .stats-grid,
+        body.layout-compact .analytics-grid,
+        body.layout-compact .actions,
+        body.layout-compact .report-grid { gap: 12px; }
+        body.layout-compact .stat-card,
+        body.layout-compact .chart-card,
+        body.layout-compact .report-card,
+        body.layout-compact .table-section,
+        body.layout-compact .backup-panel .card { padding: 14px; }
+        body.layout-spacious .stat-card,
+        body.layout-spacious .chart-card,
+        body.layout-spacious .report-card,
+        body.layout-spacious .table-section,
+        body.layout-spacious .backup-panel .card { padding: 24px; }
         body[data-theme="dark"] {
             --bg: #0f172a;
             --surface: #111827;
@@ -485,6 +512,57 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
         @media (max-width: 992px) { .navbar { flex-direction: column; align-items: flex-start; gap: 10px; } .navbar div { width: 100%; } .navbar a { margin-left: 0; margin-right: 10px; } }
         @media (max-width: 768px) { .container { padding: 0 12px; } .stats-grid, .analytics-grid, .actions { grid-template-columns: 1fr; } .table-section { overflow-x: auto; } }
         @media (max-width: 576px) { .navbar h1 { font-size: 20px; } .navbar a { display: inline-block; margin-top: 6px; } }
+        .floating-contact-widget {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            z-index: 9999;
+            display: grid;
+            gap: 12px;
+            align-items: end;
+        }
+        .floating-contact-widget a,
+        .floating-contact-widget button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: none;
+            text-decoration: none;
+            color: #fff;
+            font-size: 20px;
+            background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+            box-shadow: 0 18px 36px rgba(37, 99, 102, 0.25);
+            transition: transform 0.2s ease, opacity 0.2s ease;
+        }
+        .floating-contact-widget button { width: 62px; height: 62px; font-size: 24px; }
+        .floating-contact-widget a.telegram { background: linear-gradient(135deg, #0088cc 0%, #005f99 100%); }
+        .floating-contact-widget a.whatsapp { background: linear-gradient(135deg, #25d366 0%, #128c7e 100%); }
+        .floating-contact-widget .contact-label {
+            position: absolute;
+            right: 72px;
+            bottom: 0;
+            display: none;
+            white-space: nowrap;
+            background: rgba(15, 23, 42, 0.95);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 999px;
+            font-size: 0.9rem;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+        }
+        .floating-contact-widget .contact-item {
+            position: relative;
+        }
+        .floating-contact-widget .contact-item:hover .contact-label {
+            display: block;
+        }
+        .floating-contact-widget .contact-item:hover {
+            transform: translateY(-2px);
+        }
     </style>
 </head>
 <body>
@@ -498,6 +576,44 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
 
 <div class="container">
     <h2 style="margin-bottom: 20px;">የዲያቆን ሶፎንያስ ዌቭሳይት ደመቀ(የቤተ ገብርኤል አጠቃላይ መረጃ) </h2>
+    <div class="customizer-panel">
+        <div class="card" style="padding: 22px; margin-bottom: 28px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 18px; border: 1px solid var(--border); background: var(--surface);">
+            <div style="min-width: 280px; max-width: 560px;">
+                <h3 style="margin:0 0 6px; font-size: 1.05rem; color: var(--text);">🎨 Theme Customizer</h3>
+                <p style="margin:0; color: var(--muted); font-size: 14px; line-height: 1.5;">በዳሽቦርድ ላይ ቀለም፣ ፎንትና አወቃቀር ይቀይሩ። ይህ ለአስተዳዳሪ ቅጥያ እና ሙሉ ቅርጸ አቀማመጥ ይረዳል።</p>
+            </div>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; width:100%; max-width: 760px;">
+                <label style="display:block; color: var(--text); font-weight:700; font-size: 13px;">
+                    ቀለም
+                    <select id="colorScheme" style="width:100%; margin-top:6px; padding:10px 12px; border-radius: 10px; border:1px solid #d1d5db; background: var(--surface); color: var(--text);">
+                        <option value="blue">Blue Modern</option>
+                        <option value="emerald">Emerald</option>
+                        <option value="purple">Purple</option>
+                        <option value="crimson">Crimson</option>
+                        <option value="slate">Slate</option>
+                    </select>
+                </label>
+                <label style="display:block; color: var(--text); font-weight:700; font-size: 13px;">
+                    Font
+                    <select id="fontFamily" style="width:100%; margin-top:6px; padding:10px 12px; border-radius: 10px; border:1px solid #d1d5db; background: var(--surface); color: var(--text);">
+                        <option value="Arial, sans-serif">Arial</option>
+                        <option value="Inter, sans-serif">Inter</option>
+                        <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Segoe UI</option>
+                        <option value="'Poppins', sans-serif">Poppins</option>
+                        <option value="'Helvetica Neue', Helvetica, Arial, sans-serif">Helvetica</option>
+                    </select>
+                </label>
+                <label style="display:block; color: var(--text); font-weight:700; font-size: 13px;">
+                    Layout
+                    <select id="layoutMode" style="width:100%; margin-top:6px; padding:10px 12px; border-radius: 10px; border:1px solid #d1d5db; background: var(--surface); color: var(--text);">
+                        <option value="standard">Standard</option>
+                        <option value="spacious">Spacious</option>
+                        <option value="compact">Compact</option>
+                    </select>
+                </label>
+            </div>
+        </div>
+    </div>
     
     <div class="stats-grid">
         <div class="stat-card">
@@ -585,6 +701,16 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
         </div>
     </div>
 
+    <div class="report-section">
+        <div class="report-header">
+            <h3>🌍 Student Location Map</h3>
+            <p style="margin: 0; color: var(--muted);">ተማሪዎች ከተማ እና አገር እንዴት እንደሆኑ በካርታ ላይ ይመልከቱ።</p>
+        </div>
+        <div class="card" style="padding: 16px;">
+            <div id="studentMap" style="height: 420px; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb;"></div>
+        </div>
+    </div>
+
     <?php if ($success_message): ?>
     <div style="margin-bottom: 20px; padding: 12px 14px; border-radius: 8px; background: #ecfdf3; color: #047857; border: 1px solid #a7f3d0;">
         <?php echo htmlspecialchars($success_message, ENT_QUOTES, 'UTF-8'); ?>
@@ -596,10 +722,12 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
         <a href="admin_add_news.php" class="action-btn featured news">📰 አዲስ ዜና ጨምር</a>
         <a href="admin_add_blog.php" class="action-btn featured blog">📝 ብሎግ ጨምር</a>
         <a href="admin_add_announcement.php" class="action-btn featured announcement">📢 ማስታወቂያ ጨምር</a>
-        <a href="admin_website_settings.php" class="action-btn">⚙️ Website Settings</a>
+        <a href="admin_website_settings.php" class="action-btn">⚙️ዌብሳይት ማስተካከያ</a>
+        <a href="admin_ai_dashboard.php" class="action-btn featured">🤖 AI Smart ዳሽቦርድ</a>
         <a href="admin_course_builder.php" class="action-btn">🛠️ ኮርስ ብሉደር ክፈት</a>
+        <a href="vedio_admin.php" class="action-btn">🎬 ቪዲዮ አስተዳደር</a>
         <a href="admin_courses.php" class="action-btn">📹 ቪዲዮዎችን ጨምር</a>
-        <a href="gallery_admin.php" class="action-btn featured gallery">🖼️ Gallery Manager</a>
+        <a href="gallery_admin.php" class="action-btn featured gallery">🖼️ ፎቶዎችን አስተዳደር</a>
         <a href="admin_add_question.php?view=sections" class="action-btn">🧩 Manage Sections</a>
         <a href="admin_add_question.php?view=questions" class="action-btn">🧠 Manage Questions</a>
         <a href="admin_exam_results.php" class="action-btn">📊 ሪፖርቶችን ተመልከት</a>
@@ -1012,17 +1140,90 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
     </div>
 </div>
 
+<div class="floating-contact-widget" aria-label="Contact support">
+    <div class="contact-item">
+        <a class="telegram" href="https://t.me/sophonyasbetmichael" target="_blank" rel="noreferrer noopener" aria-label="ግንኙነት በቴሌግራም">✈️</a>
+        <div class="contact-label">ቴሌግራም</div>
+    </div>
+    <div class="contact-item">
+        <a class="whatsapp" href="https://wa.me/251927603731" target="_blank" rel="noreferrer noopener" aria-label="ግንኙነት በዋትስ አፕ">💬</a>
+        <div class="contact-label">ዋትስ አፕ</div>
+    </div>
+    <button type="button" onclick="window.open('https://wa.me/251927603731%20support', '_blank');" aria-label="Open contact options">📞</button>
+</div>
+
     <script>
         (function () {
-            const storageKey = 'sofnyas-theme';
+            const themeStorageKey = 'sofnyas-theme';
+            const customizerStorageKey = 'sofnyas-dashboard-customizer';
             const toggle = document.getElementById('themeToggle');
+            const colorControl = document.getElementById('colorScheme');
+            const fontControl = document.getElementById('fontFamily');
+            const layoutControl = document.getElementById('layoutMode');
+
+            const colorMap = {
+                blue: ['#667eea', '#764ba2'],
+                emerald: ['#0f766e', '#14b8a6'],
+                purple: ['#7c3aed', '#a855f7'],
+                crimson: ['#dc2626', '#fb7185'],
+                slate: ['#334155', '#64748b']
+            };
+
+            const defaultCustomizer = {
+                color: 'blue',
+                font: 'Arial, sans-serif',
+                layout: 'standard'
+            };
+
             const applyTheme = (theme) => {
                 document.body.setAttribute('data-theme', theme);
                 if (toggle) {
                     toggle.textContent = theme === 'dark' ? '☀️ Light' : '🌙 Dark';
                 }
             };
-            const savedTheme = localStorage.getItem(storageKey);
+
+            const applyCustomizer = (settings) => {
+                const [primary, primary2] = colorMap[settings.color] || colorMap.blue;
+                document.documentElement.style.setProperty('--primary', primary);
+                document.documentElement.style.setProperty('--primary-2', primary2);
+                document.documentElement.style.setProperty('--font-family', settings.font);
+                document.body.classList.remove('layout-standard', 'layout-spacious', 'layout-compact');
+                document.body.classList.add('layout-' + (settings.layout || 'standard'));
+                if (colorControl) colorControl.value = settings.color;
+                if (fontControl) fontControl.value = settings.font;
+                if (layoutControl) layoutControl.value = settings.layout;
+            };
+
+            const saveCustomizer = (settings) => {
+                localStorage.setItem(customizerStorageKey, JSON.stringify(settings));
+            };
+
+            const loadCustomizer = () => {
+                const raw = localStorage.getItem(customizerStorageKey);
+                if (!raw) {
+                    saveCustomizer(defaultCustomizer);
+                    return defaultCustomizer;
+                }
+                try {
+                    const parsed = JSON.parse(raw);
+                    return Object.assign({}, defaultCustomizer, parsed);
+                } catch (e) {
+                    saveCustomizer(defaultCustomizer);
+                    return defaultCustomizer;
+                }
+            };
+
+            const updateCustomizer = () => {
+                const settings = {
+                    color: colorControl?.value || defaultCustomizer.color,
+                    font: fontControl?.value || defaultCustomizer.font,
+                    layout: layoutControl?.value || defaultCustomizer.layout
+                };
+                applyCustomizer(settings);
+                saveCustomizer(settings);
+            };
+
+            const savedTheme = localStorage.getItem(themeStorageKey);
             if (savedTheme === 'dark' || savedTheme === 'light') {
                 applyTheme(savedTheme);
             } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
@@ -1030,15 +1231,111 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
             } else {
                 applyTheme('light');
             }
+
+            const savedCustomizer = loadCustomizer();
+            applyCustomizer(savedCustomizer);
+
             if (toggle) {
                 toggle.addEventListener('click', () => {
                     const currentTheme = document.body.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
                     const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
                     applyTheme(nextTheme);
-                    localStorage.setItem(storageKey, nextTheme);
+                    localStorage.setItem(themeStorageKey, nextTheme);
                 });
             }
+
+            [colorControl, fontControl, layoutControl].forEach((control) => {
+                if (control) {
+                    control.addEventListener('change', updateCustomizer);
+                }
+            });
         })();
+    </script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-o9N1j7k59Q80OQv1yX7sWv8g6VZrJ6Y0/3bCmXabQdk=" crossorigin=""></script>
+    <script>
+        const studentLocations = <?php echo json_encode($student_locations, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+        const locationLookup = {
+            'ethiopia': [9.145, 40.489673],
+            'addis ababa': [9.03, 38.74],
+            'nairobi': [-1.2921, 36.8219],
+            'london': [51.5074, -0.1278],
+            'new york': [40.7128, -74.0060],
+            'united states': [37.0902, -95.7129],
+            'usa': [37.0902, -95.7129],
+            'united kingdom': [55.3781, -3.4360],
+            'uk': [55.3781, -3.4360],
+            'germany': [51.1657, 10.4515],
+            'france': [46.2276, 2.2137],
+            'canada': [56.1304, -106.3468],
+            'australia': [-25.2744, 133.7751],
+            'india': [20.5937, 78.9629],
+            'china': [35.8617, 104.1954],
+            'egypt': [26.8206, 30.8025],
+            'sudan': [12.8628, 30.2176],
+            'south africa': [-30.5595, 22.9375],
+            'toronto': [43.6532, -79.3832],
+            'cairo': [30.0444, 31.2357]
+        };
+
+        function getStudentCoordinates(item) {
+            if (item.latitude && item.longitude) {
+                return [parseFloat(item.latitude), parseFloat(item.longitude)];
+            }
+            const cityKey = (item.city || '').trim().toLowerCase();
+            const countryKey = (item.country || '').trim().toLowerCase();
+            if (cityKey && locationLookup[cityKey]) {
+                return locationLookup[cityKey];
+            }
+            if (countryKey && locationLookup[countryKey]) {
+                return locationLookup[countryKey];
+            }
+            return null;
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const mapContainer = document.getElementById('studentMap');
+            if (!mapContainer) {
+                return;
+            }
+
+            const map = L.map('studentMap').setView([8.98, 38.76], 2);
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 18,
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            const markers = [];
+            studentLocations.forEach(student => {
+                const coords = getStudentCoordinates(student);
+                if (!coords) {
+                    return;
+                }
+                const marker = L.marker(coords).addTo(map);
+                const locationLabel = [student.city, student.country].filter(Boolean).join(', ');
+                const popupHtml = '<strong>' + (student.name || 'Student') + '</strong><br>' +
+                    (locationLabel ? safeHtml(locationLabel) + '<br>' : '') +
+                    safeHtml(student.email || '');
+                marker.bindPopup(popupHtml);
+                markers.push(marker);
+            });
+
+            if (markers.length > 0) {
+                const group = L.featureGroup(markers);
+                map.fitBounds(group.getBounds().pad(0.2), { animate: false });
+            }
+        });
+
+        function safeHtml(value) {
+            return String(value).replace(/[&<>"']/g, function (char) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#39;'
+                }[char];
+            });
+        }
     </script>
 </body>
 </html>

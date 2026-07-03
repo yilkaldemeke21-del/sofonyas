@@ -25,6 +25,8 @@ if ($student_id) {
 $name = $student['name'] ?? '';
 $email = $student['email'] ?? '';
 $student_code = $student['student_id'] ?? '';
+$country = $student['country'] ?? '';
+$city = $student['city'] ?? '';
 $password = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -58,11 +60,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$error) {
         try {
             if ($student_id) {
-                $sql = 'UPDATE students SET name = :name, email = :email, student_id = :student_id';
+                $sql = 'UPDATE students SET name = :name, email = :email, student_id = :student_id, country = :country, city = :city';
                 $params = [
                     ':name' => $name,
                     ':email' => $email,
                     ':student_id' => $student_code,
+                    ':country' => $country,
+                    ':city' => $city,
                     ':id' => $student_id,
                 ];
                 if ($password !== '') {
@@ -77,12 +81,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($password === '') {
                     $error = 'እባክዎ የይለፍ ቃል ያስገቡ።';
                 } else {
-                    $stmt = $pdo->prepare('INSERT INTO students (name, email, student_id, password_hash) VALUES (:name, :email, :student_id, :password_hash)');
+                    $stmt = $pdo->prepare('INSERT INTO students (name, email, student_id, password_hash, country, city) VALUES (:name, :email, :student_id, :password_hash, :country, :city)');
                     $stmt->execute([
                         ':name' => $name,
                         ':email' => $email,
                         ':student_id' => $student_code,
                         ':password_hash' => password_hash($password, PASSWORD_DEFAULT),
+                        ':country' => $country,
+                        ':city' => $city,
                     ]);
                     $student_id = $pdo->lastInsertId();
                     $success = 'ተማሪው ተመዝግቧል።';
@@ -149,6 +155,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="form-group">
                 <label for="student_id">የተማሪ መለያ ቁጥር *</label>
                 <input type="text" id="student_id" name="student_id" value="<?php echo safe($student_code); ?>" required>
+            </div>
+            <div class="form-group">
+                <label for="country">አገር</label>
+                <input type="text" id="country" name="country" value="<?php echo safe($country); ?>" placeholder="ኢትዮጵያ">
+            </div>
+            <div class="form-group">
+                <label for="city">ከተማ</label>
+                <input type="text" id="city" name="city" value="<?php echo safe($city); ?>" placeholder="አዲስ አበባ">
             </div>
             <div class="form-group">
                 <label for="password"><?php echo $student_id ? 'የይለፍ ቃል ማስተካከል (ከፈለጉ)' : 'የይለፍ ቃል *'; ?></label>

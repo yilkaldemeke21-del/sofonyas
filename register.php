@@ -98,6 +98,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $mailSent = sendAppEmail($email, $welcomeSubject, $welcomeMessage);
                 if (!$mailSent) {
                     error_log('Registration email could not be sent for ' . $email);
+                    $deliverySuffix = '&delivery=failed';
+                } else {
+                    $deliverySuffix = '';
                 }
 
                 session_regenerate_id(true);
@@ -105,7 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['student_email'] = $email;
                 $_SESSION['student_name'] = $name;
 
-                header('Location: ' . buildAppUrl('verify_email.php?token=' . urlencode($verificationToken)));
+                header('Location: ' . buildAppUrl('verify_email.php?token=' . urlencode($verificationToken) . $deliverySuffix));
                 exit;
             } catch (PDOException $e) {
                 $errors[] = 'ምዝገባው አልተሳካም። እባክዎ እንደገና ይሞክሩ።';

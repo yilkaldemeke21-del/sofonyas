@@ -91,9 +91,10 @@ try {
                     <tr>
                         <th>ስም</th>
                         <th>ኢሜይል</th>
+                        <th>አገር</th>
+                        <th>ከተማ</th>
                         <th>የተማሪ መለያ</th>
-                        <th>የክፍያ ሁኔታ</th>
-                        <th>ተጨማሪ</th>
+                        <th>የተመዝገበበት ቀን</th>
                         <th>ድርጊቶች</th>
                     </tr>
                 </thead>
@@ -102,9 +103,10 @@ try {
                         <tr>
                             <td><?php echo safe($student['name']); ?></td>
                             <td><?php echo safe($student['email']); ?></td>
+                            <td><?php echo safe($student['country'] ?? 'N/A'); ?></td>
+                            <td><?php echo safe($student['city'] ?? 'N/A'); ?></td>
                             <td><?php echo safe($student['student_id']); ?></td>
-                            <td><?php echo safe($student['created_at']); ?></td>
-                            <td><?php echo safe($student['password_hash'] ? 'አለ' : 'የለም'); ?></td>
+                            <td><?php echo date('M d, Y', strtotime($student['created_at'])); ?></td>
                             <td>
                                 <a class="action-btn edit-btn" href="admin_edit_student.php?id=<?php echo $student['id']; ?>">ማስተካከል</a>
                                 <a class="action-btn delete-btn" href="admin_students.php?delete=<?php echo $student['id']; ?>" onclick="return confirm('ይህን ተማሪ ሰርዝ?');">ሰርዝ</a>

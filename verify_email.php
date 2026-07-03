@@ -5,8 +5,13 @@ require_once __DIR__ . '/mail_config.php';
 
 $errors = [];
 $success = '';
+$fallbackLink = '';
 $token = trim($_GET['token'] ?? '');
 $emailToResend = trim($_GET['email'] ?? ($_SESSION['student_email'] ?? ''));
+$deliveryStatus = trim($_GET['delivery'] ?? '');
+if ($deliveryStatus === 'failed' && $token !== '') {
+    $fallbackLink = buildAppUrl('verify_email.php?token=' . urlencode($token));
+}
 
 if ($token === '') {
     if ($emailToResend !== '' && filter_var($emailToResend, FILTER_VALIDATE_EMAIL)) {
@@ -62,7 +67,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['resend_email'])) {
             if ($mailSent) {
                 $success = 'A new verification email has been sent.';
             } else {
-                $success = 'A verification request was created, but email delivery is not configured. You can still use the verification link shown in the server log or contact the administrator.';
+                $fallbackLink = $verifyUrl;
+                $success = 'A verification request was created, but email delivery is not configured. Use the direct link below to verify your account.';
             }
         } else {
             $errors[] = 'No account was found for that email.';
@@ -81,6 +87,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['resend_email'])) {
         .card { max-width: 560px; margin: auto; background: #fff; border-radius: 14px; padding: 24px; box-shadow: 0 12px 35px rgba(0,0,0,0.08); }
         .error { background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 8px; margin-bottom: 14px; }
         .success { background: #e0fce9; color: #166534; padding: 12px; border-radius: 8px; margin-bottom: 14px; }
+        .fallback { background: #fff7ed; border: 1px solid #fcd34d; color: #92400e; padding: 14px; border-radius: 10px; margin-bottom: 16px; word-break: break-word; }
+        .fallback p { margin: 0 0 10px; }
+        .fallback a { color: #c2410c; text-decoration: underline; }
         input { width: 100%; padding: 10px; margin-top: 6px; margin-bottom: 14px; border: 1px solid #cbd5e1; border-radius: 8px; }
         button { background: #2563eb; color: #fff; border: none; padding: 12px 16px; border-radius: 8px; cursor: pointer; font-weight: 700; }
     </style>
@@ -90,6 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['resend_email'])) {
     <h1>Email Verification</h1>
     <?php if (!empty($errors)): ?><div class="error"><ul><?php foreach ($errors as $error) { echo '<li>' . safe($error) . '</li>'; } ?></ul></div><?php endif; ?>
     <?php if ($success !== ''): ?><div class="success"><?php echo safe($success); ?></div><?php endif; ?>
+    <?php if ($fallbackLink !== ''): ?><div class="fallback"><p>Direct verification link:</p><p><a href="<?php echo safe($fallbackLink); ?>"><?php echo safe($fallbackLink); ?></a></p></div><?php endif; ?>
     <?php if (!empty($errors) || $success === ''): ?>
     <form method="post">
         <label for="resend_email">Email address</label>

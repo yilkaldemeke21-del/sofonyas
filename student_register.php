@@ -10,6 +10,8 @@ $recaptchaSecret = getenv('RECAPTCHA_SECRET_KEY') ?: '';
 $name = '';
 $email = '';
 $studentId = '';
+$country = '';
+$city = '';
 $confirmPassword = '';
 $course = trim($_GET['course'] ?? '');
 $courseId = (int)($_GET['course_id'] ?? 0);
@@ -31,6 +33,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $course = trim($_POST['course'] ?? '');
         $courseId = (int)($_POST['course_id'] ?? $courseId);
         $amount = trim($_POST['amount'] ?? '0');
+        $country = trim($_POST['country'] ?? '');
+        $city = trim($_POST['city'] ?? '');
         $captchaResponse = $_POST['g-recaptcha-response'] ?? '';
 
         if ($name === '') {
@@ -80,12 +84,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $passwordHash = password_hash($password, PASSWORD_DEFAULT);
 
-                $stmt = $pdo->prepare('INSERT INTO students (name, email, student_id, password_hash) VALUES (:name, :email, :student_id, :password_hash)');
+                $stmt = $pdo->prepare('INSERT INTO students (name, email, student_id, password_hash, country, city) VALUES (:name, :email, :student_id, :password_hash, :country, :city)');
                 $stmt->execute([
                     ':name' => $name,
                     ':email' => $email,
                     ':student_id' => $studentId,
                     ':password_hash' => $passwordHash,
+                    ':country' => $country,
+                    ':city' => $city,
                 ]);
 
                 $registrationId = uniqid('reg_', true);
@@ -121,14 +127,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     . '<strong>Amount:</strong> ' . safe($amount) . '</p>'
                     . '<p>Please verify your email here: <a href="' . safe($verifyUrl) . '">Verify Email</a></p>'
                     . '<p>You can now log in and access your dashboard.</p>';
-                sendAppEmail($email, $welcomeSubject, $welcomeMessage);
+                $mailSent = sendAppEmail($email, $welcomeSubject, $welcomeMessage);
+                if (!$mailSent) {
+                    error_log('Student registration email could not be sent for ' . $email);
+                    $deliverySuffix = '&delivery=failed';
+                } else {
+                    $deliverySuffix = '';
+                }
 
                 session_regenerate_id(true);
                 $_SESSION['student_id'] = $studentId;
                 $_SESSION['student_email'] = $email;
                 $_SESSION['student_name'] = $name;
 
-                header('Location: student_dashboard.php');
+                header('Location: ' . buildAppUrl('verify_email.php?token=' . urlencode($verificationToken) . $deliverySuffix));
                 exit;
             } catch (PDOException $e) {
                 $errors[] = 'ተማሪውን መመዝገብ አልተሳካም። ኢሜይል ወይም የተማሪ መለያ ቁጥር አስምር ሊሆን ይችላል።';
@@ -202,6 +214,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <label for="student_id">የተማሪ መለያ (አማራጭ)</label>
         <input id="student_id" name="student_id" value="<?php echo safe($studentId); ?>" placeholder="ባዶ ቢተው በራስ-ሰር ይፈጥራል">
 
+        <div class="row">
+            <div>
+                <label for="country">አገር</label>
+                <input id="country" name="country" value="<?php echo safe($country); ?>" placeholder="ኢትዮጵያ">
+            </div>
+            <div>
+                <label for="city">ከተማ</label>
+                <input id="city" name="city" value="<?php echo safe($city); ?>" placeholder="አዲስ አበባ">
+            </div>
+        </div>
         <div class="row">
             <div>
                 <label for="password">የይለፍ ቃል</label>

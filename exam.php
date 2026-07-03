@@ -85,27 +85,8 @@ $pdo->exec('CREATE TABLE IF NOT EXISTS quiz_link_generators (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 
 ensureExamAccessTables($pdo);
-ensureExamSubmissionsTable($pdo);
-
-function ensureExamSubmissionsTable(PDO $pdo): void
-{
-    $pdo->exec('CREATE TABLE IF NOT EXISTS exam_submissions (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        student_id VARCHAR(100) NOT NULL,
-        student_name VARCHAR(255) NOT NULL,
-        exam_type VARCHAR(50) NOT NULL,
-        access_code VARCHAR(50) NOT NULL,
-        score INT NOT NULL DEFAULT 0,
-        total_questions INT NOT NULL DEFAULT 0,
-        answers JSON DEFAULT NULL,
-        submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE KEY uq_exam_submission_unique (student_id, exam_type, access_code)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
-
-    $columnCheck = $pdo->query("SHOW COLUMNS FROM exam_submissions LIKE 'access_code'")->fetch(PDO::FETCH_ASSOC);
-    if (!$columnCheck) {
-        $pdo->exec('ALTER TABLE exam_submissions ADD COLUMN access_code VARCHAR(50) NOT NULL AFTER exam_type');
-    }
+if (function_exists('sofonyas_ensureExamSubmissionsTable')) {
+    sofnyas_ensureExamSubmissionsTable($pdo);
 }
 
 function buildExamRedirectUrl(array $quizLink): string

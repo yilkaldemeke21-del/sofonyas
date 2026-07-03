@@ -242,6 +242,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
                     <a class="button" href="student_login.php" data-am="የተማሪ ግባ" data-en="Student Access">Student Access</a>
                     <a class="button secondary" href="#about" data-am="ተጨማሪ ይወቁ" data-en="Learn More">Learn More</a>
                     <button id="installAppBtn" class="button secondary" style="display:none;" type="button">Install App</button>
+                    <button id="enableNotificationsBtn" class="button secondary" style="display:none;" type="button">Enable Notifications</button>
                 </div>
             </div>
         </div>
@@ -255,47 +256,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
             <article class="stat-card"><strong>12</strong><span>የተማሪ ዳሽቦርዶች</span></article>
             <article class="stat-card"><strong>100%</strong><span>የእምነት እና የትምህርት ማዕከል</span></article>
         </section>
-    </section>
-
-    <!-- Contact section (integrated from contact.html) -->
-    <section id="contactSection" class="card reveal" style="margin-top:20px;">
-        <h2 class="section-title" data-am="የእኛ እውቀት እና እርዳታ ማስተዳደር" data-en="Contact & Support">የእኛ እውቀት እና እርዳታ ማስተዳደር</h2>
-        <p style="color:#475569;">እባክዎን ጥያቄዎን ይላኩ እና ማንኛውም የሚገኙ ፋይሎችን ከዚህ ቦታ ያስገቡ።</p>
-        <div style="display:grid; gap:20px; grid-template-columns:1.1fr 0.9fr; margin-top:16px;">
-            <div style="background:#fff; border-radius:12px; padding:18px; border:1px solid #e6eef8; box-shadow:0 12px 30px rgba(15,23,42,0.04);">
-                <h3 data-am="እኛን ይገናኙ" data-en="Contact us">እኛን ይገናኙ</h3>
-                <div class="teacher-info" style="margin-top:10px; background:#f8fafc; border:1px solid #e6eef8; padding:12px; border-radius:10px;">
-                    <p><strong>ስልክ</strong> 0927 603 731 / 0935535937</p>
-                    <p><strong>ኢሜይል</strong> <a href="mailto:sofonyasdemeke21@gmail.com">sofonyasdemeke21@gmail.com</a></p>
-                    <p><strong>አድራሻ</strong> ሞጣ፣ ኢትዮጵያ</p>
-                    <p><strong>ሰዓት</strong> ሰኞ - አርብ 01:00 - 18:00</p>
-                </div>
-                <div style="margin-top:12px; border-radius:12px; overflow:hidden; box-shadow:0 10px 26px rgba(15,23,42,0.06);">
-                    <!-- Google Maps embed (replace src with your official embed if needed). OpenStreetMap link provided. -->
-                    <iframe id="siteMapIframe" width="100%" height="240" frameborder="0" scrolling="no" marginheight="0" marginwidth="0"
-                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15661.737794690162!2d37.86890737471809!3d11.080963033205416!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x16450cbdb67a0631%3A0x5d7f32e2f4871c7d!2sMotta!5e0!3m2!1sen!2set!4v1783034680515!5m2!1sen!2set"
-                        style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
-                    <div style="padding:8px 10px; background:#fff; font-size:0.9rem; color:#334155;">
-                        <a href="https://www.openstreetmap.org/?mlat=9.01&amp;mlon=38.75#map=15/9.01/38.75" target="_blank" rel="noopener">እንደ ካርታ በሙሉ ክፈት</a>
-                    </div>
-                </div>
-            </div>
-            <form id="siteContactForm" class="contact-form" action="contact_submit.php" method="post" enctype="multipart/form-data" style="background:#fff; border-radius:12px; padding:18px; border:1px solid #e6eef8; box-shadow:0 12px 30px rgba(15,23,42,0.04);">
-                <h3 data-am="እባክዎን ማስታወቂያዎን ይላኩ" data-en="Send us a message">እባክዎን ማስታወቂያዎን ይላኩ</h3>
-                <label for="site_name" style="display:block; margin-top:10px; font-weight:700;">ስም</label>
-                <input id="site_name" name="name" type="text" required placeholder="ሙሉ ስምዎን ያስገቡ" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px;" />
-                <label for="site_email" style="display:block; margin-top:10px; font-weight:700;">ኢሜይል</label>
-                <input id="site_email" name="email" type="email" required placeholder="example@mail.com" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px;" />
-                <label for="site_subject" style="display:block; margin-top:10px; font-weight:700;">ጉዳይ</label>
-                <input id="site_subject" name="subject" type="text" required placeholder="የሚፈልጉትን ጉዳይ ያስቀምጡ" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px;" />
-                <label for="site_message" style="display:block; margin-top:10px; font-weight:700;">መልእክት</label>
-                <textarea id="site_message" name="message" required placeholder="የጥያቄዎን ዝርዝር እዚህ ያስገቡ" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; min-height:120px; margin-top:8px;"></textarea>
-                <label for="site_attachment" style="display:block; margin-top:10px; font-weight:700;">ከታወቀ ፋይል (ካለ)</label>
-                <input id="site_attachment" name="attachment" type="file" accept=".pdf,.doc,.docx,.jpg,.png" style="margin-top:8px;" />
-                <button type="submit" style="margin-top:14px; padding:12px 14px; border-radius:10px; background:#4f46e5; color:#fff; border:none; font-weight:700;">መልእክት ላክ</button>
-                <div id="siteContactFeedback" class="contact-feedback" aria-live="polite" style="display:none; margin-top:12px; background:#0f172a; color:#fff; padding:10px; border-radius:8px; font-family:monospace; white-space:pre-wrap;"></div>
-            </form>
-        </div>
     </section>
 
     <?php
@@ -706,10 +666,100 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         const testimonialTrack = document.getElementById('testimonialTrack');
         const testimonialNav = document.getElementById('testimonialNav');
         const installBtn = document.getElementById('installAppBtn');
+        const enableNotificationsBtn = document.getElementById('enableNotificationsBtn');
+        const vapidPublicKey = 'BDm7zLpbTZE-Ldhfe687Iqs6Ne9jEJcvGS76zSqbYbsbrUA73orumEo-DxBFhYGyskD7MueWvPr6KZU3RwxPiA4';
         let deferredPrompt = null;
         let currentSlide = 0;
         let heroSlideIndex = 0;
         let testimonialIndex = 0;
+
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
+            return outputArray;
+        }
+
+        function bufferToBase64Url(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let str = '';
+            bytes.forEach((byte) => {
+                str += String.fromCharCode(byte);
+            });
+            return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        }
+
+        function makeSubscriptionPayload(subscription) {
+            const raw = subscription && typeof subscription.toJSON === 'function' ? subscription.toJSON() : subscription;
+            const keys = raw.keys || {};
+            const p256dh = typeof keys.p256dh === 'string' && keys.p256dh !== ''
+                ? keys.p256dh
+                : bufferToBase64Url(subscription.getKey('p256dh'));
+            const auth = typeof keys.auth === 'string' && keys.auth !== ''
+                ? keys.auth
+                : bufferToBase64Url(subscription.getKey('auth'));
+
+            return {
+                endpoint: raw.endpoint,
+                expirationTime: raw.expirationTime || null,
+                keys: {
+                    p256dh,
+                    auth
+                }
+            };
+        }
+
+        async function subscribeToPush() {
+            if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+                showToast('Push notifications are not supported by this browser.', 'error');
+                return;
+            }
+
+            const registration = await navigator.serviceWorker.ready;
+            let subscription = await registration.pushManager.getSubscription();
+            if (!subscription) {
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    showToast('Notification permission denied. Please allow notifications to enable updates.', 'error');
+                    return;
+                }
+                subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
+                });
+            }
+
+            const payload = makeSubscriptionPayload(subscription);
+            const response = await fetch('push_subscribe.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            if (result.success) {
+                showToast('Push notifications are enabled for this app.', 'success');
+                if (enableNotificationsBtn) {
+                    enableNotificationsBtn.textContent = 'Notifications Enabled';
+                    enableNotificationsBtn.disabled = true;
+                }
+            } else {
+                showToast(result.message || 'Unable to save push subscription.', 'error');
+            }
+        }
+
+        function updateNotificationButton() {
+            if (!enableNotificationsBtn) return;
+            if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+                enableNotificationsBtn.style.display = 'none';
+                return;
+            }
+            enableNotificationsBtn.style.display = 'inline-flex';
+            enableNotificationsBtn.addEventListener('click', subscribeToPush);
+        }
 
         function applyLanguage(lang) {
             document.documentElement.lang = lang;
@@ -855,6 +905,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
 
         window.addEventListener('appinstalled', () => {
             showToast('App installed. Thank you!', 'success');
+            if (installBtn) {
+                installBtn.style.display = 'none';
+            }
         });
 
         if ('serviceWorker' in navigator) {
@@ -867,6 +920,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
             loader.classList.add('hidden');
             setTimeout(() => loader.remove(), 400);
             applyLanguage('am');
+            updateNotificationButton();
             startSlider();
             startHeroSlider();
             startTestimonialSlider();

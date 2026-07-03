@@ -585,7 +585,7 @@ if (empty($notifications)) {
         .grid-2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
         .grid-3 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
         .course-card, .mini-card { background: linear-gradient(135deg, var(--surface), var(--surface-3)); border: 1px solid var(--border); border-radius: 14px; padding: 14px; color: var(--text); }
-        .course-card img { width: 220px; border-radius: 50px; height: 310px; object-fit: cover; background: linear-gradient(135deg,#dbeafe,#c4b5fd); }
+        .course-card img { width: 220px; border-radius: 50px; height: 310px; object-fit: contain; background: linear-gradient(135deg,#dbeafe,#c4b5fd); }
         .course-card h3, .mini-card h3 { font-size: 20px; color: var(--text); margin: 10px 0 6px; font-weight: 800; line-height: 1.35; }
         .muted { color: var(--muted); font-size: 16px; line-height: 1.35; font-weight: 500; }
         .rich-content h1, .rich-content h2, .rich-content h3 { font-size: 16px; line-height: 1.35; margin: 0.35em 0; }
@@ -630,6 +630,8 @@ if (empty($notifications)) {
             <a class="button" href="sofonyas%20(2).html">መጀመሪያ</a>
             <a class="button" href="tutorial.php">ኮርሶች</a>
             <a class="button" href="my_courses.php">My Courses</a>
+            <a class="button" href="ai_personal_tutor.php">AI Tutor</a>
+            <a class="button" href="smart_learning_path.php">Learning Path</a>
             <a class="button" href="live_class.php">Live Class</a>
             <a class="button" href="discussion_forum.php">ፎርም</a>
             <a class="button" href="library.php">ላይብራሪ</a>
