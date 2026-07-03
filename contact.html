@@ -58,6 +58,7 @@
         .contact-form input, .contact-form textarea { width:100%; margin-top:8px; padding:14px 16px; border:1px solid #cbd5e1; border-radius:16px; background:#f8fafc; color:#0f172a; outline:none; font-size:1rem; }
         .contact-form textarea { min-height:150px; resize:vertical; }
         .contact-form button { margin-top:20px; width:100%; padding:14px 18px; border:none; border-radius:18px; background:#4f46e5; color:#fff; cursor:pointer; font-weight:700; transition:background 0.2s ease; }
+        .contact-feedback { background:#0f172a; color:#fff; border-radius:12px; padding:14px 16px; font-family:monospace; white-space:pre-wrap; margin-top:14px; }
         .contact-form button:hover { background:#4338ca; }
         footer { margin-top:40px; padding:26px 0 40px; text-align:center; color:#64748b; }
         footer a { color:#4338ca; text-decoration:none; }
@@ -248,13 +249,22 @@
                     <h3>እኛን ይገናኙ</h3>
                     <p>ለማንኛውም የትምህርት ጥያቄ፣በኮርስ፣በእርዳታ ወይም ለሁሉም የማስታወቂያ ጉዳዮች እንግናኝላችኋለን።</p>
                     <div class="teacher-info">
-                        <p><strong>አድራሻ</strong> ሞጣ፣ኢትዮጵያ</p>
-                        <p><strong>ስልክ</strong> 0927 603 731/0935535937</p>
+                        <p><strong>ስልክ</strong> 0927 603 731 / 0935535937</p>
                         <p><strong>ኢሜይል</strong> <a href="mailto:sofonyasdemeke21@gmail.com">sofonyasdemeke21@gmail.com</a></p>
-                        <p><strong>የትምህርት ሰዓት</strong> ሰኞ - አርብ 01:00AM - 18:00PM</p>
+                        <p><strong>አድራሻ</strong> ሞጣ፣ ኢትዮጵያ</p>
+                        <p><strong>ሰዓት</strong> ሰኞ - አርብ 01:00AM - 18:00PM</p>
+                    </div>
+                    <div style="margin-top:14px; border-radius:12px; overflow:hidden; box-shadow:0 12px 30px rgba(15,23,42,0.06);">
+                        <!-- OpenStreetMap embed as a free, no-key fallback. Replace with a Google Maps embed iframe if you prefer. -->
+                        <iframe width="100%" height="220" frameborder="0" scrolling="no" marginheight="0" marginwidth="0"
+                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15661.737794690162!2d37.86890737471809!3d11.080963033205416!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x16450cbdb67a0631%3A0x5d7f32e2f4871c7d!2sMotta!5e0!3m2!1sen!2set!4v1783034680515!5m2!1sen!2set" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"
+                            style="border:0"></iframe>
+                        <div style="padding:8px 10px; background:#fff; font-size:0.9rem; color:#334155;">
+                            <a href="https://www.openstreetmap.org/?mlat=9.01&amp;mlon=38.75#map=15/9.01/38.75" target="_blank" rel="noopener">እንደ ካርታ በሙሉ ክፈት</a>
+                        </div>
                     </div>
                 </div>
-                <form class="contact-form" action="#" method="post">
+                <form id="contactForm" class="contact-form" action="contact_submit.php" method="post" enctype="multipart/form-data">
                     <h3>እባክዎን ማስታወቂያዎን ይላኩ</h3>
                     <label for="name">ስም</label>
                     <input id="name" name="name" type="text" placeholder="ሙሉ ስምዎን ያስገቡ" required />
@@ -264,7 +274,10 @@
                     <input id="subject" name="subject" type="text" placeholder="የሚፈልጉትን ጉዳይ ያስቀምጡ" required />
                     <label for="message">መልእክት</label>
                     <textarea id="message" name="message" placeholder="የጥያቄዎን ዝርዝር እዚህ ያስገቡ" required></textarea>
+                    <label for="attachment">ከታወቀ ፋይል (ካለ)</label>
+                    <input id="attachment" name="attachment" type="file" accept=".pdf,.doc,.docx,.jpg,.png" />
                     <button type="submit">መልእክት ላክ</button>
+                    <div id="contactFeedback" class="contact-feedback" aria-live="polite" style="display:none"></div>
                 </form>
             </div>
         </section>
@@ -290,6 +303,39 @@
         }
 
         searchInput.addEventListener('input', filterTeam);
+
+        // Contact form submission with Name : Value feedback and server POST
+        const contactForm = document.getElementById('contactForm');
+        const contactFeedback = document.getElementById('contactFeedback');
+        if (contactForm) {
+            contactForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (contactFeedback) { contactFeedback.style.display = 'block'; contactFeedback.textContent = '' }
+
+                const fd = new FormData(contactForm);
+                // Build Name : Value preview
+                const lines = [];
+                for (const pair of fd.entries()) {
+                    const k = pair[0];
+                    const v = pair[1];
+                    if (k === 'attachment') {
+                        lines.push(`${k} : ${v && v.name ? v.name : '(no file)'}`);
+                    } else {
+                        lines.push(`${k} : ${v}`);
+                    }
+                }
+                if (contactFeedback) contactFeedback.textContent = lines.join('\n');
+
+                try {
+                    const resp = await fetch(contactForm.action, { method: 'POST', body: fd });
+                    const json = await resp.json();
+                    if (contactFeedback) contactFeedback.textContent += '\n\nServer: ' + (json.message || JSON.stringify(json));
+                    if (json.success) contactForm.reset();
+                } catch (err) {
+                    if (contactFeedback) contactFeedback.textContent += '\n\nRequest failed: ' + err.message;
+                }
+            });
+        }
     </script>
 </body>
 </html>

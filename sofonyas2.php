@@ -257,6 +257,86 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         </section>
     </section>
 
+    <!-- Contact section (integrated from contact.html) -->
+    <section id="contactSection" class="card reveal" style="margin-top:20px;">
+        <h2 class="section-title" data-am="የእኛ እውቀት እና እርዳታ ማስተዳደር" data-en="Contact & Support">የእኛ እውቀት እና እርዳታ ማስተዳደር</h2>
+        <p style="color:#475569;">እባክዎን ጥያቄዎን ይላኩ እና ማንኛውም የሚገኙ ፋይሎችን ከዚህ ቦታ ያስገቡ።</p>
+        <div style="display:grid; gap:20px; grid-template-columns:1.1fr 0.9fr; margin-top:16px;">
+            <div style="background:#fff; border-radius:12px; padding:18px; border:1px solid #e6eef8; box-shadow:0 12px 30px rgba(15,23,42,0.04);">
+                <h3 data-am="እኛን ይገናኙ" data-en="Contact us">እኛን ይገናኙ</h3>
+                <div class="teacher-info" style="margin-top:10px; background:#f8fafc; border:1px solid #e6eef8; padding:12px; border-radius:10px;">
+                    <p><strong>ስልክ</strong> 0927 603 731 / 0935535937</p>
+                    <p><strong>ኢሜይል</strong> <a href="mailto:sofonyasdemeke21@gmail.com">sofonyasdemeke21@gmail.com</a></p>
+                    <p><strong>አድራሻ</strong> ሞጣ፣ ኢትዮጵያ</p>
+                    <p><strong>ሰዓት</strong> ሰኞ - አርብ 01:00 - 18:00</p>
+                </div>
+                <div style="margin-top:12px; border-radius:12px; overflow:hidden; box-shadow:0 10px 26px rgba(15,23,42,0.06);">
+                    <!-- Google Maps embed (replace src with your official embed if needed). OpenStreetMap link provided. -->
+                    <iframe id="siteMapIframe" width="100%" height="240" frameborder="0" scrolling="no" marginheight="0" marginwidth="0"
+                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15661.737794690162!2d37.86890737471809!3d11.080963033205416!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x16450cbdb67a0631%3A0x5d7f32e2f4871c7d!2sMotta!5e0!3m2!1sen!2set!4v1783034680515!5m2!1sen!2set"
+                        style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+                    <div style="padding:8px 10px; background:#fff; font-size:0.9rem; color:#334155;">
+                        <a href="https://www.openstreetmap.org/?mlat=9.01&amp;mlon=38.75#map=15/9.01/38.75" target="_blank" rel="noopener">እንደ ካርታ በሙሉ ክፈት</a>
+                    </div>
+                </div>
+            </div>
+            <form id="siteContactForm" class="contact-form" action="contact_submit.php" method="post" enctype="multipart/form-data" style="background:#fff; border-radius:12px; padding:18px; border:1px solid #e6eef8; box-shadow:0 12px 30px rgba(15,23,42,0.04);">
+                <h3 data-am="እባክዎን ማስታወቂያዎን ይላኩ" data-en="Send us a message">እባክዎን ማስታወቂያዎን ይላኩ</h3>
+                <label for="site_name" style="display:block; margin-top:10px; font-weight:700;">ስም</label>
+                <input id="site_name" name="name" type="text" required placeholder="ሙሉ ስምዎን ያስገቡ" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px;" />
+                <label for="site_email" style="display:block; margin-top:10px; font-weight:700;">ኢሜይል</label>
+                <input id="site_email" name="email" type="email" required placeholder="example@mail.com" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px;" />
+                <label for="site_subject" style="display:block; margin-top:10px; font-weight:700;">ጉዳይ</label>
+                <input id="site_subject" name="subject" type="text" required placeholder="የሚፈልጉትን ጉዳይ ያስቀምጡ" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px;" />
+                <label for="site_message" style="display:block; margin-top:10px; font-weight:700;">መልእክት</label>
+                <textarea id="site_message" name="message" required placeholder="የጥያቄዎን ዝርዝር እዚህ ያስገቡ" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; min-height:120px; margin-top:8px;"></textarea>
+                <label for="site_attachment" style="display:block; margin-top:10px; font-weight:700;">ከታወቀ ፋይል (ካለ)</label>
+                <input id="site_attachment" name="attachment" type="file" accept=".pdf,.doc,.docx,.jpg,.png" style="margin-top:8px;" />
+                <button type="submit" style="margin-top:14px; padding:12px 14px; border-radius:10px; background:#4f46e5; color:#fff; border:none; font-weight:700;">መልእክት ላክ</button>
+                <div id="siteContactFeedback" class="contact-feedback" aria-live="polite" style="display:none; margin-top:12px; background:#0f172a; color:#fff; padding:10px; border-radius:8px; font-family:monospace; white-space:pre-wrap;"></div>
+            </form>
+        </div>
+    </section>
+
+    <?php
+    // List uploaded contact files for admins/viewing on the site
+    $contactUploadsDir = __DIR__ . '/uploads/contacts/';
+    $contactFiles = [];
+    if (is_dir($contactUploadsDir)) {
+        foreach (new DirectoryIterator($contactUploadsDir) as $fileInfo) {
+            if ($fileInfo->isFile()) {
+                $contactFiles[] = [
+                    'name' => $fileInfo->getFilename(),
+                    'mtime' => $fileInfo->getMTime(),
+                    'size' => $fileInfo->getSize(),
+                ];
+            }
+        }
+        usort($contactFiles, function($a, $b) { return $b['mtime'] - $a['mtime']; });
+    }
+    ?>
+
+    <section class="card reveal" aria-label="Contact submissions" style="margin-top:22px;">
+        <h2><?php echo safe(translateText('የእርዳታ ፋይሎች', 'Contact Submissions')); ?></h2>
+        <?php if (empty($contactFiles)): ?>
+            <p style="color:#475569;"><?php echo safe(translateText('አሁን ምንም ፋይል አልተሰበሰበም።', 'No files uploaded yet.')); ?></p>
+        <?php else: ?>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; margin-top:12px;">
+                <?php foreach ($contactFiles as $f): ?>
+                    <div style="background:#fff; border-radius:12px; padding:12px; border:1px solid #e2e8f0; box-shadow:0 8px 18px rgba(15,23,42,0.04);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                            <strong style="font-size:0.98rem; color:#0f172a;"><?php echo safe($f['name']); ?></strong>
+                            <a href="uploads/contacts/<?php echo rawurlencode($f['name']); ?>" download style="color:#4338ca; text-decoration:none; font-weight:700;"><?php echo safe(translateText('Download', 'Download')); ?></a>
+                        </div>
+                        <div style="margin-top:6px; color:#64748b; font-size:0.9rem;">
+                            <?php echo date('Y-m-d H:i', $f['mtime']); ?> • <?php echo number_format($f['size'] / 1024, 1); ?> KB
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+    </section>
+
     <section class="card reveal hero-visual slider-section" aria-label="Hero image slider">
         <div class="hero-card">
             <div class="hero-slide active">
@@ -795,6 +875,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
 
         window.addEventListener('scroll', revealOnScroll);
         window.addEventListener('resize', revealOnScroll);
+    </script>
+    <script>
+    (function(){
+        const form = document.getElementById('siteContactForm');
+        const feedback = document.getElementById('siteContactFeedback');
+        if (!form) return;
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (feedback) { feedback.style.display = 'block'; feedback.textContent = ''; }
+            const fd = new FormData(form);
+            const lines = [];
+            for (const pair of fd.entries()) {
+                const k = pair[0];
+                const v = pair[1];
+                if (k === 'attachment') {
+                    lines.push(`${k} : ${v && v.name ? v.name : '(no file)'}`);
+                } else {
+                    lines.push(`${k} : ${v}`);
+                }
+            }
+            if (feedback) feedback.textContent = lines.join('\n');
+            const btn = form.querySelector('button[type="submit"]');
+            if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
+            try {
+                const resp = await fetch(form.action, { method: 'POST', body: fd });
+                const json = await resp.json();
+                if (feedback) feedback.textContent += '\n\nServer: ' + (json.message || JSON.stringify(json));
+                if (json.success) form.reset();
+            } catch (err) {
+                if (feedback) feedback.textContent += '\n\nRequest failed: ' + err.message;
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = 'መልእክት ላክ'; }
+            }
+        });
+    })();
     </script>
 </body>
 </html>
