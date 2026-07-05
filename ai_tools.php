@@ -49,6 +49,19 @@ switch ($action) {
         echo json_encode(['success' => true, 'recommendations' => $recommendations]);
         break;
 
+    case 'chat':
+        $message = trim((string)(getRequestValue('message') ?? ''));
+        if ($message === '') {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => 'Please enter a question for the tutor.']);
+            exit;
+        }
+
+        $reply = generateTutorReply($pdo, $studentId, $message);
+        logAiActivity($pdo, $studentId, 'chat', null, json_encode(['message' => $message]));
+        echo json_encode(['success' => true, 'reply' => $reply]);
+        break;
+
     case 'generate_study_guide':
         $courseId = (int)($_GET['course_id'] ?? 0);
         if ($courseId <= 0) {
@@ -95,6 +108,35 @@ function logAiActivity(PDO $pdo, string $studentId, string $action, ?int $course
     } catch (Throwable $e) {
         error_log('AI activity log failed: ' . $e->getMessage());
     }
+}
+
+function generateTutorReply(PDO $pdo, string $studentId, string $message): string
+{
+    $studentId = trim($studentId);
+    $message = trim($message);
+
+    $courses = [];
+    if ($studentId !== '') {
+        $stmt = $pdo->prepare('SELECT c.course_name FROM courses c JOIN registrations r ON r.course_id = c.id WHERE r.student_id = :student_id ORDER BY r.created_at DESC LIMIT 5');
+        $stmt->execute([':student_id' => $studentId]);
+        $courses = array_values(array_filter(array_map('trim', array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'course_name'))));
+    }
+
+    if (preg_match('/study|plan|schedule|timeline|day/i', $message)) {
+        $courseList = !empty($courses) ? 'Your enrolled courses include ' . implode(', ', $courses) . '.' : 'You can select an enrolled course from the study guide panel.';
+        return 'A strong study plan starts with small daily goals. ' . $courseList . ' Break each topic into 20–30 minute sessions and review the same lesson twice during the week.';
+    }
+
+    if (preg_match('/quiz|test|practice/i', $message)) {
+        return 'Practice quizzes help you remember ideas faster. Pick a course, choose a few questions, and answer them without looking at your notes first. Then review the answers and focus on the topics you missed.';
+    }
+
+    if (preg_match('/course|lesson|topic/i', $message)) {
+        $courseList = !empty($courses) ? 'You are currently learning ' . implode(', ', $courses) . '.' : 'You can choose a course from the tutor panel.';
+        return 'Focus on one lesson at a time and summarize it in your own words. ' . $courseList . ' If you want a deeper breakdown, generate a study guide for that course.';
+    }
+
+    return 'I can help you with study plans, course summaries, revision tips, and practice quiz questions. Tell me what course or topic you want to focus on next.';
 }
 
 function getRecommendedCourses(PDO $pdo, string $studentId, int $limit = 5): array

@@ -388,6 +388,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$accessError && !$timeExpired) {
             ':total_questions' => count($questions),
             ':answers' => json_encode($answers, JSON_UNESCAPED_UNICODE),
         ]);
+
+        $sheetPayload = [
+            'name' => $studentName,
+            'email' => $_SESSION['student_email'] ?? '',
+            'student_id' => $studentId,
+            'exam_title' => $examType,
+            'access_code' => $quizLink['access_code'] ?? '',
+            'score' => $score,
+            'total_questions' => count($questions),
+            'answers' => json_encode($answers, JSON_UNESCAPED_UNICODE),
+            'remarks' => 'Auto graded exam submission',
+            'submitted_at' => date('Y-m-d H:i:s'),
+            'source' => 'exam',
+        ];
+        $sheetResult = sendGoogleSheetsExamSync($sheetPayload);
+        if (!$sheetResult['success']) {
+            error_log('Google Sheets exam sync failed: ' . ($sheetResult['error'] ?? 'unknown') . ' response=' . print_r($sheetResult['response'], true));
+        }
+
         // If a submission was recorded, deactivate any matching exam_access_codes so the code cannot be reused.
         try {
             if (!empty($quizLink['access_code'])) {

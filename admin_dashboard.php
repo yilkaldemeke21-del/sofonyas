@@ -1,12 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/db.php';
-
-// Check if admin is logged in
-if (!isset($_SESSION['admin_id'])) {
-    header('Location: admin_login.php');
-    exit;
-}
+requireRole(['admin'], $pdo);
 
 // Get statistics
 $stmt = $pdo->query('SELECT COUNT(*) as total FROM registrations');
@@ -47,8 +42,17 @@ $course_breakdown = $pdo->query('SELECT course, COUNT(*) as total FROM registrat
 
 $recent_students = $pdo->query('SELECT * FROM students ORDER BY created_at DESC LIMIT 5')->fetchAll();
 $recent_courses = $pdo->query('SELECT * FROM courses ORDER BY created_at DESC LIMIT 5')->fetchAll();
-$stmt = $pdo->query('SELECT name, email, country, city FROM students WHERE country IS NOT NULL OR city IS NOT NULL ORDER BY created_at DESC LIMIT 150');
+$stmt = $pdo->query('SELECT name, email, country, city, latitude, longitude FROM students WHERE country IS NOT NULL OR city IS NOT NULL OR latitude IS NOT NULL OR longitude IS NOT NULL ORDER BY created_at DESC LIMIT 150');
 $student_locations = $stmt->fetchAll();
+
+$stmt = $pdo->query('SELECT s.country, s.city, s.latitude, s.longitude, COUNT(r.id) AS total
+    FROM registrations r
+    LEFT JOIN students s ON r.student_id = s.student_id
+    WHERE (s.latitude IS NOT NULL AND s.longitude IS NOT NULL) OR s.city IS NOT NULL OR s.country IS NOT NULL
+    GROUP BY s.latitude, s.longitude, s.city, s.country
+    ORDER BY total DESC
+    LIMIT 200');
+$registration_heatmap = $stmt->fetchAll();
 
 // Create notifications tables if they don't exist
 try {
@@ -703,10 +707,27 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
 
     <div class="report-section">
         <div class="report-header">
-            <h3>🌍 Student Location Map</h3>
-            <p style="margin: 0; color: var(--muted);">ተማሪዎች ከተማ እና አገር እንዴት እንደሆኑ በካርታ ላይ ይመልከቱ።</p>
+            <h3>🌍 Student Location Map + Registration Heat Map</h3>
+            <p style="margin: 0; color: var(--muted);">View student location markers and registration density overlaid with a Leaflet heat map. This display is driven by enrolled student records and registration coordinates.</p>
         </div>
         <div class="card" style="padding: 16px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:12px; flex-wrap:wrap;">
+                <div>
+                    <strong>Heat Map + Location Markers</strong>
+                    <p style="margin: 4px 0 0; color: var(--muted); font-size: 0.94rem;">The heat overlay reflects registration counts by city/country, while markers show recent student entries.</p>
+                </div>
+                <div style="background:#eef2ff; color:#1d4ed8; padding:8px 12px; border-radius:999px; font-weight:700; font-size:.9rem;">OpenStreetMap + Leaflet JS</div>
+            </div>
+            <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
+                <div style="flex:1 1 220px; background:#f8fafc; padding:12px; border-radius:12px; border:1px solid #e2e8f0; color:#334155; font-size:0.92rem;">
+                    <strong>Heat Overlay</strong>
+                    <p style="margin: 8px 0 0; color:#475569;">Registration density using student coordinates from recent enrollments.</p>
+                </div>
+                <div style="flex:1 1 220px; background:#f8fafc; padding:12px; border-radius:12px; border:1px solid #e2e8f0; color:#334155; font-size:0.92rem;">
+                    <strong>Markers</strong>
+                    <p style="margin: 8px 0 0; color:#475569;">Individual student markers are placed by city/country or latitude/longitude when available.</p>
+                </div>
+            </div>
             <div id="studentMap" style="height: 420px; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb;"></div>
         </div>
     </div>
@@ -1252,8 +1273,10 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
         })();
     </script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-o9N1j7k59Q80OQv1yX7sWv8g6VZrJ6Y0/3bCmXabQdk=" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
     <script>
         const studentLocations = <?php echo json_encode($student_locations, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+        const registrationHeatMap = <?php echo json_encode($registration_heatmap, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
         const locationLookup = {
             'ethiopia': [9.145, 40.489673],
             'addis ababa': [9.03, 38.74],
@@ -1303,6 +1326,19 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
                 maxZoom: 18,
                 attribution: '&copy; OpenStreetMap contributors'
             }).addTo(map);
+
+            const heatPoints = registrationHeatMap.map(item => {
+                const coords = getStudentCoordinates(item);
+                if (!coords || !item.total) {
+                    return null;
+                }
+                const intensity = Math.min(0.95, Math.max(0.2, Math.log(item.total + 1) / 2.5));
+                return [coords[0], coords[1], intensity];
+            }).filter(Boolean);
+
+            if (heatPoints.length > 0) {
+                L.heatLayer(heatPoints, { radius: 30, blur: 20, maxZoom: 12 }).addTo(map);
+            }
 
             const markers = [];
             studentLocations.forEach(student => {

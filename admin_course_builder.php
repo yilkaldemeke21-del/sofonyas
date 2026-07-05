@@ -2,10 +2,8 @@
 session_start();
 require_once __DIR__ . '/db.php';
 
-if (!isset($_SESSION['admin_id'])) {
-    header('Location: admin_login.php');
-    exit;
-}
+// Require admin or instructor (teacher) role to access course builder
+requireRole(['admin','instructor','teacher'], $pdo);
 
 $error = '';
 $success = '';

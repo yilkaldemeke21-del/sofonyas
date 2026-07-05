@@ -40,10 +40,8 @@ function uploadCourseVideo(array $file, string &$error): ?string
     return 'uploads/course_media/video/' . $filename;
 }
 
-if (!isset($_SESSION['admin_id'])) {
-    header('Location: admin_login.php');
-    exit;
-}
+// Require admin or instructor to access
+requireRole(['admin','instructor','teacher'], $pdo);
 
 $error = '';
 $success = '';

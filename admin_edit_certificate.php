@@ -139,7 +139,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
             <div class="actions no-print">
                 <button type="submit" form="certificate-form">💾 ሰርቲፊኬት አስተካክል</button>
-                <button type="button" class="print-btn" onclick="window.print()">🖨️ ሰርቲፊኬት አትም</button>
+                <button type="button" class="print-btn" onclick="printCertificate()">🖨️ ሰርቲፊኬት አትም</button>
+                <a class="print-btn" href="admin_certificate.php?download=<?php echo (int)$cert_id; ?>">⬇️ PDF አውርድ</a>
             </div>
         </div>
 
@@ -170,5 +171,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </form>
     </div>
 </div>
+        <script>
+        function printCertificate() {
+            var preview = document.querySelector('.preview-frame');
+            if (!preview) {
+                window.print();
+                return;
+            }
+
+            var css = 'body{font-family: Arial, Helvetica, sans-serif; margin:0; padding:24px; background:#fff} .preview-frame{border:8px solid #8b5cf6; border-radius:28px; padding:18px 20px; background:linear-gradient(180deg,#fff 0%,#f5f3ff 100%);}';
+            var newWin = window.open('', '_blank');
+            newWin.document.open();
+            newWin.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Certificate Print</title><style>' + css + '</style></head><body>');
+            newWin.document.write(preview.outerHTML);
+            newWin.document.write('</body></html>');
+            newWin.document.close();
+            newWin.focus();
+            setTimeout(function(){ newWin.print(); }, 250);
+        }
+        </script>
 </body>
 </html>

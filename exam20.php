@@ -310,6 +310,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['exam_access_submit']
         ':answers' => json_encode($answers, JSON_UNESCAPED_UNICODE),
     ]);
 
+    $sheetPayload = [
+        'name' => $studentName,
+        'email' => $_SESSION['student_email'] ?? '',
+        'student_id' => $studentId,
+        'exam_title' => $examType,
+        'access_code' => $accessCode ?? '',
+        'score' => $score,
+        'total_questions' => count($questions),
+        'answers' => json_encode($answers, JSON_UNESCAPED_UNICODE),
+        'remarks' => 'Auto graded exam20 submission',
+        'submitted_at' => date('Y-m-d H:i:s'),
+        'source' => 'exam20',
+    ];
+    $sheetResult = sendGoogleSheetsExamSync($sheetPayload);
+    if (!$sheetResult['success']) {
+        error_log('Google Sheets exam20 sync failed: ' . ($sheetResult['error'] ?? 'unknown') . ' response=' . print_r($sheetResult['response'], true));
+    }
+
     if (count($questions) > 0 && $score === count($questions)) {
         sendCertificateEmail($pdo, $studentId, $studentName, $examType, $score, count($questions));
         $_SESSION['certificate_message'] = 'Congratulations! Your certificate has been generated and sent to your email.';

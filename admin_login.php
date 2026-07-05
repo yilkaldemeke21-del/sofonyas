@@ -1,5 +1,8 @@
 <?php
 session_start();
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
 require_once __DIR__ . '/db.php';
 
 // If admin already logged in, redirect to dashboard
@@ -22,6 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = $dbConnectionError;
     } elseif (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
         $error = 'ደህንነት ተሰርዟል። እባክዎ ገጹን እንደገና ይጫኑ።';
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
     } else {
         $username = trim($_POST['username'] ?? '');
         $password = $_POST['password'] ?? '';

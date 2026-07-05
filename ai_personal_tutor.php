@@ -18,6 +18,13 @@ $stmt = $pdo->prepare('SELECT c.id, c.course_name FROM courses c JOIN registrati
 $stmt->execute([':student_id' => $studentId]);
 $enrolledCourses = $stmt->fetchAll();
 
+if (empty($enrolledCourses)) {
+    $stmt = $pdo->prepare('SELECT id, course_name FROM courses ORDER BY created_at DESC LIMIT 8');
+    $stmt->execute();
+    $enrolledCourses = $stmt->fetchAll();
+}
+
+$courseOptions = $enrolledCourses;
 $totalCourses = count($enrolledCourses);
 $stmt = $pdo->prepare('SELECT COUNT(*) AS completed_lessons FROM lesson_progress WHERE student_id = :student_id');
 $stmt->execute([':student_id' => $studentId]);
@@ -245,11 +252,11 @@ $advice = 'ጥያቄዎችን ለማቅረብ፣ እባኮትን የኮርስ �
                 <strong><?php echo $totalCourses; ?></strong>
             </div>
             <div class="metric-box">
-                <h4>Completed Lessons</h4>
+                <h4>የተጠናቀቁ ትምህርቶች</h4>
                 <strong><?php echo $completedLessons; ?></strong>
             </div>
             <div class="metric-box">
-                <h4>Average Quiz Score</h4>
+                <h4>አጠቃላይ የፈተና ዉጤት</h4>
                 <strong><?php echo $avgQuizScore; ?>%</strong>
             </div>
             <div class="metric-box">
@@ -265,7 +272,7 @@ $advice = 'ጥያቄዎችን ለማቅረብ፣ እባኮትን የኮርስ �
                 <h3>Ask Your AI Tutor</h3>
                 <p class="muted">ምንም ጥያቄ ከሆነ ይጠይቁ፣ የሚረዱ ምክሮች ይሰጣሉ።</p>
             </div>
-            <span class="badge bg-secondary text-white py-2 px-3">እንኳን ደህና መጡ, <?php echo safe($studentName); ?></span>
+            <span class="badge bg-secondary text-white py-2 px-3">እንኳን ወደ ዲ/ን ሶፎንያስ ዌብሳይት ደህና መጡ, <?php echo safe($studentName); ?></span>
         </div>
         <div class="chat-history d-flex flex-column" id="chatHistory">
             <div class="chat-message ai">ሰላም! እባክዎን ከAI የግል ተማሪ አገልግሎት ጋር የሚፈልጉትን ጥያቄ ይጻፉ።</div>
@@ -284,7 +291,7 @@ $advice = 'ጥያቄዎችን ለማቅረብ፣ እባኮትን የኮርስ �
                 <label for="studyGuideCourse" class="form-label">Select course</label>
                 <select id="studyGuideCourse" class="form-select">
                     <option value="">-- Select an enrolled course --</option>
-                    <?php foreach ($enrolledCourses as $course): ?>
+                    <?php foreach ($courseOptions as $course): ?>
                         <option value="<?php echo (int)$course['id']; ?>"><?php echo safe($course['course_name']); ?></option>
                     <?php endforeach; ?>
                 </select>
@@ -294,29 +301,29 @@ $advice = 'ጥያቄዎችን ለማቅረብ፣ እባኮትን የኮርስ �
         </div>
 
         <div class="feature-card">
-            <h3>Build a Practice Quiz</h3>
+            <h3>የልምምድ ጥያቄ ምስረታ</h3>
             <p class="muted">እረፍት ከውጤታማ ጥያቄዎች ጋር ልምድ ይገንዘቡ።</p>
             <div class="mb-3">
                 <label for="quizCourse" class="form-label">Select course</label>
                 <select id="quizCourse" class="form-select">
                     <option value="">-- Select an enrolled course --</option>
-                    <?php foreach ($enrolledCourses as $course): ?>
+                    <?php foreach ($courseOptions as $course): ?>
                         <option value="<?php echo (int)$course['id']; ?>"><?php echo safe($course['course_name']); ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
             <div class="mb-3">
-                <label for="quizCount" class="form-label">Question count</label>
+                <label for="quizCount" class="form-label">ጥያቄ ቆጠራ</label>
                 <input type="number" id="quizCount" class="form-control" min="3" max="12" value="5">
             </div>
-            <button class="btn btn-outline-primary" type="button" id="generateQuizButton">Generate Quiz</button>
-            <div class="response-panel mt-4" id="quizResponse">Practice quiz results will display here.</div>
+            <button class="btn btn-outline-primary" type="button" id="generateQuizButton">Quiz አመንጭ</button>
+            <div class="response-panel mt-4" id="quizResponse">ልምምድ ያደረጉበት ጥያቄ ከዚህ ይታያል</div>
         </div>
     </div>
 
     <div class="feature-card mt-4">
-        <h3>Top AI Tutor Recommendations</h3>
-        <p class="muted">እንዴት ከመማር ይበልጣሉ፣ ኮርሶችን እና ትምህርት ሥርዓትን ያሳያሉ።</p>
+        <h3>የታላቋ AI ቱቶር ገለጻ </h3>
+        <p class="muted">ይህ የትምህርት ይዘት በጣም ወሳኝ እና ግልጽ ነው፣ ኮርሶችን እና ትምህርት ሥርዓትን ያሳያሉ።</p>
         <div id="recommendationsList" class="row gy-3 mt-3"></div>
     </div>
 </div>
@@ -329,6 +336,29 @@ $advice = 'ጥያቄዎችን ለማቅረብ፣ እባኮትን የኮርስ �
     const studyGuideResponse = document.getElementById('studyGuideResponse');
     const quizResponse = document.getElementById('quizResponse');
     const baseUrl = 'ai_tools.php';
+
+    const selectFirstAvailableCourse = () => {
+        ['studyGuideCourse', 'quizCourse'].forEach((id) => {
+            const select = document.getElementById(id);
+            if (!select || select.value) return;
+            const firstOption = Array.from(select.options).find((option) => option.value !== '');
+            if (firstOption) {
+                select.value = firstOption.value;
+            }
+        });
+    };
+
+    const getSelectedCourseId = (selectId) => {
+        const select = document.getElementById(selectId);
+        if (!select) return '';
+        if (select.value) return select.value;
+        const firstOption = Array.from(select.options).find((option) => option.value !== '');
+        if (firstOption) {
+            select.value = firstOption.value;
+            return firstOption.value;
+        }
+        return '';
+    };
 
     const createBubble = (text, type) => {
         const bubble = document.createElement('div');
@@ -392,9 +422,9 @@ $advice = 'ጥያቄዎችን ለማቅረብ፣ እባኮትን የኮርስ �
     };
 
     const generateStudyGuide = async () => {
-        const courseId = document.getElementById('studyGuideCourse').value;
+        const courseId = getSelectedCourseId('studyGuideCourse');
         if (!courseId) {
-            studyGuideResponse.textContent = 'Please select a course before generating a study guide.';
+            studyGuideResponse.textContent = 'No course is available right now. Please add or enroll in a course first.';
             return;
         }
         studyGuideResponse.textContent = 'Generating your study guide…';
@@ -423,21 +453,25 @@ $advice = 'ጥያቄዎችን ለማቅረብ፣ እባኮትን የኮርስ �
     };
 
     const generateQuiz = async () => {
-        const courseId = document.getElementById('quizCourse').value;
+        const courseId = getSelectedCourseId('quizCourse');
         const questionCount = document.getElementById('quizCount').value || 5;
         if (!courseId) {
-            quizResponse.textContent = 'Please select a course before generating a quiz.';
+            quizResponse.textContent = 'No course is available right now. Please add or enroll in a course first.';
             return;
         }
         quizResponse.textContent = 'Preparing practice quiz…';
         try {
             const response = await fetch(`${baseUrl}?action=generate_quiz&course_id=${encodeURIComponent(courseId)}&questions=${encodeURIComponent(questionCount)}`);
             const data = await response.json();
-            if (data.success && Array.isArray(data.quiz) && data.quiz.length > 0) {
-                quizResponse.innerHTML = data.quiz.map((item, index) => `
+            const quizItems = Array.isArray(data.quiz)
+                ? data.quiz
+                : (data.quiz && Array.isArray(data.quiz.questions) ? data.quiz.questions : []);
+            if (data.success && quizItems.length > 0) {
+                quizResponse.innerHTML = quizItems.map((item, index) => `
                     <div style="margin-bottom:18px;">
                         <strong>Q${index + 1}: ${item.question}</strong>
-                        <div style="margin-top:6px; color:#475569;">Answer: ${item.answer}</div>
+                        <div style="margin-top:8px; color:#475569;">Answer: ${item.answer}</div>
+                        ${Array.isArray(item.options) && item.options.length > 0 ? `<div style="margin-top:6px; color:#64748b;">Options: ${item.options.join(' • ')}</div>` : ''}
                     </div>
                 `).join('');
             } else {
@@ -462,6 +496,7 @@ $advice = 'ጥያቄዎችን ለማቅረብ፣ እባኮትን የኮርስ �
             sendTutorChat();
         }
     });
+    selectFirstAvailableCourse();
     document.getElementById('generateStudyGuideButton').addEventListener('click', generateStudyGuide);
     document.getElementById('generateQuizButton').addEventListener('click', generateQuiz);
 

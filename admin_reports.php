@@ -152,7 +152,7 @@ switch ($type) {
         <div style="margin-bottom:14px;padding:10px 12px;border:1px solid #fde68a;background:#fef3c7;color:#92400e;border-radius:6px;">Preview mode: the report is visible without an active admin session. Sign in from the dashboard for full admin access.</div>
     <?php endif; ?>
     <h1><?php echo safe($reportTitle); ?></h1>
-    <div class="meta">Generated on <?php echo date('Y-m-d H:i'); ?> • Admin Report Center</div>
+    <div class="meta">Generated on <?php echo date('Y-m-d H:i'); ?> • ሶፊ ዌብሳይት የመረጃ ማዕከል</div>
     <?php if ($message !== ''): ?><div style="margin-bottom:12px;padding:10px 12px;border-radius:8px;background:#ecfdf5;color:#166534;border:1px solid #a7f3d0;"><?php echo safe($message); ?></div><?php endif; ?>
     <?php if ($error !== ''): ?><div style="margin-bottom:12px;padding:10px 12px;border-radius:8px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;"><?php echo safe($error); ?></div><?php endif; ?>
     <?php if (empty($rows)): ?>

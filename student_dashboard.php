@@ -1,11 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/db.php';
-
-if (!isset($_SESSION['student_id'])) {
-    header('Location: student_login.php');
-    exit;
-}
+requireRole(['student'], $pdo);
 
 $studentId = $_SESSION['student_id'];
 $stmt = $pdo->prepare('SELECT * FROM students WHERE student_id = :student_id');
@@ -14,6 +10,21 @@ $student = $stmt->fetch();
 $student = is_array($student) ? $student : [];
 $studentName = $student['name'] ?? $student['student_name'] ?? 'ተማሪ';
 $studentEmail = $student['email'] ?? '';
+
+$ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
+$userAgent = substr($_SERVER['HTTP_USER_AGENT'] ?? 'Unknown', 0, 500);
+try {
+    upsertStudentSession($pdo, $studentId, session_id(), $ipAddress, $userAgent);
+} catch (Throwable $e) {
+    error_log('Session refresh failed: ' . $e->getMessage());
+}
+
+$deviceSessions = [];
+try {
+    $deviceSessions = getStudentSessions($pdo, $studentId);
+} catch (Throwable $e) {
+    $deviceSessions = [];
+}
 
 $chatMessageText = '';
 $chatMessageError = '';
@@ -588,6 +599,10 @@ if (empty($notifications)) {
         .course-card img { width: 220px; border-radius: 50px; height: 310px; object-fit: contain; background: linear-gradient(135deg,#dbeafe,#c4b5fd); }
         .course-card h3, .mini-card h3 { font-size: 20px; color: var(--text); margin: 10px 0 6px; font-weight: 800; line-height: 1.35; }
         .muted { color: var(--muted); font-size: 16px; line-height: 1.35; font-weight: 500; }
+        .tab-menu .tab-btn { cursor: pointer; border: 1px solid transparent; background: transparent; padding: 10px 14px; border-radius: 999px; font-weight: 700; color: var(--primary); }
+        .tab-menu .tab-btn.active { background: var(--surface); border-color: var(--border); box-shadow: 0 6px 16px rgba(37,99,235,0.08); }
+        .tab-pane { display: none; padding: 12px 0; }
+        .tab-pane.active { display: block; }
         .rich-content h1, .rich-content h2, .rich-content h3 { font-size: 16px; line-height: 1.35; margin: 0.35em 0; }
         .rich-content ul, .rich-content ol { padding-left: 18px; margin: 8px 0 10px; }
         .rich-content li { margin-bottom: 6px; }
@@ -629,12 +644,13 @@ if (empty($notifications)) {
             <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle theme">🌙 Dark</button>
             <a class="button" href="sofonyas%20(2).html">መጀመሪያ</a>
             <a class="button" href="tutorial.php">ኮርሶች</a>
-            <a class="button" href="my_courses.php">My Courses</a>
-            <a class="button" href="ai_personal_tutor.php">AI Tutor</a>
+            <a class="button" href="my_courses.php">የኔ ኮርሶች</a>
+            <a class="button" href="ai_personal_tutor.php">AI ቱቶሪያል</a>
             <a class="button" href="smart_learning_path.php">Learning Path</a>
-            <a class="button" href="live_class.php">Live Class</a>
+            <a class="button" href="live_class.php">ላይቭ ክላስ</a>
             <a class="button" href="discussion_forum.php">ፎርም</a>
             <a class="button" href="library.php">ላይብራሪ</a>
+            <a class="button" href="student_id_card.php">የID Card እይ</a>
             <a class="button secondary" href="student_logout.php">ውጣ</a>
         </div>
     </div>
@@ -710,6 +726,7 @@ if (empty($notifications)) {
         <div style="display:flex; flex-wrap:wrap; gap:12px;">
             <a class="button" href="<?php echo safe($activeExamLinks['mid_exam']['link_url'] ?? 'mid_exam.php'); ?>">Start Mid Exam</a>
             <a class="button secondary" href="<?php echo safe($activeExamLinks['final_exam']['link_url'] ?? 'final_exam.php'); ?>">Start Final Exam</a>
+            <a class="button secondary" href="submit_exam.php">Submit Exam Result</a>
         </div>
         <div style="margin-top: 12px; display:flex; gap:12px; flex-wrap:wrap;">
             <?php if (empty($activeExamLinks['mid_exam'])): ?><span class="pill warning">No active mid exam link</span><?php endif; ?>
@@ -772,7 +789,7 @@ if (empty($notifications)) {
                         <p class="muted"><span class="instructor-line">ዋጋ:</span> <?php echo number_format((float)($course['price'] ?? 0), 2); ?> ብር</p>
                         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
                             <a class="button" href="student_register.php?course=<?php echo rawurlencode($course['course_name']); ?>&amount=<?php echo (float)($course['price'] ?? 0); ?>">Enroll Now</a>
-                            <a class="button secondary" href="tutorial.php#courses">View Details</a>
+                            <a class="button secondary" href="course_details.php?id=<?php echo (int)$course['id']; ?>">View Details</a>
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -787,20 +804,129 @@ if (empty($notifications)) {
             <?php if (empty($registrations)): ?>
                 <p class="muted">ምንም ተመዝጋቢ ኮርስ የለም።</p>
             <?php else: ?>
-                <?php foreach (array_slice($registrations, 0, 3) as $row): ?>
-                    <?php $courseName = $row['course'] ?: ($row['course_name'] ?? 'Course'); ?>
-                    <?php $courseThumb = !empty($row['thumbnail']) ? publicMediaUrl($row['thumbnail']) : 'IMG_20241202_031425_251.jpg'; ?>
-                    <?php $courseDesc = $row['short_description'] ?: $row['description'] ?: 'ይህ ኮርስ ለእርስዎ ተዘጋጅቷል።'; ?>
-                    <?php $progressValue = (!empty($row['payment_status']) && $row['payment_status'] === 'paid') ? 65 : 35; ?>
-                    <div class="course-card" style="margin-bottom: 12px;">
+                <?php foreach ($registrations as $row): ?>
+                    <?php
+                        $courseName = $row['course'] ?: ($row['course_name'] ?? 'Course');
+                        $courseThumb = !empty($row['thumbnail']) ? publicMediaUrl($row['thumbnail']) : 'IMG_20241202_031425_251.jpg';
+                        $courseDesc = $row['short_description'] ?: $row['description'] ?: 'ይህ ኮርስ ለእርስዎ ተዘጋጅቷል።';
+                        $progressValue = (!empty($row['payment_status']) && $row['payment_status'] === 'paid') ? 65 : 35;
+                        $courseIdParam = (int)($row['course_id'] ?? 0);
+                        $courseKey = 'course_' . md5($courseName . $courseIdParam);
+                        $modulesJson = [];
+                        $lessonHtml = '';
+                        if (!empty($row['modules'])) {
+                            $modulesJson = json_decode($row['modules'], true);
+                        }
+                        $quizJson = [];
+                        if (!empty($row['quiz'])) {
+                            $quizJson = json_decode($row['quiz'], true);
+                        }
+                        $assignmentJson = [];
+                        if (!empty($row['assignment'])) {
+                            $assignmentJson = json_decode($row['assignment'], true);
+                        }
+                    ?>
+                    <div class="course-card" style="margin-bottom: 20px;">
                         <img src="<?php echo safe($courseThumb); ?>" alt="<?php echo safe($courseName); ?>">
                         <h3><?php echo safe($courseName); ?></h3>
                         <div class="muted rich-content" style="margin-bottom:8px;"><?php echo renderRichText($courseDesc); ?></div>
                         <p class="muted">ኢንስትራክተር: <?php echo safe($row['instructor'] ?? 'Admin Instructor'); ?></p>
                         <div class="progress-track"><div class="progress-fill" style="width: <?php echo $progressValue; ?>%;"></div></div>
-                        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:12px; flex-wrap:wrap;">
                             <span class="pill info">Progress <?php echo $progressValue; ?>%</span>
-                            <a class="button" href="tutorial.php">ትምህርት ቀጥል</a>
+                            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                <a class="button" href="course_content.php?course_id=<?php echo $courseIdParam; ?>">View Course</a>
+                                <a class="button" href="lesson.php?course_id=<?php echo $courseIdParam; ?>">Start Lesson</a>
+                                <a class="button secondary" href="course_details.php?id=<?php echo $courseIdParam; ?>">Course Details</a>
+                            </div>
+                        </div>
+                        <div class="course-tabs" style="margin-top:20px;">
+                            <div class="tab-menu" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;">
+                                <button type="button" class="tab-btn active" data-tab-group="<?php echo $courseKey; ?>" data-tab="content">Course Content</button>
+                                <button type="button" class="tab-btn" data-tab-group="<?php echo $courseKey; ?>" data-tab="tutorial">Tutorial</button>
+                                <button type="button" class="tab-btn" data-tab-group="<?php echo $courseKey; ?>" data-tab="lesson">Lesson</button>
+                                <button type="button" class="tab-btn" data-tab-group="<?php echo $courseKey; ?>" data-tab="quiz">Quiz</button>
+                                <button type="button" class="tab-btn" data-tab-group="<?php echo $courseKey; ?>" data-tab="assignment">Assignment</button>
+                            </div>
+                            <div class="tab-pane active" id="<?php echo $courseKey; ?>_content">
+                                <h4>Course Overview</h4>
+                                <div class="rich-content"><?php echo renderRichText($courseDesc); ?></div>
+                                <?php if (!empty($row['description']) && !empty($row['short_description'])): ?>
+                                    <div class="rich-content" style="margin-top:12px;">
+                                        <strong>Full Course Content</strong>
+                                        <?php echo renderRichText($row['description']); ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="tab-pane" id="<?php echo $courseKey; ?>_tutorial">
+                                <h4>Tutorial</h4>
+                                <?php if (!empty($row['tutorial_topic'])): ?><h5><?php echo safe($row['tutorial_topic']); ?></h5><?php endif; ?>
+                                <div class="rich-content"><?php echo renderRichText($row['tutorial_text'] ?? 'No tutorial text available.'); ?></div>
+                                <?php if (!empty($row['tutorial_image'])): ?>
+                                    <p><strong>Image:</strong> <a class="action-link" href="<?php echo safe(publicMediaUrl($row['tutorial_image'])); ?>" target="_blank">View image</a></p>
+                                <?php endif; ?>
+                                <?php if (!empty($row['tutorial_audio'])): ?>
+                                    <p><strong>Audio:</strong> <a class="action-link" href="<?php echo safe(publicMediaUrl($row['tutorial_audio'])); ?>" target="_blank">Play audio</a></p>
+                                <?php endif; ?>
+                                <?php if (!empty($row['tutorial_video'])): ?>
+                                    <p><strong>Video:</strong> <a class="action-link" href="<?php echo safe(publicMediaUrl($row['tutorial_video'])); ?>" target="_blank">Watch video</a></p>
+                                <?php endif; ?>
+                            </div>
+                            <div class="tab-pane" id="<?php echo $courseKey; ?>_lesson">
+                                <h4>Lesson</h4>
+                                <?php if (!empty($modulesJson) && is_array($modulesJson)): ?>
+                                    <?php foreach ($modulesJson as $index => $module): ?>
+                                        <div style="margin-bottom:14px; padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px;">
+                                            <strong><?php echo safe($module['title'] ?? 'Module '.($index + 1)); ?></strong>
+                                            <div class="muted rich-content" style="margin-top:8px;">
+                                                <?php echo renderRichText($module['description'] ?? ''); ?>
+                                            </div>
+                                            <?php if (!empty($module['lessons']) && is_array($module['lessons'])): ?>
+                                                <ul style="margin-top:10px; padding-left:18px;">
+                                                    <?php foreach ($module['lessons'] as $lesson): ?>
+                                                        <li><?php echo safe($lesson['title'] ?? 'Lesson title'); ?></li>
+                                                    <?php endforeach; ?>
+                                                </ul>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <div class="rich-content"><?php echo renderRichText($row['modules'] ?? 'No lesson outline available.'); ?></div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="tab-pane" id="<?php echo $courseKey; ?>_quiz">
+                                <h4>Quiz</h4>
+                                <?php if (!empty($quizJson) && is_array($quizJson)): ?>
+                                    <ul style="padding-left:18px;">
+                                        <?php foreach ($quizJson as $quiz): ?>
+                                            <li>
+                                                <strong><?php echo safe($quiz['title'] ?? 'Quiz'); ?></strong>
+                                                <?php if (!empty($quiz['question_count'])): ?> — <?php echo (int)$quiz['question_count']; ?> questions<?php endif; ?>
+                                            </li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                <?php else: ?>
+                                    <div class="rich-content"><?php echo renderRichText($row['quiz'] ?? 'No quiz information available.'); ?></div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="tab-pane" id="<?php echo $courseKey; ?>_assignment">
+                                <h4>Assignment</h4>
+                                <?php if (!empty($assignmentJson) && is_array($assignmentJson)): ?>
+                                    <ul style="padding-left:18px;">
+                                        <?php foreach ($assignmentJson as $assignment): ?>
+                                            <li>
+                                                <strong><?php echo safe($assignment['title'] ?? 'Assignment'); ?></strong>
+                                                <?php if (!empty($assignment['due_date'])): ?> — Due <?php echo safe($assignment['due_date']); ?><?php endif; ?>
+                                                <?php if (!empty($assignment['description'])): ?>
+                                                    <div class="muted rich-content" style="margin-top:6px;"><?php echo renderRichText($assignment['description']); ?></div>
+                                                <?php endif; ?>
+                                            </li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                <?php else: ?>
+                                    <div class="rich-content"><?php echo renderRichText($row['assignment'] ?? 'No assignment details available.'); ?></div>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -949,6 +1075,11 @@ if (empty($notifications)) {
                     <p class="muted">ኢሜይል: <?php echo safe($studentEmail); ?></p>
                     <p class="muted">ስ.ቁጥር: <?php echo safe($student['phone'] ?? 'N/A'); ?></p>
                     <p class="muted">ሀገር: <?php echo safe($student['country'] ?? 'ኢትዮጵያዊ'); ?></p>
+                    <p class="muted">ከተማ: <?php echo safe($student['city'] ?? 'N/A'); ?></p>
+                    <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
+                        <a class="button" href="student_id_card.php" style="padding:10px 14px; font-size:14px;">ID Card እይ</a>
+                        <a class="button secondary" href="student_id_card.php?download=1" style="padding:10px 14px; font-size:14px;">PDF አውርድ</a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -957,7 +1088,27 @@ if (empty($notifications)) {
             <p class="section-sub">ፓስዋርድ መቀየር፣ ፕሮፋይል መቀየር እና ፎቶ መጨመር</p>
             <div class="account-actions" style="margin-top: 12px;">
                 <a class="button secondary" href="student_register.php">ፕሮፋይል ቀይር</a>
+                <a class="button secondary" href="student_logout.php?action=logout_all">ሁሉንም መሣሪያዎች ውጣ</a>
                 <a class="button" href="student_logout.php">ዉጣ</a>
+            </div>
+            <div style="margin-top: 16px;">
+                <p style="margin:0 0 8px; font-weight:700; color:#1f2937;">📱 የመግቢያ መሣሪያዎች</p>
+                <?php if (!empty($deviceSessions)): ?>
+                    <ul style="padding-left:18px; margin:0; color:#334155; display:flex; flex-direction:column; gap:8px;">
+                        <?php foreach ($deviceSessions as $deviceSession): ?>
+                            <li>
+                                <strong><?php echo safe($deviceSession['device_label'] ?? 'Device'); ?></strong>
+                                <div class="muted" style="font-size:13px;">
+                                    <?php echo safe($deviceSession['ip_address'] ?? 'Unknown IP'); ?> ·
+                                    <?php echo safe(date('M d, Y H:i', strtotime($deviceSession['last_seen_at']))); ?>
+                                    <?php if ((string)($deviceSession['session_id'] ?? '') === session_id()): ?> · <span style="color:#16a34a;">Current device</span><?php endif; ?>
+                                </div>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php else: ?>
+                    <p class="muted">ምንም የመግቢያ መሣሪያ አልተመዘገበም።</p>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -1122,6 +1273,32 @@ if (empty($notifications)) {
                     localStorage.setItem(storageKey, nextTheme);
                 });
             }
+
+            const initCourseTabs = () => {
+                document.querySelectorAll('.tab-menu .tab-btn').forEach(button => {
+                    button.addEventListener('click', () => {
+                        const group = button.dataset.tabGroup;
+                        const tab = button.dataset.tab;
+                        if (!group || !tab) {
+                            return;
+                        }
+
+                        const groupButtons = document.querySelectorAll(`.tab-menu .tab-btn[data-tab-group="${group}"]`);
+                        const groupPanes = document.querySelectorAll(`.tab-pane[id^="${group}_"]`);
+
+                        groupButtons.forEach(btn => btn.classList.remove('active'));
+                        groupPanes.forEach(pane => pane.classList.remove('active'));
+
+                        button.classList.add('active');
+                        const selectedPane = document.getElementById(`${group}_${tab}`);
+                        if (selectedPane) {
+                            selectedPane.classList.add('active');
+                        }
+                    });
+                });
+            };
+
+            initCourseTabs();
         })();
     </script>
 </body>

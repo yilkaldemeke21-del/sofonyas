@@ -2,31 +2,49 @@
 session_start();
 require_once __DIR__ . '/db.php';
 
+// Immediate guard: if DB connection failed, show clear Amharic error and stop.
+if (!isset($pdo) || !$pdo instanceof PDO) {
+  $dbErr = defined('DB_CONNECTION_ERROR') && DB_CONNECTION_ERROR !== '' ? DB_CONNECTION_ERROR : 'የዳታቤዝ ግንኙነት አልተፈጸመም። እባክዎ ከኮምፒውተሩ የMySQL/ MariaDB አገልግሎት እንደተነሳ ያረጋግጡ።';
+  http_response_code(500);
+  echo '<!doctype html><html><head><meta charset="utf-8"><title>DB Error</title></head><body style="font-family:Arial,sans-serif;padding:24px">';
+  echo '<h2 style="color:#991b1b">አስቸኳይ: የዳታቤዝ ግንኙነት ተደርጎ አልተፈጸምም</h2>';
+  echo '<p>' . htmlspecialchars($dbErr) . '</p>';
+  echo '</body></html>';
+  exit;
+}
+
 $certificateIdInput = trim($_GET['id'] ?? $_POST['certificate_id'] ?? '');
 $certificate = null;
-$message = '';
+$errors = [];
 
 if ($certificateIdInput !== '') {
-    $normalized = strtoupper(trim($certificateIdInput));
-    $id = $normalized;
+  $normalized = strtoupper(trim($certificateIdInput));
 
-    if (preg_match('/^VC[- ]?(\d+)$/', $normalized, $m)) {
-        $id = (int)$m[1];
-    } else {
-        $id = filter_var($normalized, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) !== false ? (int)$normalized : 0;
+  // Accept: VC-000123, VC 123, VC123, or plain numeric id e.g. 123
+  if (preg_match('/^VC[- ]?(\d{1,10})$/i', $normalized, $m)) {
+    $id = (int)$m[1];
+  } elseif (preg_match('/^\d{1,10}$/', $normalized)) {
+    $id = (int)$normalized;
+  } else {
+    $id = 0;
+  }
+
+  if ($id > 0) {
+              if (!isset($pdo) || !$pdo instanceof PDO) {
+                  $dbErr = defined('DB_CONNECTION_ERROR') && DB_CONNECTION_ERROR !== '' ? DB_CONNECTION_ERROR : 'የዳታቤዝ ግንኙነት አልተፈጸመም። እባክዎ ከኮምፒውተሩ የMySQL/ MariaDB አገልግሎት እንደተነሳ ያረጋግጡ።';
+                  $errors[] = 'አስቸኳይ: ' . $dbErr;
+              } else {
+    $stmt = $pdo->prepare('SELECT * FROM certificates WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $id]);
+    $certificate = $stmt->fetch();
+
+    if (!$certificate) {
+      $errors[] = 'ይህ ሰርቲፊኬት አልተገኘም። እባክዎ መለያውን ደግመው ያስገቡ።';
     }
-
-    if ($id > 0) {
-        $stmt = $pdo->prepare('SELECT * FROM certificates WHERE id = :id LIMIT 1');
-        $stmt->execute([':id' => $id]);
-        $certificate = $stmt->fetch();
-
-        if (!$certificate) {
-            $message = 'ይህ ሰርቲፊኬት ተለይቶ አልተገኘም።';
-        }
-    } else {
-        $message = 'እባክዎ ትክክለኛ የሰርቲፊኬት መለያ ቁጥር ያስገቡ።';
-    }
+              }
+  } else {
+    $errors[] = 'እባክዎ ትክክለኛ የሰርቲፊኬት መለያ ቁጥር (ለምሳሌ VC-000123 ወይም 123) ያስገቡ።';
+  }
 }
 ?>
 <!DOCTYPE html>
@@ -74,8 +92,8 @@ if ($certificateIdInput !== '') {
       <button type="submit">አረጋግጥ</button>
     </form>
 
-    <?php if ($message !== ''): ?>
-      <div class="error"><?php echo safe($message); ?></div>
+    <?php if (!empty($errors)): ?>
+      <div class="error"><?php echo safe(implode("<br>", $errors)); ?></div>
     <?php endif; ?>
 
     <?php if ($certificate): ?>

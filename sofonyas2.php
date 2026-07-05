@@ -31,6 +31,17 @@ if ($footerText === '') {
     $footerText = 'Address: motta, Ethiopia';
 }
 
+$whatsappNumber = preg_replace('/[^0-9]/', '', $phoneNumber);
+if ($whatsappNumber === '') {
+    $whatsappNumber = '251927603731';
+}
+if (strpos($whatsappNumber, '251') !== 0) {
+    $whatsappNumber = '251' . $whatsappNumber;
+}
+$whatsappLink = 'https://wa.me/' . $whatsappNumber;
+$telegramLink = 'https://t.me/sophonyasbetmichael';
+$callLink = 'tel:' . rawurlencode($phoneNumber !== '' ? $phoneNumber : '+251927603731');
+
 $lang = getCurrentLanguage();
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['set_lang'])) {
     $lang = setCurrentLanguage($_POST['set_lang']);
@@ -80,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
     <title><?php echo safe($siteName); ?></title>
     <meta name="description" content="<?php echo safe(translateText('የሶፎንያስ የመማሪያ እና ኮሚዩኒቲ ዌብሳይት', 'Sofoniyas learning and community website')); ?>">
     <meta name="keywords" content="Sofoniyas, learning, church, community, education, Ethiopia">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="theme-color" content="#1353e7">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -110,6 +121,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         .toast-success { background: linear-gradient(135deg, #16a34a, #15803d); }
         .toast-error { background: linear-gradient(135deg, #dc2626, #b91c1c); }
         .toast-info { background: linear-gradient(135deg, #2563eb, #4f46e5); }
+        .floating-contact { position: fixed; right: 18px; bottom: 18px; z-index: 1050; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+        .floating-contact-panel { display: flex; flex-direction: column; gap: 10px; opacity: 0; transform: translateY(10px); pointer-events: none; transition: all 0.25s ease; }
+        .floating-contact-panel.open { opacity: 1; transform: translateY(0); pointer-events: auto; }
+        .floating-contact-btn, .floating-contact-main { width: 54px; height: 54px; border: none; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; color: white; text-decoration: none; box-shadow: 0 16px 35px rgba(15,23,42,0.18); transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .floating-contact-btn:hover, .floating-contact-main:hover { transform: translateY(-2px); box-shadow: 0 20px 40px rgba(15,23,42,0.24); }
+        .floating-contact-main { background: linear-gradient(135deg, #2563eb, #7c3aed); font-size: 1.3rem; cursor: pointer; }
+        .floating-contact-btn.whatsapp { background: linear-gradient(135deg, #25D366, #128C7E); }
+        .floating-contact-btn.telegram { background: linear-gradient(135deg, #0088cc, #0f766e); }
+        .floating-contact-btn.call { background: linear-gradient(135deg, #f59e0b, #ea580c); }
+        @media (max-width: 760px) { .floating-contact { right: 14px; bottom: 14px; } }
         .hero-section { position: relative; overflow: hidden; border-radius: 28px; min-height: 760px; margin: 24px 0 28px; background: linear-gradient(135deg, rgba(15,23,42,0.86), rgba(30,41,59,0.76)); box-shadow: 0 25px 45px rgba(15,23,42,0.18); }
         .hero-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; object-position: center; opacity: 1; filter: none; }
         .hero-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(2,6,23,0.24), rgba(15,23,42,0.24)); }
@@ -150,6 +171,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         .card { background: rgba(255,255,255,0.9); border: 1px solid #e2e8f0; border-radius: 20px; padding: 20px; box-shadow: 0 12px 30px rgba(15,23,42,0.06); margin-bottom: 22px; }
         .contact-form { background: linear-gradient(135deg, rgba(247,250,255,0.92), rgba(226,232,255,0.82)); border: 1px solid rgba(148,163,184,0.26); padding: 36px; border-radius: 32px; box-shadow: 0 42px 90px rgba(15,23,42,0.14); max-width: 760px; margin: 0 auto; }
         .contact-form h3 { margin-top: 0; margin-bottom: 24px; color: #0f172a; font-size: clamp(2rem, 2.6vw, 2.7rem); text-align: center; letter-spacing: 0.02em; background: rgba(59,130,246,0.12); display: inline-block; padding: 14px 24px; border-radius: 20px; box-shadow: 0 14px 30px rgba(59,130,246,0.12); }
+        .experience-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-top: 16px; }
+        .experience-card { background: linear-gradient(135deg, #ffffff, #f8fafc); border: 1px solid #e2e8f0; border-radius: 20px; padding: 18px; box-shadow: 0 14px 28px rgba(15,23,42,0.06); }
+        .experience-card h3 { margin: 0 0 8px; color: #1d4ed8; }
+        .experience-icon { font-size: 1.6rem; margin-bottom: 8px; }
+        .voice-note-box { margin-top: 12px; display: grid; gap: 8px; }
+        .voice-note-btn { border: none; border-radius: 999px; padding: 10px 14px; background: linear-gradient(135deg, #2563eb, #7c3aed); color: #fff; font-weight: 700; cursor: pointer; }
+        .voice-note-status { min-height: 24px; font-size: 0.95rem; color: #475569; }
+        .drag-quiz { display: grid; gap: 10px; margin-top: 12px; }
+        .drag-items { display: flex; flex-wrap: wrap; gap: 8px; }
+        .drag-item { border: 1px dashed #94a3b8; border-radius: 999px; padding: 8px 12px; background: #eef2ff; color: #312e81; cursor: grab; user-select: none; }
+        .drop-zone { min-height: 54px; border: 2px dashed #60a5fa; border-radius: 16px; padding: 12px; display: flex; align-items: center; justify-content: center; color: #1d4ed8; font-weight: 700; background: #eff6ff; }
+        .drop-zone.correct { border-color: #16a34a; background: #ecfdf5; color: #166534; }
+        .drop-zone.wrong { border-color: #dc2626; background: #fef2f2; color: #991b1b; }
+        .quiz-feedback { min-height: 22px; font-size: 0.95rem; color: #475569; }
+        .activity-feed { display: grid; gap: 10px; margin-top: 10px; }
+        .activity-item { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; background: #f8fafc; border: 1px solid #e2e8f0; color: #334155; }
+        .activity-dot { width: 8px; height: 8px; border-radius: 999px; background: linear-gradient(135deg, #2563eb, #7c3aed); margin-top: 7px; flex-shrink: 0; }
         .contact-form form { display: grid; gap: 20px; }
         .contact-form .form-field { display: grid; gap: 8px; }
         .contact-form label { font-weight: 700; color: #0f172a; }
@@ -275,12 +313,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         usort($contactFiles, function($a, $b) { return $b['mtime'] - $a['mtime']; });
     }
     ?>
-
-    <section class="card reveal" aria-label="Contact submissions" style="margin-top:22px;">
-        <h2><?php echo safe(translateText('የእርዳታ ፋይሎች', 'Contact Submissions')); ?></h2>
-        <?php if (empty($contactFiles)): ?>
-            <p style="color:#475569;"><?php echo safe(translateText('አሁን ምንም ፋይል አልተሰበሰበም።', 'No files uploaded yet.')); ?></p>
-        <?php else: ?>
+    <?php if (!empty($contactFiles)): ?>
+        <section class="card reveal" aria-label="Uploaded contact files">
+            <h2 data-am="የተስተካከሉ ፋይሎች" data-en="Uploaded Files">Uploaded Files</h2>
             <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; margin-top:12px;">
                 <?php foreach ($contactFiles as $f): ?>
                     <div style="background:#fff; border-radius:12px; padding:12px; border:1px solid #e2e8f0; box-shadow:0 8px 18px rgba(15,23,42,0.04);">
@@ -294,8 +329,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
                     </div>
                 <?php endforeach; ?>
             </div>
-        <?php endif; ?>
-    </section>
+        </section>
+    <?php endif; ?>
 
     <section class="card reveal hero-visual slider-section" aria-label="Hero image slider">
         <div class="hero-card">
@@ -382,6 +417,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
             </div>
         </div>
     </div>
+
+    
+    <section class="card reveal" style="background: linear-gradient(135deg, #f8fbff 0%, #eef2ff 100%); border: 1px solid #dbeafe;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; margin-bottom:18px;">
+            <div style="max-width:760px;">
+                <h2 style="margin:0 0 10px; color:#1d4ed8;" data-am="የእኛ እውቀት እና እርዳታ ማስተዳደር" data-en="Knowledge and Support Hub">የእኛ እውቀት እና እርዳታ ማስተዳደር</h2>
+                <p style="margin:0; color:#475569; line-height:1.7;" data-am="ይህ ክፍል ለትምህርት፣ ለኮርሶች እና ለስልጠና እርዳታ በግልጽ እና በቅርብ ጊዜ መገናኘት ይረዳል።" data-en="This section makes it simple to reach the team for learning support, course guidance, and study help.">ይህ ክፍል ለትምህርት፣ ለኮርሶች እና ለስልጠና እርዳታ በግልጽ እና በቅርብ ጊዜ መገናኘት ይረዳል።</p>
+            </div>
+            <div style="padding:10px 14px; border-radius:999px; background:#dbeafe; color:#1d4ed8; font-weight:700; font-size:14px;">● የLMS ደረጃ ድጋፍ</div>
+        </div>
+
+        <div style="display:grid; gap:24px; grid-template-columns:1.05fr 0.95fr; margin-top:18px;">
+            <div style="background:#fff; border:1px solid #e2e8f0; border-radius:24px; padding:24px; box-shadow:0 18px 40px rgba(15,23,42,0.08);">
+                <h3 style="margin-top:0; color:#111827;">እኛን ይገናኙ</h3>
+                <p style="margin:0 0 14px; color:#475569; line-height:1.75;">ለማንኛውም የትምህርት ጥያቄ፣ በኮርስ ላይ የሚያስፈልጉ ድጋፎች ወይም የደረጃ ተከታታይ እርዳታ ይጠይቁ።</p>
+                <div style="background:#eef2ff; border:1px solid #c7d2fe; border-radius:18px; padding:16px 18px; color:#0f172a;">
+                    <p style="margin:0 0 8px;"><strong>ስልክ</strong> 0927 603 731 / 0935535937</p>
+                    <p style="margin:0 0 8px;"><strong>ኢሜይል</strong> <a href="mailto:sofonyasdemeke21@gmail.com" style="color:#4338ca; text-decoration:none;">sofonyasdemeke21@gmail.com</a></p>
+                    <p style="margin:0 0 8px;"><strong>አድራሻ</strong> ሞጣ፣ ኢትዮጵያ</p>
+                    <p style="margin:0;"><strong>ሰዓት</strong> ሰኞ - አርብ 01:00AM - 18:00PM</p>
+                </div>
+                <div style="margin-top:14px; border-radius:16px; overflow:hidden; box-shadow:0 12px 30px rgba(15,23,42,0.06);">
+                    <iframe width="100%" height="220" frameborder="0" scrolling="no" marginheight="0" marginwidth="0"
+                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d15661.737794690162!2d37.86890737471809!3d11.080963033205416!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x16450cbdb67a0631%3A0x5d7f32e2f4871c7d!2sMotta!5e0!3m2!1sen!2set!4v1783034680515!5m2!1sen!2set"
+                        allowfullscreen="" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" style="border:0; display:block;">
+                    </iframe>
+                    <div style="padding:8px 10px; background:#fff; font-size:0.9rem; color:#334155;">
+                        <a href="https://www.openstreetmap.org/?mlat=9.01&amp;mlon=38.75#map=15/9.01/38.75" target="_blank" rel="noopener" style="color:#4338ca; text-decoration:none;">እንደ ካርታ በሙሉ ክፈት</a>
+                    </div>
+                </div>
+            </div>
+
+            <form id="supportContactForm" class="contact-form" action="contact_submit.php" method="post" enctype="multipart/form-data">
+                <h3 style="margin-top:0;" data-am="ማስታወቂያዎን ይላኩ" data-en="Send us a message">ማስታወቂያዎን ይላኩ</h3>
+                <div class="form-field">
+                    <label for="support_name" data-am="ስም" data-en="Name">ስም</label>
+                    <input id="support_name" name="name" type="text" placeholder="ሙሉ ስምዎን ያስገቡ" required>
+                </div>
+                <div class="form-field">
+                    <label for="support_email" data-am="ኢሜይል" data-en="Email">ኢሜይል</label>
+                    <input id="support_email" name="email" type="email" placeholder="example@mail.com" required>
+                </div>
+                <div class="form-field">
+                    <label for="support_subject" data-am="ጉዳይ" data-en="Subject">ጉዳይ</label>
+                    <input id="support_subject" name="subject" type="text" placeholder="የሚፈልጉትን ጉዳይ ያስቀምጡ" required>
+                </div>
+                <div class="form-field">
+                    <label for="support_message" data-am="መልእክት" data-en="Message">መልእክት</label>
+                    <textarea id="support_message" name="message" placeholder="የጥያቄዎን ዝርዝር እዚህ ያስገቡ" required></textarea>
+                </div>
+                <div class="form-field">
+                    <label for="support_attachment" data-am="ከታወቀ ፋይል (ካለ)" data-en="Attachment (optional)">ከታወቀ ፋይል (ካለ)</label>
+                    <input id="support_attachment" name="attachment" type="file" accept=".pdf,.doc,.docx,.jpg,.png">
+                </div>
+                <div class="controls">
+                    <button type="submit" class="button">መልእክት ላክ</button>
+                </div>
+            </form> 
+        </div>
+    </section>
+
 
     <section class="card reveal" style="background:linear-gradient(135deg,#f8fbff 0%,#eef2ff 100%); border:1px solid #dbeafe;">
         <h2 data-am="የLMS ደረጃ ባህሪያት" data-en="Professional LMS Features">Professional LMS Features</h2>
@@ -590,6 +686,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         <div style="margin-top:4px; font-size:14px;"><?php echo safe(translateText('ይህ ዌብሳይት ለእርስዎ በቀላሉ እና በጥሩ ቅርጸት መረጃ ይሰጣል።', 'This website provides clear and easy-to-follow information for you.')); ?></div>
     </div>
 
+    <div class="floating-contact" aria-label="Quick contact">
+        <div class="floating-contact-panel" id="floatingContactPanel">
+            <a class="floating-contact-btn whatsapp" href="<?php echo safe($whatsappLink); ?>" target="_blank" rel="noopener" aria-label="WhatsApp">💬</a>
+            <a class="floating-contact-btn telegram" href="<?php echo safe($telegramLink); ?>" target="_blank" rel="noopener" aria-label="Telegram">✈</a>
+            <a class="floating-contact-btn call" href="<?php echo safe($callLink); ?>" aria-label="Call">📞</a>
+        </div>
+        <button class="floating-contact-main" id="floatingContactToggle" type="button" aria-label="Open contact options">✉</button>
+    </div>
+
     <footer style="background:#0f172a; color:#e2e8f0; padding:28px 20px 36px; margin-top:28px;">
         <div style="max-width:1100px; margin:0 auto; display:grid; gap:24px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); align-items:start;">
             <div>
@@ -666,7 +771,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         const testimonialTrack = document.getElementById('testimonialTrack');
         const testimonialNav = document.getElementById('testimonialNav');
         const installBtn = document.getElementById('installAppBtn');
+        const voiceNoteDemoBtn = document.getElementById('voiceNoteDemoBtn');
+        const voiceNoteStatus = document.getElementById('voiceNoteStatus');
+        const dragDropZone = document.getElementById('dragDropZone');
+        const dragDropFeedback = document.getElementById('dragDropFeedback');
+        const dragItems = Array.from(document.querySelectorAll('.drag-item'));
         const enableNotificationsBtn = document.getElementById('enableNotificationsBtn');
+        const floatingContactToggle = document.getElementById('floatingContactToggle');
+        const floatingContactPanel = document.getElementById('floatingContactPanel');
         const vapidPublicKey = 'BDm7zLpbTZE-Ldhfe687Iqs6Ne9jEJcvGS76zSqbYbsbrUA73orumEo-DxBFhYGyskD7MueWvPr6KZU3RwxPiA4';
         let deferredPrompt = null;
         let currentSlide = 0;
@@ -853,6 +965,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
             });
         }
 
+        if (voiceNoteDemoBtn && voiceNoteStatus) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (SpeechRecognition) {
+                const recognition = new SpeechRecognition();
+                recognition.lang = 'en-US';
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                voiceNoteDemoBtn.addEventListener('click', () => {
+                    voiceNoteStatus.textContent = 'Listening...';
+                    recognition.start();
+                });
+                recognition.onresult = (event) => {
+                    const transcript = event.results[0][0].transcript;
+                    voiceNoteStatus.textContent = `Voice note captured: ${transcript}`;
+                };
+                recognition.onerror = () => {
+                    voiceNoteStatus.textContent = 'Voice note is unavailable on this browser.';
+                };
+            } else {
+                voiceNoteDemoBtn.addEventListener('click', () => {
+                    voiceNoteStatus.textContent = 'Voice note support is not available here yet.';
+                });
+            }
+        }
+
+        if (dragDropZone && dragDropFeedback) {
+            dragItems.forEach((item) => {
+                item.addEventListener('dragstart', (event) => {
+                    event.dataTransfer.setData('text/plain', item.dataset.answer || '');
+                });
+            });
+            dragDropZone.addEventListener('dragover', (event) => event.preventDefault());
+            dragDropZone.addEventListener('drop', (event) => {
+                event.preventDefault();
+                const answer = event.dataTransfer.getData('text/plain');
+                if (answer === 'summary') {
+                    dragDropZone.className = 'drop-zone correct';
+                    dragDropZone.textContent = 'Correct — Lesson summary fits the study plan.';
+                    dragDropFeedback.textContent = 'Great work! The study plan is built from lesson summaries.';
+                } else {
+                    dragDropZone.className = 'drop-zone wrong';
+                    dragDropZone.textContent = 'Try again — the best match is Lesson summary.';
+                    dragDropFeedback.textContent = 'That answer does not match the study-plan concept.';
+                }
+            });
+        }
+
         langButtons.forEach((button) => {
             button.addEventListener('click', () => applyLanguage(button.getAttribute('data-lang')));
         });
@@ -909,6 +1068,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
                 installBtn.style.display = 'none';
             }
         });
+
+        if (floatingContactToggle && floatingContactPanel) {
+            floatingContactToggle.addEventListener('click', (event) => {
+                event.stopPropagation();
+                floatingContactPanel.classList.toggle('open');
+            });
+            document.addEventListener('click', (event) => {
+                if (!floatingContactPanel.contains(event.target) && !floatingContactToggle.contains(event.target)) {
+                    floatingContactPanel.classList.remove('open');
+                }
+            });
+        }
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {

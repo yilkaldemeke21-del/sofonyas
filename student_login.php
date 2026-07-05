@@ -1,6 +1,10 @@
 <?php
 session_start();
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/mail_config.php';
 
 if (isset($_SESSION['student_id'])) {
     header('Location: student_dashboard.php');
@@ -17,6 +21,7 @@ $maxAttempts = 5;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
         $error = 'ደህንነት ተሰርዟል። እባክዎ ገጹን እንደገና ይጫኑ።';
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
     } else {
         $email = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
@@ -70,6 +75,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         ]);
                     } catch (PDOException $e) {
                         error_log('Attendance record failed: ' . $e->getMessage());
+                    }
+
+                    try {
+                        $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
+                        $userAgent = substr($_SERVER['HTTP_USER_AGENT'] ?? 'Unknown', 0, 500);
+                        recordStudentSecurityEvent($pdo, $student['student_id'], 'login_success', 'Successful student sign-in.', $ipAddress, $userAgent);
+                        upsertStudentSession($pdo, $student['student_id'], session_id(), $ipAddress, $userAgent);
+
+                        $alertMessage = '<p>Hi ' . htmlspecialchars($student['name'] ?? $student['student_name'] ?? 'student', ENT_QUOTES, 'UTF-8') . ',</p>'
+                            . '<p>A new sign-in was detected on your Sofnyas LMS account.</p>'
+                            . '<p><strong>Time:</strong> ' . date('Y-m-d H:i:s') . '<br>'
+                            . '<strong>Device:</strong> ' . htmlspecialchars(getDeviceDisplayName($userAgent), ENT_QUOTES, 'UTF-8') . '<br>'
+                            . '<strong>IP address:</strong> ' . htmlspecialchars($ipAddress, ENT_QUOTES, 'UTF-8') . '</p>'
+                            . '<p>If this was not you, change your password immediately and contact support.</p>';
+                        sendAppEmail($student['email'], 'Sofnyas LMS sign-in alert', $alertMessage);
+                    } catch (Throwable $e) {
+                        error_log('Login security alert failed: ' . $e->getMessage());
                     }
 
                     header('Location: student_dashboard.php');

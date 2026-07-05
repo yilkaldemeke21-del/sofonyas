@@ -533,6 +533,112 @@ function ensureSecurityTables(PDO $pdo): void
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_login_attempts_key_time (key_identifier, created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+
+    $pdo->exec('CREATE TABLE IF NOT EXISTS student_login_alerts (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id VARCHAR(100) NOT NULL,
+        event_type VARCHAR(50) NOT NULL,
+        event_details TEXT DEFAULT NULL,
+        ip_address VARCHAR(45) DEFAULT NULL,
+        user_agent TEXT DEFAULT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_student_login_alerts_student (student_id),
+        INDEX idx_student_login_alerts_created_at (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+
+    $pdo->exec('CREATE TABLE IF NOT EXISTS student_sessions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id VARCHAR(100) NOT NULL,
+        session_id VARCHAR(100) NOT NULL UNIQUE,
+        device_label VARCHAR(255) DEFAULT NULL,
+        ip_address VARCHAR(45) DEFAULT NULL,
+        user_agent TEXT DEFAULT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        last_seen_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        ended_at DATETIME DEFAULT NULL,
+        is_active TINYINT(1) NOT NULL DEFAULT 1,
+        INDEX idx_student_sessions_student (student_id),
+        INDEX idx_student_sessions_active (is_active, last_seen_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+}
+
+function getDeviceDisplayName(string $userAgent): string
+{
+    $agent = trim($userAgent);
+    if ($agent === '') {
+        return 'Unknown device';
+    }
+
+    $deviceType = 'Desktop';
+    if (preg_match('/(android|iphone|ipad|mobile|tablet)/i', $agent)) {
+        $deviceType = 'Mobile';
+    } elseif (preg_match('/(macintosh|mac os|iphone|ipad)/i', $agent)) {
+        $deviceType = 'Apple device';
+    }
+
+    $browser = 'Browser';
+    if (preg_match('/Edg\//i', $agent)) {
+        $browser = 'Edge';
+    } elseif (preg_match('/Chrome\//i', $agent)) {
+        $browser = 'Chrome';
+    } elseif (preg_match('/Firefox\//i', $agent)) {
+        $browser = 'Firefox';
+    } elseif (preg_match('/Safari\//i', $agent)) {
+        $browser = 'Safari';
+    } elseif (preg_match('/OPR\//i', $agent)) {
+        $browser = 'Opera';
+    }
+
+    return $browser . ' on ' . $deviceType;
+}
+
+function recordStudentSecurityEvent(PDO $pdo, string $studentId, string $eventType, string $eventDetails, ?string $ipAddress = null, ?string $userAgent = null): void
+{
+    $stmt = $pdo->prepare('INSERT INTO student_login_alerts (student_id, event_type, event_details, ip_address, user_agent) VALUES (:student_id, :event_type, :event_details, :ip_address, :user_agent)');
+    $stmt->execute([
+        ':student_id' => $studentId,
+        ':event_type' => $eventType,
+        ':event_details' => $eventDetails,
+        ':ip_address' => $ipAddress,
+        ':user_agent' => $userAgent,
+    ]);
+}
+
+function upsertStudentSession(PDO $pdo, string $studentId, string $sessionId, ?string $ipAddress = null, ?string $userAgent = null): void
+{
+    $stmt = $pdo->prepare('INSERT INTO student_sessions (student_id, session_id, device_label, ip_address, user_agent, created_at, last_seen_at, is_active)
+        VALUES (:student_id, :session_id, :device_label, :ip_address, :user_agent, NOW(), NOW(), 1)
+        ON DUPLICATE KEY UPDATE device_label = VALUES(device_label), ip_address = VALUES(ip_address), user_agent = VALUES(user_agent), last_seen_at = NOW(), is_active = 1');
+    $stmt->execute([
+        ':student_id' => $studentId,
+        ':session_id' => $sessionId,
+        ':device_label' => getDeviceDisplayName((string)$userAgent),
+        ':ip_address' => $ipAddress,
+        ':user_agent' => $userAgent,
+    ]);
+}
+
+function markStudentSessionInactive(PDO $pdo, string $sessionId): void
+{
+    $stmt = $pdo->prepare('UPDATE student_sessions SET is_active = 0, ended_at = NOW() WHERE session_id = :session_id');
+    $stmt->execute([':session_id' => $sessionId]);
+}
+
+function invalidateOtherStudentSessions(PDO $pdo, string $studentId, string $currentSessionId): int
+{
+    $stmt = $pdo->prepare('UPDATE student_sessions SET is_active = 0, ended_at = NOW() WHERE student_id = :student_id AND session_id != :current_session_id AND is_active = 1');
+    $stmt->execute([
+        ':student_id' => $studentId,
+        ':current_session_id' => $currentSessionId,
+    ]);
+    return $stmt->rowCount();
+}
+
+function getStudentSessions(PDO $pdo, string $studentId): array
+{
+    $stmt = $pdo->prepare('SELECT * FROM student_sessions WHERE student_id = :student_id ORDER BY last_seen_at DESC LIMIT 8');
+    $stmt->execute([':student_id' => $studentId]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
 function ensureSiteSettingsTable(PDO $pdo): void
@@ -624,6 +730,75 @@ function verifyCaptchaResponse(string $response, string $secret): bool
 
     $payload = json_decode($result, true);
     return is_array($payload) && !empty($payload['success']);
+}
+
+function sendJsonPostRequest(string $url, array $data, int $timeoutSeconds = 10): array
+{
+    $payload = json_encode($data, JSON_UNESCAPED_UNICODE);
+    $result = [
+        'success' => false,
+        'status' => 0,
+        'response' => null,
+        'error' => '',
+    ];
+
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $timeoutSeconds);
+        $responseBody = curl_exec($ch);
+        $curlError = curl_error($ch);
+        $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        $result['status'] = $statusCode;
+        if ($responseBody === false) {
+            $result['error'] = $curlError ?: 'Unknown cURL error';
+            return $result;
+        }
+
+        $result['response'] = json_decode($responseBody, true);
+    } else {
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'POST',
+                'header' => "Content-Type: application/json\r\n",
+                'content' => $payload,
+                'timeout' => $timeoutSeconds,
+            ],
+        ]);
+        $responseBody = @file_get_contents($url, false, $context);
+        if ($responseBody === false) {
+            $result['error'] = 'file_get_contents failed';
+            return $result;
+        }
+
+        $result['response'] = json_decode($responseBody, true);
+    }
+
+    if (is_array($result['response']) && isset($result['response']['success']) && $result['response']['success'] === true) {
+        $result['success'] = true;
+        return $result;
+    }
+
+    if (is_array($result['response']) && isset($result['response']['message'])) {
+        $result['error'] = (string)$result['response']['message'];
+    }
+
+    return $result;
+}
+
+function sendGoogleSheetsExamSync(array $payload): array
+{
+    $webhook = getenv('GOOGLE_SHEETS_EXAM_WEBHOOK') ?: '';
+    if ($webhook === '') {
+        return ['success' => false, 'status' => 0, 'response' => null, 'error' => 'Google Sheets webhook not configured.'];
+    }
+
+    return sendJsonPostRequest($webhook, $payload, 10);
 }
 
 function ensureStudentEmailVerificationColumns(PDO $pdo): void
@@ -780,6 +955,86 @@ if (!function_exists('safe')) {
     function safe($value): string {
         return htmlspecialchars((string)($value ?? ''), ENT_QUOTES, 'UTF-8');
     }
+}
+
+/**
+ * Role helper utilities
+ */
+function getCurrentUserRole(PDO $pdo = null): ?string
+{
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    if (!empty($_SESSION['user_role'])) {
+        return strtolower((string)$_SESSION['user_role']);
+    }
+
+    if (!empty($_SESSION['student_id'])) {
+        if ($pdo instanceof PDO) {
+            try {
+                $stmt = $pdo->prepare('SELECT role FROM students WHERE student_id = :student_id LIMIT 1');
+                $stmt->execute([':student_id' => $_SESSION['student_id']]);
+                $row = $stmt->fetch();
+                if (!empty($row['role'])) {
+                    $_SESSION['user_role'] = $row['role'];
+                    return strtolower($row['role']);
+                }
+            } catch (Throwable $e) {
+            }
+        }
+        return 'student';
+    }
+
+    if (!empty($_SESSION['admin_id'])) {
+        if ($pdo instanceof PDO) {
+            try {
+                $stmt = $pdo->prepare('SELECT role FROM admin_users WHERE id = :id LIMIT 1');
+                $stmt->execute([':id' => $_SESSION['admin_id']]);
+                $row = $stmt->fetch();
+                if (!empty($row['role'])) {
+                    $_SESSION['user_role'] = $row['role'];
+                    return strtolower($row['role']);
+                }
+            } catch (Throwable $e) {
+            }
+        }
+        return 'admin';
+    }
+
+    return null;
+}
+
+function requireRole(array $allowedRoles, PDO $pdo = null)
+{
+    $allowed = array_map('strtolower', $allowedRoles);
+    $role = getCurrentUserRole($pdo);
+
+    if ($role === null) {
+        // Not logged in - pick login based on requested roles
+        if (in_array('admin', $allowed, true) || in_array('instructor', $allowed, true) || in_array('teacher', $allowed, true)) {
+            header('Location: admin_login.php');
+        } else {
+            header('Location: student_login.php');
+        }
+        exit;
+    }
+
+    if (!in_array($role, $allowed, true)) {
+        http_response_code(403);
+        echo '<!doctype html><html><head><meta charset="utf-8"><title>403 Forbidden</title></head><body style="font-family:Arial,sans-serif;padding:24px;">';
+        echo '<h1>403 Forbidden</h1>';
+        echo '<p>Your account does not have permission to access this resource.</p>';
+        echo '<p><a href="' . (in_array('admin', $allowed, true) ? 'admin_login.php' : 'student_dashboard.php') . '">Go back</a></p>';
+        echo '</body></html>';
+        exit;
+    }
+}
+
+function isRole(string $role, PDO $pdo = null): bool
+{
+    $current = getCurrentUserRole($pdo);
+    return $current !== null && strtolower($role) === strtolower($current);
 }
 
 function csrfToken(): string
