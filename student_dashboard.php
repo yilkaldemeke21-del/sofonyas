@@ -3,6 +3,134 @@ session_start();
 require_once __DIR__ . '/db.php';
 requireRole(['student'], $pdo);
 
+function renderSafeCourseContent($value): string
+{
+    $html = trim((string)($value ?? ''));
+    if ($html === '') {
+        return '';
+    }
+
+    $html = preg_replace('/<script\b[^>]*>.*?<\/script>/is', '', $html);
+    $html = preg_replace('/<style\b[^>]*>.*?<\/style>/is', '', $html);
+    $html = preg_replace('/<iframe\b[^>]*>.*?<\/iframe>/is', '', $html);
+    $html = preg_replace('/on\w+\s*=\s*("[^"]*"|\'[^\']*\')/i', '', $html);
+    $html = preg_replace('/javascript:/i', '', $html);
+    $html = preg_replace('/\b(vbscript|data):/i', '', $html);
+
+    libxml_use_internal_errors(true);
+    $dom = new DOMDocument('1.0', 'UTF-8');
+    $wrapped = '<div>' . $html . '</div>';
+    $dom->loadHTML('<?xml version="1.0" encoding="UTF-8"?>' . $wrapped, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+
+    $allowedTags = ['p', 'br', 'strong', 'b', 'em', 'i', 'u', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'a', 'img', 'span', 'div', 'section', 'article', 'pre', 'code'];
+    $allowedAttrs = ['href', 'src', 'alt', 'title', 'target', 'rel', 'class'];
+
+    foreach (iterator_to_array($dom->getElementsByTagName('*')) as $node) {
+        if ($node->nodeType !== XML_ELEMENT_NODE) {
+            continue;
+        }
+
+        $tag = strtolower($node->nodeName);
+        if (!in_array($tag, $allowedTags, true)) {
+            $parent = $node->parentNode;
+            if ($parent instanceof DOMNode) {
+                while ($node->firstChild) {
+                    $parent->insertBefore($node->firstChild, $node);
+                }
+                $parent->removeChild($node);
+            }
+            continue;
+        }
+
+        foreach (iterator_to_array($node->attributes) as $attribute) {
+            $name = strtolower($attribute->name);
+            if (!in_array($name, $allowedAttrs, true)) {
+                $node->removeAttribute($attribute->name);
+                continue;
+            }
+
+            if (in_array($name, ['href', 'src'], true)) {
+                $value = trim($attribute->value);
+                if ($value === '' || !preg_match('~^(https?:|mailto:|/|\\.)~i', $value)) {
+                    $node->removeAttribute($attribute->name);
+                    continue;
+                }
+            }
+
+            if ($name === 'href') {
+                $node->setAttribute('target', '_blank');
+                $node->setAttribute('rel', 'noopener noreferrer');
+            }
+        }
+    }
+
+    libxml_clear_errors();
+
+    $wrapper = $dom->getElementsByTagName('div')->item(0);
+    if ($wrapper instanceof DOMElement) {
+        $content = $dom->saveHTML($wrapper);
+        return trim((string)preg_replace('/^<div>|<\/div>$/i', '', $content));
+    }
+
+    return trim((string)$html);
+}
+
+function extractCourseModules($value): array
+{
+    $raw = trim((string)($value ?? ''));
+    if ($raw === '') {
+        return [];
+    }
+
+    $decoded = json_decode($raw, true);
+    if (is_array($decoded) && !empty($decoded)) {
+        $modules = [];
+        foreach ($decoded as $index => $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+            $title = trim((string)($entry['title'] ?? ''));
+            $content = trim((string)($entry['description'] ?? $entry['content'] ?? ''));
+            $lessons = [];
+            if (!empty($entry['lessons']) && is_array($entry['lessons'])) {
+                foreach ($entry['lessons'] as $lesson) {
+                    if (is_array($lesson)) {
+                        $lessons[] = trim((string)($lesson['title'] ?? ''));
+                    } elseif (is_string($lesson)) {
+                        $lessons[] = trim($lesson);
+                    }
+                }
+            }
+            $modules[] = [
+                'title' => $title !== '' ? $title : 'Module ' . ($index + 1),
+                'content' => $content,
+                'lessons' => array_values(array_filter($lessons, static function ($lesson): bool { return $lesson !== ''; })),
+            ];
+        }
+        return $modules;
+    }
+
+    return [[
+        'title' => 'Course Modules',
+        'content' => $raw,
+        'lessons' => [],
+    ]];
+}
+
+function getInitialLetter($value): string
+{
+    $text = trim((string)($value ?? ''));
+    if ($text === '') {
+        return '';
+    }
+
+    if (preg_match('/[\p{L}\p{N}]/u', $text, $matches) === 1) {
+        return strtoupper($matches[0]);
+    }
+
+    return strtoupper($text[0]);
+}
+
 $studentId = $_SESSION['student_id'];
 $stmt = $pdo->prepare('SELECT * FROM students WHERE student_id = :student_id');
 $stmt->execute([':student_id' => $studentId]);
@@ -12,7 +140,7 @@ $studentName = $student['name'] ?? $student['student_name'] ?? 'ተማሪ';
 $studentEmail = $student['email'] ?? '';
 
 $ipAddress = $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
-$userAgent = substr($_SERVER['HTTP_USER_AGENT'] ?? 'Unknown', 0, 500);
+$userAgent = (string)($_SERVER['HTTP_USER_AGENT'] ?? 'Unknown');
 try {
     upsertStudentSession($pdo, $studentId, session_id(), $ipAddress, $userAgent);
 } catch (Throwable $e) {
@@ -74,7 +202,7 @@ try {
 } catch (PDOException $e) {
 }
 
-$stmt = $pdo->prepare('SELECT r.*, c.id AS course_id, c.course_code, c.short_description, c.description, c.instructor, c.thumbnail, c.price AS course_price, c.category, c.level FROM registrations r LEFT JOIN courses c ON c.id = r.course_id OR c.course_name = r.course WHERE r.student_id = :student_id ORDER BY r.created_at DESC');
+$stmt = $pdo->prepare('SELECT r.*, c.id AS course_id, c.course_code, c.short_description, c.description, c.instructor, c.thumbnail, c.price AS course_price, c.category, c.level, c.tutorial_topic, c.tutorial_text, c.tutorial_image, c.tutorial_audio, c.tutorial_video, c.pdf_file, c.modules, c.quiz, c.assignment, c.certificate_requirements FROM registrations r LEFT JOIN courses c ON c.id = r.course_id OR c.course_name = r.course WHERE r.student_id = :student_id ORDER BY r.created_at DESC');
 $stmt->execute([':student_id' => $studentId]);
 $registrations = $stmt->fetchAll();
 
@@ -610,6 +738,28 @@ if (empty($notifications)) {
         .rich-content strong, .rich-content b { font-weight: 800; }
         .rich-content em, .rich-content i { font-style: italic; }
         .rich-content u { text-decoration: underline; }
+        .rich-content img { max-width: 100%; border-radius: 12px; height: auto; }
+        .course-player-grid { display: grid; gap: 18px; }
+        .course-player-card { border: 1px solid var(--border); border-radius: 20px; overflow: hidden; background: linear-gradient(135deg, var(--surface), var(--surface-3)); box-shadow: 0 14px 32px rgba(15,23,42,0.08); }
+        .course-player-hero { display: grid; grid-template-columns: minmax(220px, 280px) 1fr; gap: 18px; padding: 16px; background: linear-gradient(135deg, rgba(37,99,235,0.10), rgba(124,58,237,0.08)); }
+        .course-player-hero img { width: 100%; height: 220px; object-fit: cover; border-radius: 16px; }
+        .course-player-meta h3 { margin: 0 0 10px; font-size: 22px; color: var(--text); }
+        .course-player-meta .muted { margin-bottom: 10px; }
+        .course-player-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+        .course-player-layout { display: grid; grid-template-columns: minmax(260px, 300px) 1fr; gap: 16px; padding: 16px; }
+        .course-player-sidebar { background: #f8fafc; border: 1px solid var(--border); border-radius: 16px; padding: 12px; }
+        .sidebar-title { font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: #64748b; margin-bottom: 10px; }
+        .module-accordion { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: white; margin-bottom: 10px; }
+        .module-accordion summary { cursor: pointer; padding: 10px 12px; font-weight: 700; color: var(--text); list-style: none; }
+        .module-accordion summary::-webkit-details-marker { display: none; }
+        .module-panel { border-top: 1px solid var(--border); padding: 10px 12px; display: grid; gap: 8px; }
+        .module-lessons { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+        .module-lessons li { padding: 8px 10px; border-radius: 10px; background: #f8fafc; color: var(--muted); font-size: 14px; }
+        .course-player-main .tab-menu { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; border-bottom: none; padding-bottom: 0; }
+        .course-player-main .tab-btn { border: 1px solid var(--border); color: var(--primary); background: white; }
+        .course-player-main .tab-btn.active { background: linear-gradient(135deg, rgba(37,99,235,0.10), rgba(124,58,237,0.10)); border-color: rgba(37,99,235,0.18); }
+        .course-player-main .tab-pane { padding-top: 8px; }
+        .course-player-empty { padding: 12px; border: 1px dashed var(--border); border-radius: 12px; color: var(--muted); background: rgba(248,250,252,0.8); }
         .progress-track { width: 100%; height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin: 8px 0; }
         .progress-fill { font-size: 16px; height: 100%; background: linear-gradient(90deg,#2563eb,#38bdf8); border-radius: 999px; }
         .pill { display: inline-flex; align-items: center; padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
@@ -799,137 +949,173 @@ if (empty($notifications)) {
 
     <div class="grid-2">
         <div class="card">
-            <h2 class="section-title">📘 የእኔ ኮርሶች</h2>
-            <p class="section-sub">ተማሪው የተመዘገበባቸው ኮርሶች እና እድገት መረጃ</p>
+            <div class="section-title" style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
+                <div>
+                    <h2 style="margin:0;">📘 የእኔ ኮርሶች</h2>
+                    <p class="section-sub" style="margin:6px 0 0;">እያንዳንዱ ኮርስ የሚሰጠውን ሙሉ ይዘት፣ ቱቶሪያል፣ መማሪያዎች፣ ኩዊዝ፣ ሥራዎች እና ሪሶርሶች በመልክ ያሳያል።</p>
+                </div>
+            </div>
             <?php if (empty($registrations)): ?>
-                <p class="muted">ምንም ተመዝጋቢ ኮርስ የለም።</p>
+                <div class="course-player-empty">ምንም ተመዝጋቢ ኮርስ የለም።</div>
             <?php else: ?>
-                <?php foreach ($registrations as $row): ?>
-                    <?php
-                        $courseName = $row['course'] ?: ($row['course_name'] ?? 'Course');
-                        $courseThumb = !empty($row['thumbnail']) ? publicMediaUrl($row['thumbnail']) : 'IMG_20241202_031425_251.jpg';
-                        $courseDesc = $row['short_description'] ?: $row['description'] ?: 'ይህ ኮርስ ለእርስዎ ተዘጋጅቷል።';
-                        $progressValue = (!empty($row['payment_status']) && $row['payment_status'] === 'paid') ? 65 : 35;
-                        $courseIdParam = (int)($row['course_id'] ?? 0);
-                        $courseKey = 'course_' . md5($courseName . $courseIdParam);
-                        $modulesJson = [];
-                        $lessonHtml = '';
-                        if (!empty($row['modules'])) {
-                            $modulesJson = json_decode($row['modules'], true);
-                        }
-                        $quizJson = [];
-                        if (!empty($row['quiz'])) {
-                            $quizJson = json_decode($row['quiz'], true);
-                        }
-                        $assignmentJson = [];
-                        if (!empty($row['assignment'])) {
-                            $assignmentJson = json_decode($row['assignment'], true);
-                        }
-                    ?>
-                    <div class="course-card" style="margin-bottom: 20px;">
-                        <img src="<?php echo safe($courseThumb); ?>" alt="<?php echo safe($courseName); ?>">
-                        <h3><?php echo safe($courseName); ?></h3>
-                        <div class="muted rich-content" style="margin-bottom:8px;"><?php echo renderRichText($courseDesc); ?></div>
-                        <p class="muted">ኢንስትራክተር: <?php echo safe($row['instructor'] ?? 'Admin Instructor'); ?></p>
-                        <div class="progress-track"><div class="progress-fill" style="width: <?php echo $progressValue; ?>%;"></div></div>
-                        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:12px; flex-wrap:wrap;">
-                            <span class="pill info">Progress <?php echo $progressValue; ?>%</span>
-                            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                                <a class="button" href="course_content.php?course_id=<?php echo $courseIdParam; ?>">View Course</a>
-                                <a class="button" href="lesson.php?course_id=<?php echo $courseIdParam; ?>">Start Lesson</a>
-                                <a class="button secondary" href="course_details.php?id=<?php echo $courseIdParam; ?>">Course Details</a>
-                            </div>
-                        </div>
-                        <div class="course-tabs" style="margin-top:20px;">
-                            <div class="tab-menu" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px;">
-                                <button type="button" class="tab-btn active" data-tab-group="<?php echo $courseKey; ?>" data-tab="content">Course Content</button>
-                                <button type="button" class="tab-btn" data-tab-group="<?php echo $courseKey; ?>" data-tab="tutorial">Tutorial</button>
-                                <button type="button" class="tab-btn" data-tab-group="<?php echo $courseKey; ?>" data-tab="lesson">Lesson</button>
-                                <button type="button" class="tab-btn" data-tab-group="<?php echo $courseKey; ?>" data-tab="quiz">Quiz</button>
-                                <button type="button" class="tab-btn" data-tab-group="<?php echo $courseKey; ?>" data-tab="assignment">Assignment</button>
-                            </div>
-                            <div class="tab-pane active" id="<?php echo $courseKey; ?>_content">
-                                <h4>Course Overview</h4>
-                                <div class="rich-content"><?php echo renderRichText($courseDesc); ?></div>
-                                <?php if (!empty($row['description']) && !empty($row['short_description'])): ?>
-                                    <div class="rich-content" style="margin-top:12px;">
-                                        <strong>Full Course Content</strong>
-                                        <?php echo renderRichText($row['description']); ?>
+                <div class="course-player-grid">
+                    <?php foreach ($registrations as $row): ?>
+                        <?php
+                            $courseName = $row['course'] ?: ($row['course_name'] ?? 'Course');
+                            $courseThumb = !empty($row['thumbnail']) ? publicMediaUrl($row['thumbnail']) : 'IMG_20241202_031425_251.jpg';
+                            $courseSummary = trim((string)($row['short_description'] ?? ''));
+                            $courseOverview = trim((string)($row['description'] ?? ''));
+                            $courseDescription = $courseOverview !== '' ? $courseOverview : ($courseSummary !== '' ? $courseSummary : 'ይህ ኮርስ ለእርስዎ ተዘጋጅቷል።');
+                            $progressValue = (!empty($row['payment_status']) && $row['payment_status'] === 'paid') ? 65 : 35;
+                            $courseIdParam = (int)($row['course_id'] ?? 0);
+                            $courseKey = 'course_' . md5($courseName . $courseIdParam);
+                            $modules = extractCourseModules($row['modules'] ?? '');
+                            $quizData = [];
+                            if (!empty($row['quiz'])) {
+                                $quizData = json_decode($row['quiz'], true);
+                            }
+                            $assignmentData = [];
+                            if (!empty($row['assignment'])) {
+                                $assignmentData = json_decode($row['assignment'], true);
+                            }
+                        ?>
+                        <article class="course-player-card">
+                            <div class="course-player-hero">
+                                <img src="<?php echo safe($courseThumb); ?>" alt="<?php echo safe($courseName); ?>">
+                                <div class="course-player-meta">
+                                    <span class="pill info">Progress <?php echo $progressValue; ?>%</span>
+                                    <h3><?php echo safe($courseName); ?></h3>
+                                    <div class="muted rich-content"><?php echo renderSafeCourseContent($courseSummary !== '' ? $courseSummary : $courseDescription); ?></div>
+                                    <p class="muted" style="margin-top:6px;"><strong>Instructor:</strong> <?php echo safe($row['instructor'] ?? 'Admin Instructor'); ?></p>
+                                    <div class="course-player-actions">
+                                        <a class="button" href="course_content.php?course_id=<?php echo $courseIdParam; ?>">View Course</a>
+                                        <a class="button" href="lesson.php?course_id=<?php echo $courseIdParam; ?>">Start Lesson</a>
+                                        <a class="button secondary" href="course_details.php?id=<?php echo $courseIdParam; ?>">Course Details</a>
                                     </div>
-                                <?php endif; ?>
+                                </div>
                             </div>
-                            <div class="tab-pane" id="<?php echo $courseKey; ?>_tutorial">
-                                <h4>Tutorial</h4>
-                                <?php if (!empty($row['tutorial_topic'])): ?><h5><?php echo safe($row['tutorial_topic']); ?></h5><?php endif; ?>
-                                <div class="rich-content"><?php echo renderRichText($row['tutorial_text'] ?? 'No tutorial text available.'); ?></div>
-                                <?php if (!empty($row['tutorial_image'])): ?>
-                                    <p><strong>Image:</strong> <a class="action-link" href="<?php echo safe(publicMediaUrl($row['tutorial_image'])); ?>" target="_blank">View image</a></p>
-                                <?php endif; ?>
-                                <?php if (!empty($row['tutorial_audio'])): ?>
-                                    <p><strong>Audio:</strong> <a class="action-link" href="<?php echo safe(publicMediaUrl($row['tutorial_audio'])); ?>" target="_blank">Play audio</a></p>
-                                <?php endif; ?>
-                                <?php if (!empty($row['tutorial_video'])): ?>
-                                    <p><strong>Video:</strong> <a class="action-link" href="<?php echo safe(publicMediaUrl($row['tutorial_video'])); ?>" target="_blank">Watch video</a></p>
-                                <?php endif; ?>
-                            </div>
-                            <div class="tab-pane" id="<?php echo $courseKey; ?>_lesson">
-                                <h4>Lesson</h4>
-                                <?php if (!empty($modulesJson) && is_array($modulesJson)): ?>
-                                    <?php foreach ($modulesJson as $index => $module): ?>
-                                        <div style="margin-bottom:14px; padding:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px;">
-                                            <strong><?php echo safe($module['title'] ?? 'Module '.($index + 1)); ?></strong>
-                                            <div class="muted rich-content" style="margin-top:8px;">
-                                                <?php echo renderRichText($module['description'] ?? ''); ?>
-                                            </div>
-                                            <?php if (!empty($module['lessons']) && is_array($module['lessons'])): ?>
-                                                <ul style="margin-top:10px; padding-left:18px;">
-                                                    <?php foreach ($module['lessons'] as $lesson): ?>
-                                                        <li><?php echo safe($lesson['title'] ?? 'Lesson title'); ?></li>
-                                                    <?php endforeach; ?>
-                                                </ul>
+                            <div class="course-player-layout">
+                                <aside class="course-player-sidebar">
+                                    <div class="sidebar-title">Modules &amp; Lessons</div>
+                                    <?php if (!empty($modules)): ?>
+                                        <?php foreach ($modules as $moduleIndex => $module): ?>
+                                            <details class="module-accordion" <?php echo $moduleIndex === 0 ? 'open' : ''; ?>>
+                                                <summary><?php echo safe($module['title'] ?? 'Module ' . ($moduleIndex + 1)); ?></summary>
+                                                <div class="module-panel">
+                                                    <?php if (!empty($module['content'])): ?>
+                                                        <div class="rich-content"><?php echo renderSafeCourseContent($module['content']); ?></div>
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($module['lessons'])): ?>
+                                                        <ul class="module-lessons">
+                                                            <?php foreach ($module['lessons'] as $lessonItem): ?>
+                                                                <li><?php echo safe($lessonItem); ?></li>
+                                                            <?php endforeach; ?>
+                                                        </ul>
+                                                    <?php endif; ?>
+                                                </div>
+                                            </details>
+                                        <?php endforeach; ?>
+                                    <?php else: ?>
+                                        <div class="course-player-empty">No module outline has been added yet.</div>
+                                    <?php endif; ?>
+                                </aside>
+                                <div class="course-player-main">
+                                    <div class="tab-menu">
+                                        <button type="button" class="tab-btn active" data-tab-group="<?php echo $courseKey; ?>" data-tab="overview">Overview</button>
+                                        <button type="button" class="tab-btn" data-tab-group="<?php echo $courseKey; ?>" data-tab="tutorial">Tutorials</button>
+                                        <button type="button" class="tab-btn" data-tab-group="<?php echo $courseKey; ?>" data-tab="lesson">Lessons</button>
+                                        <button type="button" class="tab-btn" data-tab-group="<?php echo $courseKey; ?>" data-tab="quiz">Quiz</button>
+                                        <button type="button" class="tab-btn" data-tab-group="<?php echo $courseKey; ?>" data-tab="assignment">Assignments</button>
+                                        <button type="button" class="tab-btn" data-tab-group="<?php echo $courseKey; ?>" data-tab="resources">Resources</button>
+                                        <button type="button" class="tab-btn" data-tab-group="<?php echo $courseKey; ?>" data-tab="discussion">Discussion</button>
+                                    </div>
+                                    <div class="tab-pane active" id="<?php echo $courseKey; ?>_overview">
+                                        <h4>Course Overview</h4>
+                                        <div class="rich-content"><?php echo renderSafeCourseContent($courseDescription); ?></div>
+                                    </div>
+                                    <div class="tab-pane" id="<?php echo $courseKey; ?>_tutorial">
+                                        <h4>Tutorials</h4>
+                                        <?php if (!empty($row['tutorial_topic'])): ?><h5><?php echo safe($row['tutorial_topic']); ?></h5><?php endif; ?>
+                                        <div class="rich-content"><?php echo renderSafeCourseContent($row['tutorial_text'] ?? 'No tutorial content added yet.'); ?></div>
+                                        <?php if (!empty($row['tutorial_image'])): ?>
+                                            <p><strong>Image:</strong> <a class="action-link" href="<?php echo safe(publicMediaUrl($row['tutorial_image'])); ?>" target="_blank" rel="noopener noreferrer">View image</a></p>
+                                        <?php endif; ?>
+                                        <?php if (!empty($row['tutorial_audio'])): ?>
+                                            <p><strong>Audio:</strong> <a class="action-link" href="<?php echo safe(publicMediaUrl($row['tutorial_audio'])); ?>" target="_blank" rel="noopener noreferrer">Play audio</a></p>
+                                        <?php endif; ?>
+                                        <?php if (!empty($row['tutorial_video'])): ?>
+                                            <p><strong>Video:</strong> <a class="action-link" href="<?php echo safe(publicMediaUrl($row['tutorial_video'])); ?>" target="_blank" rel="noopener noreferrer">Watch video</a></p>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="tab-pane" id="<?php echo $courseKey; ?>_lesson">
+                                        <h4>Lessons</h4>
+                                        <div class="rich-content"><?php echo renderSafeCourseContent($row['modules'] ?? 'No lesson outline available.'); ?></div>
+                                    </div>
+                                    <div class="tab-pane" id="<?php echo $courseKey; ?>_quiz">
+                                        <h4>Quiz</h4>
+                                        <?php if (!empty($quizData) && is_array($quizData)): ?>
+                                            <ul style="padding-left:18px;">
+                                                <?php foreach ($quizData as $quiz): ?>
+                                                    <li>
+                                                        <strong><?php echo safe($quiz['title'] ?? 'Quiz'); ?></strong>
+                                                        <?php if (!empty($quiz['question_count'])): ?> — <?php echo (int)$quiz['question_count']; ?> questions<?php endif; ?>
+                                                    </li>
+                                                <?php endforeach; ?>
+                                            </ul>
+                                        <?php else: ?>
+                                            <div class="rich-content"><?php echo renderSafeCourseContent($row['quiz'] ?? 'No quiz information available.'); ?></div>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="tab-pane" id="<?php echo $courseKey; ?>_assignment">
+                                        <h4>Assignments</h4>
+                                        <?php if (!empty($assignmentData) && is_array($assignmentData)): ?>
+                                            <ul style="padding-left:18px;">
+                                                <?php foreach ($assignmentData as $assignment): ?>
+                                                    <li>
+                                                        <strong><?php echo safe($assignment['title'] ?? 'Assignment'); ?></strong>
+                                                        <?php if (!empty($assignment['due_date'])): ?> — Due <?php echo safe($assignment['due_date']); ?><?php endif; ?>
+                                                        <?php if (!empty($assignment['description'])): ?>
+                                                            <div class="muted rich-content" style="margin-top:6px;"><?php echo renderSafeCourseContent($assignment['description']); ?></div>
+                                                        <?php endif; ?>
+                                                    </li>
+                                                <?php endforeach; ?>
+                                            </ul>
+                                        <?php else: ?>
+                                            <div class="rich-content"><?php echo renderSafeCourseContent($row['assignment'] ?? 'No assignment details available.'); ?></div>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="tab-pane" id="<?php echo $courseKey; ?>_resources">
+                                        <h4>Resources</h4>
+                                        <div class="rich-content">
+                                            <?php if (!empty($row['pdf_file'])): ?>
+                                                <p><strong>Course PDF:</strong> <a class="action-link" href="<?php echo safe(publicMediaUrl($row['pdf_file'])); ?>" target="_blank" rel="noopener noreferrer">Open resource</a></p>
+                                            <?php endif; ?>
+                                            <?php if (!empty($row['tutorial_image'])): ?>
+                                                <p><strong>Image:</strong> <a class="action-link" href="<?php echo safe(publicMediaUrl($row['tutorial_image'])); ?>" target="_blank" rel="noopener noreferrer">View image</a></p>
+                                            <?php endif; ?>
+                                            <?php if (!empty($row['tutorial_audio'])): ?>
+                                                <p><strong>Audio:</strong> <a class="action-link" href="<?php echo safe(publicMediaUrl($row['tutorial_audio'])); ?>" target="_blank" rel="noopener noreferrer">Play audio</a></p>
+                                            <?php endif; ?>
+                                            <?php if (!empty($row['tutorial_video'])): ?>
+                                                <p><strong>Video:</strong> <a class="action-link" href="<?php echo safe(publicMediaUrl($row['tutorial_video'])); ?>" target="_blank" rel="noopener noreferrer">Watch video</a></p>
+                                            <?php endif; ?>
+                                            <?php if (empty($row['pdf_file']) && empty($row['tutorial_image']) && empty($row['tutorial_audio']) && empty($row['tutorial_video'])): ?>
+                                                <p class="course-player-empty">No additional resources are available for this course yet.</p>
                                             <?php endif; ?>
                                         </div>
-                                    <?php endforeach; ?>
-                                <?php else: ?>
-                                    <div class="rich-content"><?php echo renderRichText($row['modules'] ?? 'No lesson outline available.'); ?></div>
-                                <?php endif; ?>
+                                    </div>
+                                    <div class="tab-pane" id="<?php echo $courseKey; ?>_discussion">
+                                        <h4>Discussion</h4>
+                                        <div class="rich-content">
+                                            <p>Start a discussion with your instructor and classmates about this course.</p>
+                                            <p><a class="button secondary" href="discussion_forum.php?course_id=<?php echo $courseIdParam; ?>">Open discussion forum</a></p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="tab-pane" id="<?php echo $courseKey; ?>_quiz">
-                                <h4>Quiz</h4>
-                                <?php if (!empty($quizJson) && is_array($quizJson)): ?>
-                                    <ul style="padding-left:18px;">
-                                        <?php foreach ($quizJson as $quiz): ?>
-                                            <li>
-                                                <strong><?php echo safe($quiz['title'] ?? 'Quiz'); ?></strong>
-                                                <?php if (!empty($quiz['question_count'])): ?> — <?php echo (int)$quiz['question_count']; ?> questions<?php endif; ?>
-                                            </li>
-                                        <?php endforeach; ?>
-                                    </ul>
-                                <?php else: ?>
-                                    <div class="rich-content"><?php echo renderRichText($row['quiz'] ?? 'No quiz information available.'); ?></div>
-                                <?php endif; ?>
-                            </div>
-                            <div class="tab-pane" id="<?php echo $courseKey; ?>_assignment">
-                                <h4>Assignment</h4>
-                                <?php if (!empty($assignmentJson) && is_array($assignmentJson)): ?>
-                                    <ul style="padding-left:18px;">
-                                        <?php foreach ($assignmentJson as $assignment): ?>
-                                            <li>
-                                                <strong><?php echo safe($assignment['title'] ?? 'Assignment'); ?></strong>
-                                                <?php if (!empty($assignment['due_date'])): ?> — Due <?php echo safe($assignment['due_date']); ?><?php endif; ?>
-                                                <?php if (!empty($assignment['description'])): ?>
-                                                    <div class="muted rich-content" style="margin-top:6px;"><?php echo renderRichText($assignment['description']); ?></div>
-                                                <?php endif; ?>
-                                            </li>
-                                        <?php endforeach; ?>
-                                    </ul>
-                                <?php else: ?>
-                                    <div class="rich-content"><?php echo renderRichText($row['assignment'] ?? 'No assignment details available.'); ?></div>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
+                        </article>
+                    <?php endforeach; ?>
+                </div>
             <?php endif; ?>
         </div>
 
@@ -1069,7 +1255,7 @@ if (empty($notifications)) {
         <div class="card">
             <h2 class="section-title">👤 የተማሪዎች ፕሮፋይል</h2>
             <div class="profile-box">
-                <div class="avatar"><?php echo strtoupper(substr(safe($studentName),0,1)); ?></div>
+                <div class="avatar"><?php echo safe(getInitialLetter($studentName)); ?></div>
                 <div>
                     <p style="margin:0; font-weight:800; color:#111827;"><?php echo safe($studentName); ?></p>
                     <p class="muted">ኢሜይል: <?php echo safe($studentEmail); ?></p>
@@ -1220,7 +1406,7 @@ if (empty($notifications)) {
                             <td>
                                 <strong><?php echo safe($courseName); ?></strong>
                                 <?php if (!empty($row['short_description']) || !empty($row['description'])): ?>
-                                    <br><small class="muted"><?php echo safe(substr(strip_tags($row['short_description'] ?: $row['description'] ?: ''), 0, 90)); ?><?php echo (strlen(strip_tags($row['short_description'] ?: $row['description'] ?: '')) > 90) ? '...' : ''; ?></small>
+                                    <br><div class="muted rich-content" style="margin-top:6px;"><?php echo renderSafeCourseContent($row['short_description'] ?: $row['description'] ?: ''); ?></div>
                                 <?php endif; ?>
                             </td>
                             <td><?php echo safe($row['amount'] ?? $row['course_price'] ?? 0); ?> ብር</td>

@@ -970,22 +970,6 @@ function getCurrentUserRole(PDO $pdo = null): ?string
         return strtolower((string)$_SESSION['user_role']);
     }
 
-    if (!empty($_SESSION['student_id'])) {
-        if ($pdo instanceof PDO) {
-            try {
-                $stmt = $pdo->prepare('SELECT role FROM students WHERE student_id = :student_id LIMIT 1');
-                $stmt->execute([':student_id' => $_SESSION['student_id']]);
-                $row = $stmt->fetch();
-                if (!empty($row['role'])) {
-                    $_SESSION['user_role'] = $row['role'];
-                    return strtolower($row['role']);
-                }
-            } catch (Throwable $e) {
-            }
-        }
-        return 'student';
-    }
-
     if (!empty($_SESSION['admin_id'])) {
         if ($pdo instanceof PDO) {
             try {
@@ -1000,6 +984,22 @@ function getCurrentUserRole(PDO $pdo = null): ?string
             }
         }
         return 'admin';
+    }
+
+    if (!empty($_SESSION['student_id'])) {
+        if ($pdo instanceof PDO) {
+            try {
+                $stmt = $pdo->prepare('SELECT role FROM students WHERE student_id = :student_id LIMIT 1');
+                $stmt->execute([':student_id' => $_SESSION['student_id']]);
+                $row = $stmt->fetch();
+                if (!empty($row['role'])) {
+                    $_SESSION['user_role'] = $row['role'];
+                    return strtolower($row['role']);
+                }
+            } catch (Throwable $e) {
+            }
+        }
+        return 'student';
     }
 
     return null;
@@ -1021,11 +1021,16 @@ function requireRole(array $allowedRoles, PDO $pdo = null)
     }
 
     if (!in_array($role, $allowed, true)) {
+        if (in_array('admin', $allowed, true) || in_array('instructor', $allowed, true) || in_array('teacher', $allowed, true)) {
+            header('Location: admin_login.php');
+            exit;
+        }
+
         http_response_code(403);
         echo '<!doctype html><html><head><meta charset="utf-8"><title>403 Forbidden</title></head><body style="font-family:Arial,sans-serif;padding:24px;">';
         echo '<h1>403 Forbidden</h1>';
         echo '<p>Your account does not have permission to access this resource.</p>';
-        echo '<p><a href="' . (in_array('admin', $allowed, true) ? 'admin_login.php' : 'student_dashboard.php') . '">Go back</a></p>';
+        echo '<p><a href="student_dashboard.php">Go back</a></p>';
         echo '</body></html>';
         exit;
     }
@@ -1047,7 +1052,12 @@ function csrfToken(): string
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
     }
 
-    return (string)$_SESSION['csrf_token'];
+    $token = (string)$_SESSION['csrf_token'];
+    if (empty($_COOKIE['csrf_token']) || (string)$_COOKIE['csrf_token'] !== $token) {
+        setcookie('csrf_token', $token, 0, '/', '', false, true);
+    }
+
+    return $token;
 }
 
 function validateCsrfToken(string $token): bool
@@ -1056,7 +1066,15 @@ function validateCsrfToken(string $token): bool
         session_start();
     }
 
-    return hash_equals($_SESSION['csrf_token'] ?? '', $token);
+    $expected = (string)($_SESSION['csrf_token'] ?? '');
+    $cookieToken = (string)($_COOKIE['csrf_token'] ?? '');
+    $provided = trim($token);
+
+    if ($provided === '') {
+        return false;
+    }
+
+    return hash_equals($expected, $provided) || hash_equals($cookieToken, $provided);
 }
 
 function getCurrentLanguage(string $fallback = 'am'): string

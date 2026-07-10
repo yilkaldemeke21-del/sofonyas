@@ -3,7 +3,8 @@ session_start();
 require_once __DIR__ . '/db.php';
 
 $message = '';
-if (isset($_POST['save_lesson']) && isset($_SESSION['student_id'])) {
+$studentId = isset($_SESSION['student_id']) ? (string)$_SESSION['student_id'] : '';
+if (isset($_POST['save_lesson']) && $studentId !== '') {
     $lessonId = (int)($_POST['lesson_id'] ?? 0);
     $courseId = (int)($_POST['course_id'] ?? 0);
     $lessonTitle = trim((string)($_POST['lesson_title'] ?? ''));
@@ -12,13 +13,13 @@ if (isset($_POST['save_lesson']) && isset($_SESSION['student_id'])) {
 
     if ($lessonId > 0 && $courseId > 0 && $lessonTitle !== '' && $courseName !== '') {
         $stmt = $pdo->prepare('SELECT id FROM lesson_bookmarks WHERE student_id = :student_id AND lesson_id = :lesson_id LIMIT 1');
-        $stmt->execute([':student_id' => $_SESSION['student_id'], ':lesson_id' => $lessonId]);
+        $stmt->execute([':student_id' => $studentId, ':lesson_id' => $lessonId]);
         if ($stmt->fetch()) {
             $message = 'This lesson is already saved.';
         } else {
             $stmt = $pdo->prepare('INSERT INTO lesson_bookmarks (student_id, lesson_id, course_id, lesson_title, course_name, instructor) VALUES (:student_id, :lesson_id, :course_id, :lesson_title, :course_name, :instructor)');
             $stmt->execute([
-                ':student_id' => $_SESSION['student_id'],
+                ':student_id' => $studentId,
                 ':lesson_id' => $lessonId,
                 ':course_id' => $courseId,
                 ':lesson_title' => $lessonTitle,
@@ -30,7 +31,7 @@ if (isset($_POST['save_lesson']) && isset($_SESSION['student_id'])) {
     } else {
         $message = 'Invalid lesson details.';
     }
-} elseif (isset($_POST['save_lesson']) && !isset($_SESSION['student_id'])) {
+} elseif (isset($_POST['save_lesson']) && $studentId === '') {
     $message = 'Please login as a student before saving a lesson.';
 }
 
@@ -42,14 +43,16 @@ $stmt = $pdo->query('SELECT * FROM courses ORDER BY created_at DESC LIMIT 12');
 $courses = $stmt->fetchAll();
 
 $enrolledCourseKeys = [];
-$enrolledStmt = $pdo->prepare('SELECT course_id, course FROM registrations WHERE student_id = :student_id');
-$enrolledStmt->execute([':student_id' => $_SESSION['student_id']]);
-foreach ($enrolledStmt->fetchAll() as $entry) {
-    if (!empty($entry['course_id'])) {
-        $enrolledCourseKeys[(int)$entry['course_id']] = true;
-    }
-    if (!empty($entry['course'])) {
-        $enrolledCourseKeys['name:' . $entry['course']] = true;
+if ($studentId !== '') {
+    $enrolledStmt = $pdo->prepare('SELECT course_id, course FROM registrations WHERE student_id = :student_id');
+    $enrolledStmt->execute([':student_id' => $studentId]);
+    foreach ($enrolledStmt->fetchAll() as $entry) {
+        if (!empty($entry['course_id'])) {
+            $enrolledCourseKeys[(int)$entry['course_id']] = true;
+        }
+        if (!empty($entry['course'])) {
+            $enrolledCourseKeys['name:' . $entry['course']] = true;
+        }
     }
 }
 
@@ -88,7 +91,7 @@ if ($courseId > 0) {
   $selectedCourse = $courseStmt->fetch();
 
   if ($selectedCourse) {
-      $isEnrolled = isset($_SESSION['student_id']) && isStudentEnrolled($pdo, (string)$_SESSION['student_id'], $courseId);
+      $isEnrolled = $studentId !== '' && isStudentEnrolled($pdo, $studentId, $courseId);
       $moduleStmt = $pdo->prepare('SELECT * FROM course_modules WHERE course_id = :course_id ORDER BY sort_order ASC, id ASC');
       $moduleStmt->execute([':course_id' => $courseId]);
       $courseModules = $moduleStmt->fetchAll();

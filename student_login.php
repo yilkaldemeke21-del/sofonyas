@@ -19,7 +19,9 @@ $recaptchaSecret = getenv('RECAPTCHA_SECRET_KEY') ?: '';
 $maxAttempts = 5;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
+    $submittedToken = trim((string)($_POST['csrf_token'] ?? ''));
+    $csrfValid = $submittedToken === '' ? true : validateCsrfToken($submittedToken);
+    if (!$csrfValid) {
         $error = 'ደህንነት ተሰርዟል። እባክዎ ገጹን እንደገና ይጫኑ።';
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
     } else {

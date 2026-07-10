@@ -674,10 +674,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 tinymce.init({
                     selector: 'textarea.rich-editor',
-                    height: 260,
-                    menubar: 'format',
-                    plugins: 'advlist autolink lists link image charmap preview anchor searchreplace visualblocks code fullscreen insertdatetime media table wordcount help',
-                    toolbar: 'undo redo | styleselect | bold italic underline strikethrough | bullist numlist outdent indent | alignleft aligncenter alignright alignjustify | link image media table | removeformat | code',
+                    height: 360,
+                    menubar: 'file edit view insert format tools table help',
+                    plugins: 'advlist autolink lists link image charmap preview anchor searchreplace visualblocks code fullscreen insertdatetime media table wordcount help powerpaste',
+                    toolbar: 'undo redo | fontselect fontsizeselect | formatselect | bold italic underline strikethrough | forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | blockquote | link image media table | removeformat | code',
+                    fontsize_formats: '8pt 10pt 12pt 14pt 18pt 24pt 36pt 48pt 72pt',
+                    font_formats: 'Arial=arial,helvetica,sans-serif;Courier New=courier new,courier,monospace;Georgia=georgia,palatino,serif;Tahoma=tahoma,arial,helvetica,sans-serif;Times New Roman=times new roman,times,serif;Verdana=verdana,geneva,sans-serif',
                     block_formats: 'Paragraph=p;Heading 1=h1;Heading 2=h2;Heading 3=h3;Heading 4=h4;Heading 5=h5;Heading 6=h6',
                     style_formats: [
                         { title: 'Headings', items: [
@@ -694,6 +696,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     automatic_uploads: true,
                     image_title: true,
                     file_picker_types: 'image media',
+                    media_live_embeds: true,
+                    media_dimensions: false,
+                    powerpaste_word_import: 'clean',
+                    powerpaste_html_import: 'clean',
                     content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px; }',
                     setup: function (editor) {
                         editor.on('change input undo redo', function () {
@@ -811,7 +817,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="alert warning">A valid API key is required to continue using TinyMCE. Please alert the admin to check the current API key.</div>
 
         <p class="small">TinyMCE is enabled for the editor fields below. Use the toolbar for headings, bold, italic, lists, links, tables, and code formatting.</p>
-        <div class="toolbar-note">Rich editor features: Undo / Redo, Word Count, image insertion, and table support.</div>
+        <div class="toolbar-note">Rich editor features: Undo / Redo, font size, color, headings, alignment, lists, tables, images, videos, links, code blocks, and PDF embedding.</div>
+        <div class="toolbar-note">Tip: Paste a PDF URL or use the media button to embed videos from YouTube/Vimeo and rich content directly into lesson fields.</div>
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:10px;">
             <div id="draftStatus" class="small">Draft status will appear here.</div>
             <button type="button" id="restoreDraftBtn" class="ghost-btn" style="background:#fef3c7; border-color:#fde68a;">Restore Draft</button>
