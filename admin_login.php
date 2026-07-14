@@ -48,6 +48,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ($admin && password_verify($password, $admin['password_hash'])) {
                         clearLoginAttempts($pdo, $attemptKey);
                         session_regenerate_id(true);
+
+                        unset($_SESSION['student_id'], $_SESSION['student_email'], $_SESSION['student_name'], $_SESSION['is_student']);
+                        unset($_SESSION['teacher_id'], $_SESSION['instructor_id']);
+
                         $role = isset($admin['role']) && $admin['role'] !== '' ? $admin['role'] : 'Admin';
                         $_SESSION['admin_id'] = $admin['id'];
                         $_SESSION['admin_username'] = $admin['username'];

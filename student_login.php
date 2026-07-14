@@ -47,6 +47,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($student && password_verify($password, $student['password_hash'])) {
                     clearLoginAttempts($pdo, $attemptKey);
                     session_regenerate_id(true);
+
+                    unset($_SESSION['admin_id'], $_SESSION['admin_username'], $_SESSION['is_admin'], $_SESSION['is_instructor']);
+                    unset($_SESSION['teacher_id'], $_SESSION['instructor_id']);
+
                     $_SESSION['student_id'] = $student['student_id'];
                     $_SESSION['student_email'] = $student['email'];
                     $_SESSION['student_name'] = $student['name'];

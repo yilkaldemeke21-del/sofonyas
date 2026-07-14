@@ -55,6 +55,24 @@ $stmt = $pdo->prepare('SELECT * FROM courses WHERE id = :id LIMIT 1');
 $stmt->execute([':id' => $courseId]);
 $course = $stmt->fetch();
 
+$courseOverviewContent = trim((string)($course['description'] ?? ''));
+if ($courseOverviewContent === '') {
+    $courseOverviewContent = trim((string)($course['tutorial_text'] ?? ''));
+}
+if ($courseOverviewContent === '') {
+    $courseOverviewContent = trim((string)($course['short_description'] ?? ''));
+}
+
+$courseTutorialContent = trim((string)($course['tutorial_text'] ?? ''));
+if ($courseTutorialContent === '') {
+    $courseTutorialContent = $courseOverviewContent;
+}
+
+$courseSummaryCopy = trim((string)($course['short_description'] ?? ''));
+if ($courseSummaryCopy === '') {
+    $courseSummaryCopy = $courseOverviewContent;
+}
+
 $isEnrolled = false;
 $registrationRecord = null;
 if (!empty($_SESSION['student_id']) && $course) {
@@ -145,7 +163,7 @@ $notes = $noteStmt->fetchAll();
                         <?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?>
                     </p>
                 <?php endif; ?>
-                <p class="muted" style="margin-top:0; line-height:1.75;"><?php echo renderRichText($course['short_description'] ?? ''); ?></p>
+                <p class="muted" style="margin-top:0; line-height:1.75;"><?php echo renderSafeCourseContent($courseSummaryCopy !== '' ? $courseSummaryCopy : 'No course summary is available yet.'); ?></p>
                 <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:14px; margin:18px 0;">
                     <div class="card" style="padding:12px 14px; background:#f8fafc; border:1px solid #e2e8f0;"><strong>Instructor</strong><br><?php echo safe($course['instructor'] ?? 'Staff'); ?></div>
                     <div class="card" style="padding:12px 14px; background:#f8fafc; border:1px solid #e2e8f0;"><strong>Price</strong><br><?php echo number_format((float)($course['price'] ?? 0), 2); ?> ብር</div>
@@ -159,7 +177,7 @@ $notes = $noteStmt->fetchAll();
                     <a class="button secondary" href="student_dashboard.php">Back to Dashboard</a>
                 </div>
                 <div style="margin-top:18px;">
-                    <p class="rich-content"><?php echo renderRichText($course['description'] ?? ''); ?></p>
+                    <p class="rich-content"><?php echo renderSafeCourseContent($courseOverviewContent !== '' ? $courseOverviewContent : 'No course description is available yet.'); ?></p>
                 </div>
             </div>
         </div>
@@ -177,20 +195,20 @@ $notes = $noteStmt->fetchAll();
 
         <div class="tab-pane active" id="overview">
             <h3>Course Overview</h3>
-            <div class="rich-content"><?php echo renderRichText($course['description'] ?? $course['short_description'] ?? 'No overview available.'); ?></div>
+            <div class="rich-content"><?php echo renderSafeCourseContent($courseOverviewContent !== '' ? $courseOverviewContent : 'No overview available.'); ?></div>
             <?php if (!empty($course['tutorial_topic'])): ?>
                 <p style="margin-top:16px;"><strong>Tutorial topic:</strong> <?php echo safe($course['tutorial_topic']); ?></p>
             <?php endif; ?>
             <?php if (!empty($course['certificate_requirements'])): ?>
-                <div style="margin-top:18px;"><strong>Certificate Requirements</strong><div class="rich-content"><?php echo renderRichText($course['certificate_requirements']); ?></div></div>
+                <div style="margin-top:18px;"><strong>Certificate Requirements</strong><div class="rich-content"><?php echo renderSafeCourseContent($course['certificate_requirements']); ?></div></div>
             <?php endif; ?>
         </div>
 
         <div class="tab-pane" id="tutorial">
             <h3>Course Tutorial</h3>
-            <?php if (!empty($course['tutorial_text']) || !empty($course['tutorial_topic'])): ?>
+            <?php if (!empty($courseTutorialContent) || !empty($course['tutorial_topic'])): ?>
                 <?php if (!empty($course['tutorial_topic'])): ?><h4><?php echo safe($course['tutorial_topic']); ?></h4><?php endif; ?>
-                <div class="rich-content"><?php echo renderRichText($course['tutorial_text'] ?? 'No tutorial content available.'); ?></div>
+                <div class="rich-content"><?php echo renderSafeCourseContent($courseTutorialContent !== '' ? $courseTutorialContent : 'No tutorial content available.'); ?></div>
             <?php else: ?>
                 <p class="muted">Tutorial content has not been added yet.</p>
             <?php endif; ?>
@@ -208,7 +226,7 @@ $notes = $noteStmt->fetchAll();
         <div class="tab-pane" id="modules">
             <h3>Course Modules</h3>
             <?php if (!empty($course['modules'])): ?>
-                <div class="rich-content"><?php echo renderRichText($course['modules']); ?></div>
+                <div class="rich-content"><?php echo renderSafeCourseContent($course['modules'] ?? 'No module outline has been provided yet.'); ?></div>
             <?php else: ?>
                 <p class="muted">No module outline has been provided yet.</p>
             <?php endif; ?>
@@ -217,7 +235,7 @@ $notes = $noteStmt->fetchAll();
         <div class="tab-pane" id="quiz">
             <h3>Quiz Structure</h3>
             <?php if (!empty($course['quiz'])): ?>
-                <div class="rich-content"><?php echo renderRichText($course['quiz']); ?></div>
+                <div class="rich-content"><?php echo renderSafeCourseContent($course['quiz'] ?? 'No quiz information is available yet.'); ?></div>
             <?php else: ?>
                 <p class="muted">Quiz instructions or sample questions are not available.</p>
             <?php endif; ?>
@@ -226,7 +244,7 @@ $notes = $noteStmt->fetchAll();
         <div class="tab-pane" id="assignment">
             <h3>Assignment Details</h3>
             <?php if (!empty($course['assignment'])): ?>
-                <div class="rich-content"><?php echo renderRichText($course['assignment']); ?></div>
+                <div class="rich-content"><?php echo renderSafeCourseContent($course['assignment'] ?? 'No assignment details are available yet.'); ?></div>
             <?php else: ?>
                 <p class="muted">Assignment details are not yet available.</p>
             <?php endif; ?>
@@ -235,7 +253,7 @@ $notes = $noteStmt->fetchAll();
         <div class="tab-pane" id="requirements">
             <h3>Certificate Requirements</h3>
             <?php if (!empty($course['certificate_requirements'])): ?>
-                <div class="rich-content"><?php echo renderRichText($course['certificate_requirements']); ?></div>
+                <div class="rich-content"><?php echo renderSafeCourseContent($course['certificate_requirements'] ?? 'No certificate requirements have been specified.'); ?></div>
             <?php else: ?>
                 <p class="muted">No certificate requirements have been specified.</p>
             <?php endif; ?>

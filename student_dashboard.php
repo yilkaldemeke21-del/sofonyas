@@ -3,78 +3,6 @@ session_start();
 require_once __DIR__ . '/db.php';
 requireRole(['student'], $pdo);
 
-function renderSafeCourseContent($value): string
-{
-    $html = trim((string)($value ?? ''));
-    if ($html === '') {
-        return '';
-    }
-
-    $html = preg_replace('/<script\b[^>]*>.*?<\/script>/is', '', $html);
-    $html = preg_replace('/<style\b[^>]*>.*?<\/style>/is', '', $html);
-    $html = preg_replace('/<iframe\b[^>]*>.*?<\/iframe>/is', '', $html);
-    $html = preg_replace('/on\w+\s*=\s*("[^"]*"|\'[^\']*\')/i', '', $html);
-    $html = preg_replace('/javascript:/i', '', $html);
-    $html = preg_replace('/\b(vbscript|data):/i', '', $html);
-
-    libxml_use_internal_errors(true);
-    $dom = new DOMDocument('1.0', 'UTF-8');
-    $wrapped = '<div>' . $html . '</div>';
-    $dom->loadHTML('<?xml version="1.0" encoding="UTF-8"?>' . $wrapped, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
-
-    $allowedTags = ['p', 'br', 'strong', 'b', 'em', 'i', 'u', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'a', 'img', 'span', 'div', 'section', 'article', 'pre', 'code'];
-    $allowedAttrs = ['href', 'src', 'alt', 'title', 'target', 'rel', 'class'];
-
-    foreach (iterator_to_array($dom->getElementsByTagName('*')) as $node) {
-        if ($node->nodeType !== XML_ELEMENT_NODE) {
-            continue;
-        }
-
-        $tag = strtolower($node->nodeName);
-        if (!in_array($tag, $allowedTags, true)) {
-            $parent = $node->parentNode;
-            if ($parent instanceof DOMNode) {
-                while ($node->firstChild) {
-                    $parent->insertBefore($node->firstChild, $node);
-                }
-                $parent->removeChild($node);
-            }
-            continue;
-        }
-
-        foreach (iterator_to_array($node->attributes) as $attribute) {
-            $name = strtolower($attribute->name);
-            if (!in_array($name, $allowedAttrs, true)) {
-                $node->removeAttribute($attribute->name);
-                continue;
-            }
-
-            if (in_array($name, ['href', 'src'], true)) {
-                $value = trim($attribute->value);
-                if ($value === '' || !preg_match('~^(https?:|mailto:|/|\\.)~i', $value)) {
-                    $node->removeAttribute($attribute->name);
-                    continue;
-                }
-            }
-
-            if ($name === 'href') {
-                $node->setAttribute('target', '_blank');
-                $node->setAttribute('rel', 'noopener noreferrer');
-            }
-        }
-    }
-
-    libxml_clear_errors();
-
-    $wrapper = $dom->getElementsByTagName('div')->item(0);
-    if ($wrapper instanceof DOMElement) {
-        $content = $dom->saveHTML($wrapper);
-        return trim((string)preg_replace('/^<div>|<\/div>$/i', '', $content));
-    }
-
-    return trim((string)$html);
-}
-
 function extractCourseModules($value): array
 {
     $raw = trim((string)($value ?? ''));
@@ -932,9 +860,15 @@ if (empty($notifications)) {
                         <?php else: ?>
                             <img src="IMG_20241202_031425_251.jpg" alt="Course preview">
                         <?php endif; ?>
+                        <?php
+                            $availableCourseSummary = trim((string)($course['short_description'] ?? ''));
+                            $availableCourseOverview = trim((string)($course['description'] ?? ''));
+                            $availableCourseTutorial = trim((string)($course['tutorial_text'] ?? ''));
+                            $availableCourseBody = $availableCourseOverview !== '' ? $availableCourseOverview : ($availableCourseTutorial !== '' ? $availableCourseTutorial : $availableCourseSummary);
+                        ?>
                         <h3><?php echo safe($course['course_name']); ?></h3>
-                        <div class="muted rich-content" style="margin-bottom:8px;"><?php echo renderRichText($course['short_description'] ?? ''); ?></div>
-                        <div class="muted rich-content" style="margin-bottom:8px;"><?php echo renderRichText($course['description'] ?? ''); ?></div>
+                        <div class="muted rich-content" style="margin-bottom:8px;"><?php echo renderSafeCourseContent($availableCourseSummary !== '' ? $availableCourseSummary : $availableCourseBody); ?></div>
+                        <div class="muted rich-content" style="margin-bottom:8px;"><?php echo renderSafeCourseContent($availableCourseBody !== '' ? $availableCourseBody : 'No course details are available yet.'); ?></div>
                         <p class="muted"><span class="instructor-line">ኢንስትራክተር:</span> <?php echo safe($course['instructor'] ?? 'Admin Instructor'); ?></p>
                         <p class="muted"><span class="instructor-line">ዋጋ:</span> <?php echo number_format((float)($course['price'] ?? 0), 2); ?> ብር</p>
                         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
@@ -965,11 +899,19 @@ if (empty($notifications)) {
                             $courseThumb = !empty($row['thumbnail']) ? publicMediaUrl($row['thumbnail']) : 'IMG_20241202_031425_251.jpg';
                             $courseSummary = trim((string)($row['short_description'] ?? ''));
                             $courseOverview = trim((string)($row['description'] ?? ''));
-                            $courseDescription = $courseOverview !== '' ? $courseOverview : ($courseSummary !== '' ? $courseSummary : 'ይህ ኮርስ ለእርስዎ ተዘጋጅቷል።');
+                            $courseTutorialContent = trim((string)($row['tutorial_text'] ?? ''));
+                            $courseDescription = $courseOverview !== '' ? $courseOverview : ($courseTutorialContent !== '' ? $courseTutorialContent : ($courseSummary !== '' ? $courseSummary : 'ይህ ኮርስ ለእርስዎ ተዘጋጅቷል።'));
+                            if ($courseTutorialContent === '') {
+                                $courseTutorialContent = $courseDescription;
+                            }
+                            $courseLessonOutline = trim((string)($row['modules'] ?? ''));
+                            if ($courseLessonOutline === '') {
+                                $courseLessonOutline = $courseDescription;
+                            }
                             $progressValue = (!empty($row['payment_status']) && $row['payment_status'] === 'paid') ? 65 : 35;
                             $courseIdParam = (int)($row['course_id'] ?? 0);
                             $courseKey = 'course_' . md5($courseName . $courseIdParam);
-                            $modules = extractCourseModules($row['modules'] ?? '');
+                            $modules = extractCourseModules($courseLessonOutline);
                             $quizData = [];
                             if (!empty($row['quiz'])) {
                                 $quizData = json_decode($row['quiz'], true);
@@ -1031,12 +973,12 @@ if (empty($notifications)) {
                                     </div>
                                     <div class="tab-pane active" id="<?php echo $courseKey; ?>_overview">
                                         <h4>Course Overview</h4>
-                                        <div class="rich-content"><?php echo renderSafeCourseContent($courseDescription); ?></div>
+                                        <div class="rich-content"><?php echo renderSafeCourseContent($courseDescription !== '' ? $courseDescription : 'No course overview has been added yet.'); ?></div>
                                     </div>
                                     <div class="tab-pane" id="<?php echo $courseKey; ?>_tutorial">
                                         <h4>Tutorials</h4>
                                         <?php if (!empty($row['tutorial_topic'])): ?><h5><?php echo safe($row['tutorial_topic']); ?></h5><?php endif; ?>
-                                        <div class="rich-content"><?php echo renderSafeCourseContent($row['tutorial_text'] ?? 'No tutorial content added yet.'); ?></div>
+                                        <div class="rich-content"><?php echo renderSafeCourseContent($courseTutorialContent !== '' ? $courseTutorialContent : 'No tutorial content added yet.'); ?></div>
                                         <?php if (!empty($row['tutorial_image'])): ?>
                                             <p><strong>Image:</strong> <a class="action-link" href="<?php echo safe(publicMediaUrl($row['tutorial_image'])); ?>" target="_blank" rel="noopener noreferrer">View image</a></p>
                                         <?php endif; ?>
@@ -1049,7 +991,7 @@ if (empty($notifications)) {
                                     </div>
                                     <div class="tab-pane" id="<?php echo $courseKey; ?>_lesson">
                                         <h4>Lessons</h4>
-                                        <div class="rich-content"><?php echo renderSafeCourseContent($row['modules'] ?? 'No lesson outline available.'); ?></div>
+                                        <div class="rich-content"><?php echo renderSafeCourseContent($courseLessonOutline !== '' ? $courseLessonOutline : 'No lesson outline available.'); ?></div>
                                     </div>
                                     <div class="tab-pane" id="<?php echo $courseKey; ?>_quiz">
                                         <h4>Quiz</h4>

@@ -947,6 +947,78 @@ function sanitizeRichText($value): string {
     return (string)($value ?? '');
 }
 
+function renderSafeCourseContent($value): string
+{
+    $html = trim((string)($value ?? ''));
+    if ($html === '') {
+        return '';
+    }
+
+    $html = preg_replace('/<script\b[^>]*>.*?<\/script>/is', '', $html);
+    $html = preg_replace('/<style\b[^>]*>.*?<\/style>/is', '', $html);
+    $html = preg_replace('/<iframe\b[^>]*>.*?<\/iframe>/is', '', $html);
+    $html = preg_replace('/on\w+\s*=\s*("[^"]*"|\'[^\']*\')/i', '', $html);
+    $html = preg_replace('/javascript:/i', '', $html);
+    $html = preg_replace('/\b(vbscript|data):/i', '', $html);
+
+    libxml_use_internal_errors(true);
+    $dom = new DOMDocument('1.0', 'UTF-8');
+    $wrapped = '<div>' . $html . '</div>';
+    $dom->loadHTML('<?xml version="1.0" encoding="UTF-8"?>' . $wrapped, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+
+    $allowedTags = ['p', 'br', 'strong', 'b', 'em', 'i', 'u', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'a', 'img', 'span', 'div', 'section', 'article', 'pre', 'code'];
+    $allowedAttrs = ['href', 'src', 'alt', 'title', 'target', 'rel', 'class'];
+
+    foreach (iterator_to_array($dom->getElementsByTagName('*')) as $node) {
+        if ($node->nodeType !== XML_ELEMENT_NODE) {
+            continue;
+        }
+
+        $tag = strtolower($node->nodeName);
+        if (!in_array($tag, $allowedTags, true)) {
+            $parent = $node->parentNode;
+            if ($parent instanceof DOMNode) {
+                while ($node->firstChild) {
+                    $parent->insertBefore($node->firstChild, $node);
+                }
+                $parent->removeChild($node);
+            }
+            continue;
+        }
+
+        foreach (iterator_to_array($node->attributes) as $attribute) {
+            $name = strtolower($attribute->name);
+            if (!in_array($name, $allowedAttrs, true)) {
+                $node->removeAttribute($attribute->name);
+                continue;
+            }
+
+            if (in_array($name, ['href', 'src'], true)) {
+                $value = trim($attribute->value);
+                if ($value === '' || !preg_match('~^(https?:|mailto:|/|\\.)~i', $value)) {
+                    $node->removeAttribute($attribute->name);
+                    continue;
+                }
+            }
+
+            if ($name === 'href') {
+                $node->setAttribute('target', '_blank');
+                $node->setAttribute('rel', 'noopener noreferrer');
+            }
+        }
+    }
+
+    libxml_clear_errors();
+
+    $wrapper = $dom->getElementsByTagName('div')->item(0);
+    if ($wrapper instanceof DOMElement) {
+        $content = $dom->saveHTML($wrapper);
+        return trim((string)preg_replace('/^<div>|<\/div>$/i', '', $content));
+    }
+
+    return trim((string)$html);
+}
+
 function renderRichText($value): string {
     return (string)($value ?? '');
 }
@@ -960,30 +1032,10 @@ if (!function_exists('safe')) {
 /**
  * Role helper utilities
  */
-function getCurrentUserRole(PDO $pdo = null): ?string
+function getCurrentUserRole(?PDO $pdo = null): ?string
 {
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
-    }
-
-    if (!empty($_SESSION['user_role'])) {
-        return strtolower((string)$_SESSION['user_role']);
-    }
-
-    if (!empty($_SESSION['admin_id'])) {
-        if ($pdo instanceof PDO) {
-            try {
-                $stmt = $pdo->prepare('SELECT role FROM admin_users WHERE id = :id LIMIT 1');
-                $stmt->execute([':id' => $_SESSION['admin_id']]);
-                $row = $stmt->fetch();
-                if (!empty($row['role'])) {
-                    $_SESSION['user_role'] = $row['role'];
-                    return strtolower($row['role']);
-                }
-            } catch (Throwable $e) {
-            }
-        }
-        return 'admin';
     }
 
     if (!empty($_SESSION['student_id'])) {
@@ -999,13 +1051,36 @@ function getCurrentUserRole(PDO $pdo = null): ?string
             } catch (Throwable $e) {
             }
         }
+
+        $_SESSION['user_role'] = $_SESSION['user_role'] ?? 'Student';
         return 'student';
+    }
+
+    if (!empty($_SESSION['admin_id'])) {
+        if ($pdo instanceof PDO) {
+            try {
+                $stmt = $pdo->prepare('SELECT role FROM admin_users WHERE id = :id LIMIT 1');
+                $stmt->execute([':id' => $_SESSION['admin_id']]);
+                $row = $stmt->fetch();
+                if (!empty($row['role'])) {
+                    $_SESSION['user_role'] = $row['role'];
+                    return strtolower($row['role']);
+                }
+            } catch (Throwable $e) {
+            }
+        }
+        $_SESSION['user_role'] = $_SESSION['user_role'] ?? 'Admin';
+        return 'admin';
+    }
+
+    if (!empty($_SESSION['user_role'])) {
+        return strtolower((string)$_SESSION['user_role']);
     }
 
     return null;
 }
 
-function requireRole(array $allowedRoles, PDO $pdo = null)
+function requireRole(array $allowedRoles, ?PDO $pdo = null)
 {
     $allowed = array_map('strtolower', $allowedRoles);
     $role = getCurrentUserRole($pdo);
@@ -1036,7 +1111,7 @@ function requireRole(array $allowedRoles, PDO $pdo = null)
     }
 }
 
-function isRole(string $role, PDO $pdo = null): bool
+function isRole(string $role, ?PDO $pdo = null): bool
 {
     $current = getCurrentUserRole($pdo);
     return $current !== null && strtolower($role) === strtolower($current);
@@ -1083,12 +1158,28 @@ function getCurrentLanguage(string $fallback = 'am'): string
         session_start();
     }
 
-    $lang = $_GET['lang'] ?? $_POST['lang'] ?? ($_SESSION['app_lang'] ?? ($_COOKIE['app_lang'] ?? ''));
-    if ($lang === 'en') {
-        return 'en';
+    $requestedLang = '';
+    if (!empty($_GET['lang'])) {
+        $requestedLang = trim((string)$_GET['lang']);
+    } elseif (!empty($_POST['set_lang'])) {
+        $requestedLang = trim((string)$_POST['set_lang']);
+    } elseif (!empty($_POST['lang'])) {
+        $requestedLang = trim((string)$_POST['lang']);
     }
 
-    return $fallback === 'en' ? 'am' : 'am';
+    if ($requestedLang === 'en' || $requestedLang === 'am') {
+        return setCurrentLanguage($requestedLang);
+    }
+
+    if (!empty($_SESSION['app_lang']) && in_array($_SESSION['app_lang'], ['am', 'en'], true)) {
+        return $_SESSION['app_lang'];
+    }
+
+    if (!empty($_COOKIE['app_lang']) && in_array($_COOKIE['app_lang'], ['am', 'en'], true)) {
+        return $_COOKIE['app_lang'];
+    }
+
+    return $fallback === 'en' ? 'en' : 'am';
 }
 
 function setCurrentLanguage(string $lang): string
@@ -1099,7 +1190,11 @@ function setCurrentLanguage(string $lang): string
 
     $lang = $lang === 'en' ? 'en' : 'am';
     $_SESSION['app_lang'] = $lang;
-    setcookie('app_lang', $lang, time() + 60 * 60 * 24 * 365, '/');
+
+    if (!headers_sent()) {
+        setcookie('app_lang', $lang, time() + 60 * 60 * 24 * 365, '/');
+    }
+
     return $lang;
 }
 

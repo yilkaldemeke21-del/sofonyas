@@ -106,10 +106,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         html { min-height: 100%; scroll-behavior: smooth; }
         body { min-height: 100%; background: radial-gradient(circle at top left, rgba(124,58,237,0.18), transparent 22%), radial-gradient(circle at bottom right, rgba(59,130,246,0.12), transparent 18%), linear-gradient(135deg, #f8fbff 0%, #eef2ff 100%); color: #0f172a; }
         body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(circle at 25% 20%, rgba(99,102,241,0.12), transparent 16%), radial-gradient(circle at 80% 10%, rgba(236,72,153,0.1), transparent 14%), radial-gradient(circle at 50% 90%, rgba(14,165,233,0.08), transparent 16%); pointer-events: none; z-index: 0; }
-        nav { position: sticky; top: 0; z-index: 20; background: rgba(248,251,255,0.78); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(148,163,184,0.18); }
-        nav ul { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: center; margin: 0; padding: 14px 18px; list-style: none; }
-        nav a { color: #0f172a; text-decoration: none; font-weight: 600; transition: color 0.2s ease, transform 0.2s ease; }
+        nav { position: sticky; top: 0; z-index: 20; background: rgba(248,251,255,0.95); backdrop-filter: blur(18px); border-bottom: 1px solid rgba(148,163,184,0.18); height: 64px; overflow: visible; }
+        nav ul { display: flex; flex-wrap: nowrap; gap: 12px; align-items: center; justify-content: flex-start; margin: 0; padding: 0 18px; list-style: none; white-space: nowrap; height:100%; }
+        nav ul > li { flex: 0 0 auto; }
+        nav a { line-height: 1; }
+        nav a { color: #0f172a; text-decoration: none; font-weight: 600; transition: color 0.18s ease, transform 0.18s ease, background 0.18s ease; }
         nav a:hover { color: #4338ca; transform: translateY(-1px); }
+        .nav-lang { margin-left: auto; display: flex; align-items: center; }
+        .lang-form { display: flex; align-items: center; }
+        /* Custom dropdown that opens absolute so it won't push nav height */
+        .lang-dropdown { position: relative; }
+        .lang-btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(15,23,42,0.12); background: #fff; color: #0f172a; font-weight: 700; cursor: pointer; }
+        .lang-btn:focus { outline: none; box-shadow: 0 6px 18px rgba(67,56,202,0.08); }
+        .lang-options { position: absolute; right: 0; top: calc(100% + 8px); display: none; min-width: 150px; background: #fff; border-radius: 10px; box-shadow: 0 12px 36px rgba(15,23,42,0.12); z-index: 5000; padding: 6px 6px; pointer-events: auto; }
+        .lang-options.open { display: block; }
+        .lang-dropdown { position: relative; z-index: 4000; }
+        .lang-options button { display: block; width: 100%; text-align: left; padding: 8px 12px; border: none; background: transparent; color: #0f172a; font-weight: 700; border-radius: 8px; cursor: pointer; }
+        .lang-options button:hover { background: rgba(67,56,202,0.06); color: #4338ca; }
+        .visually-hidden { position: absolute !important; height: 1px; width: 1px; overflow: hidden; clip: rect(1px, 1px, 1px, 1px); white-space: nowrap; }
+
+        /* Mobile hamburger */
+        .nav-toggle { display: none; background: transparent; border: none; width: 44px; height: 44px; align-items: center; justify-content: center; cursor: pointer; }
+        .nav-toggle .hamburger { position: relative; width: 22px; height: 2px; background: #0f172a; display: block; border-radius: 2px; }
+        .nav-toggle .hamburger::before, .nav-toggle .hamburger::after { content: ''; position: absolute; left: 0; right: 0; height: 2px; background: #0f172a; border-radius: 2px; }
+        .nav-toggle .hamburger::before { top: -7px; }
+        .nav-toggle .hamburger::after { top: 7px; }
+
+        @media (max-width: 900px) {
+            nav ul { display: none; }
+            .nav-toggle { display: inline-flex; }
+            nav.open ul { display: flex; flex-direction: column; gap: 12px; background: rgba(255,255,255,0.98); padding: 12px 18px; position: absolute; right: 14px; top: 56px; border-radius: 12px; box-shadow: 0 8px 36px rgba(15,23,42,0.12); z-index: 1200; }
+            nav.open ul li { white-space: nowrap; }
+            .nav-lang { margin-left: 0; }
+        }
         .card { background: rgba(216, 11, 124, 0.88); border: 1px solid rgba(236, 13, 191, 0.42); border-radius: 28px; box-shadow: 0 34px 80px rgba(15,23,42,0.1); padding: 26px; backdrop-filter: blur(18px); }
         .card h2 { margin-top: 0; }
         .quick-card { background: rgba(229, 11, 175, 0.9); border: 1px solid rgba(148,163,184,0.18); border-radius: 24px; padding: 24px; box-shadow: 0 24px 50px rgba(15,23,42,0.08); transition: transform 0.25s ease, box-shadow 0.25s ease; }
@@ -138,7 +167,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         .hero-copy { color: #fff; max-width: 660px; }
         .hero-copy h1 { font-size: clamp(2.4rem, 4vw, 3.8rem); line-height: 1.02; margin-bottom: 18px; text-shadow: 0 16px 45px rgba(15,23,42,0.3); letter-spacing: -0.03em; }
         .hero-copy p { font-size: 1.05rem; color: rgba(226,232,240,0.96); line-height: 1.75; max-width: 620px; }
-        .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 22px; }
+        .hero-intro { max-width: 1020px; margin: 22px auto 0; padding: 0 20px; }
+        .hero-intro-inner { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin: 0 auto; max-width: 940px; }
+        .hero-intro .logo-wrap { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; }
+        .hero-intro .logo-img { max-width: 140px; width: 140; height: 140px; object-fit: cover; border-radius: 80%; display: block; border: 2px solid rgba(67,56,202,0.18); }
+        .hero-intro .intro-copy { flex: 1 1 0; }
+        .hero-intro h1 { margin: 0 0 10px; font-size: 26px; color: #0f172a; letter-spacing: -0.03em; line-height: 1.15; text-align: left; }
+        .hero-intro p { margin: 0; font-size: 1.05rem; color: rgba(15,23,42,0.78); line-height: 1.75; text-align: left; }
+        .hero-actions-section { max-width: 1020px; margin: 18px auto 0; padding: 0 20px; display: flex; justify-content: center; }
+        @media (max-width: 900px) { .hero-intro-inner { flex-direction: column; align-items: center; text-align: center; } .hero-intro .intro-copy { width: 100%; } .hero-intro h1, .hero-intro p { text-align: center; } .hero-intro .logo-wrap { width: 180px; } }
+        .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 0; justify-content: center; }
         .button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: linear-gradient(135deg, #f10eb1, #4f46e5); color: white; text-decoration: none; padding: 14px 22px; border-radius: 999px; font-weight: 800; letter-spacing: 0.01em; box-shadow: 0 16px 40px rgba(37,99,235,0.22); transition: transform 0.24s ease, box-shadow 0.24s ease, filter 0.24s ease; }
         .button:hover { transform: translateY(-2px); filter: brightness(1.05); }
         .button.secondary { background: linear-gradient(135deg, #38bdf8, #e10bb3); color: white; box-shadow: 0 16px 40px rgba(59,130,246,0.2); border: none; }
@@ -237,54 +275,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
     <div class="page-loader" id="pageLoader" aria-hidden="true">
         <div class="loader-ring"></div>
     </div>
-
+<section class="hero-intro">
+        <div class="hero-intro-inner">
+            <a href="sofonyas2.php" class="logo-wrap" aria-label="<?php echo safe($siteName); ?>">
+                <img src="sofi fikr.jpg" alt="<?php echo safe($siteName); ?>" class="logo-img zoomable-img">
+            </a>
+            <div class="intro-copy">
+                <h1 class="animate-title reveal" data-am="እንኳን ወደ ዲ/ን ሶፎንያስ ደመቀ ቤተ ገብርኤል ዌብሳይት በደህና መጡ!" data-en="Welcome to Dr. Sofoniyas Demeke's Church Community Website!">እንኳን ወደ ዲ/ን ሶፎንያስ ደመቀ ቤተ ገብርኤል ዌብሳይት በደህና መጡ!</h1>
+               
+            </div>
+        </div>
+    </section>
     <nav>
         <ul>
-            <li><a href="https://t.me/+Bqeu85XkOu4yMzFk" data-am="tele_ join" data-en="Home">Home</a></li>
-            <li><a href="#about" data-am="about" data-en="About">About</a></li>
-            <li><a href="student_login.php" data-am="Student Login" data-en="Student Center">exam center</a></li>
-            <li><a href="#view" data-am="view" data-en="View">View</a></li>
-            <li><a href="contact.html" data-am="contact" data-en="Contact">Contact</a></li>
-             <li><a href="dashboard.php">Dashboard</a></li>
-            <li><a href="exam20.php">exam portal</a></li>
-            <li><a href="tutorial.php">Courses</a></li>
-            <li><a href="discussion_forum.php">Forum</a></li>
-            <li><a href="library.php">Library</a></li>
-            <li><a href="admin_login.php">Admin Login</a></li>
-            <li><a href="student_register.php">Register</a></li>
+            <li><a href="#about" data-am="ስለ እኛ" data-en="About">ስለ እኛ</a></li>
+            <li><a href="student_login.php" data-am="የተማሪ ግባ" data-en="Student Access">የተማሪ ግባ</a></li>
+            <li><a href="#view" data-am="እይታ" data-en="View">እይታ</a></li>
+            <li><a href="contact.html" data-am="አገናኝ" data-en="Contact">አገናኝ</a></li>
+            <li><a href="dashboard.php" data-am="ዳሽቦርድ" data-en="Dashboard">ዳሽቦርድ</a></li>
+            <li><a href="exam20.php" data-am="የፈተና ጣቢያ" data-en="Exam Portal">የፈተና ጣቢያ</a></li>
+            <li><a href="tutorial.php" data-am="ኮርሶች" data-en="Courses">ኮርሶች</a></li>
+            <li><a href="discussion_forum.php" data-am="ፎረም" data-en="Forum">ፎረም</a></li>
+            <li><a href="library.php" data-am="ቤተ-መፅሃፍት" data-en="Library">ቤተ-መፅሃፍት</a></li>
+            <li><a href="admin_login.php" data-am="የአስተዳደሪ ግባ" data-en="Admin Login">የአስተዳደሪ ግባ</a></li>
+            <li><a href="student_register.php" data-am="ይመዝገቡ" data-en="Register">ይመዝገቡ</a></li>
+                    <li class="nav-toggle-wrap">
+                        <button class="nav-toggle" aria-expanded="false" aria-label="Toggle menu" id="navToggle">
+                            <span class="hamburger"></span>
+                        </button>
+                    </li>
+            <li class="nav-lang">
+                <div class="lang-dropdown" id="langDropdown">
+                    <button class="lang-btn" id="langBtn" aria-haspopup="true" aria-expanded="false"><?php echo ($lang === 'am') ? 'አማርኛ' : (($lang === 'ti') ? 'ትግርኛ' : (($lang === 'om') ? 'Afaan Oromo' : 'English')); ?></button>
+                    <div class="lang-options" id="langOptions" role="menu" aria-hidden="true">
+                        <button type="button" data-lang="am" role="menuitem">አማርኛ</button>
+                        <button type="button" data-lang="ti" role="menuitem">ትግርኛ</button>
+                        <button type="button" data-lang="om" role="menuitem">Afaan Oromo</button>
+                        <button type="button" data-lang="en" role="menuitem">English</button>
+                    </div>
+                </div>
+            </li>
         </ul>
     </nav>
-
-    <form class="lang-switch" role="group" aria-label="Language switcher" method="post" style="display:flex; gap:8px; align-items:center;">
-        <input type="hidden" name="set_lang" value="am">
-        <button class="lang-btn <?php echo $lang === 'am' ? 'active' : ''; ?>" type="submit" data-lang="am">አማርኛ</button>
-    </form>
-    <form class="lang-switch" role="group" aria-label="Language switcher" method="post" style="display:flex; gap:8px; align-items:center;">
-        <input type="hidden" name="set_lang" value="en">
-        <button class="lang-btn <?php echo $lang === 'en' ? 'active' : ''; ?>" type="submit" data-lang="en">English</button>
-    </form>
 
     <header class="hero-section">
         <video class="hero-video" autoplay muted loop playsinline poster="10 .jpg">
             <source src="sofi website hero section video.mp4" type="video/mp4">
         </video>
         <div class="hero-overlay"></div>
-        <div class="hero-content">
-            <div class="hero-copy">
-                <div id="logo">
-                    <img src="<?php echo safe($siteLogoUrl); ?>" alt="<?php echo safe($siteName); ?>" class="logo-img zoomable-img">
-                </div>
-                <h1 class="animate-title reveal" data-am="እንኳን ወደ ዲ/ን ሶፎንያስ ደመቀ ቤተ ገብርኤል ዌብሳይት በደህና መጡ!" data-en="Welcome to Dr. Sofoniyas Demeke's Church Community Website!">እንኳን ወደ ዲ/ን ሶፎንያስ ደመቀ ቤተ ገብርኤል ዌብሳይት በደህና መጡ!</h1>
-                <p class="animate-subtitle reveal" data-am="ይህ የመማሪያ እና የእውቀት መንገድ በጥሩ እና በቀላሉ የሚያገኙ መረጃዎች ተዘጋጅቷል።" data-en="This learning and knowledge platform is prepared with clear, easy-to-access information for everyone.">ይህ የመማሪያ እና የእውቀት መንገድ በጥሩ እና በቀላሉ የሚያገኙ መረጃዎች ተዘጋጅቷል።</p>
-                <div class="hero-actions reveal">
-                    <a class="button" href="student_login.php" data-am="የተማሪ ግባ" data-en="Student Access">Student Access</a>
-                    <a class="button secondary" href="#about" data-am="ተጨማሪ ይወቁ" data-en="Learn More">Learn More</a>
-                    <button id="installAppBtn" class="button secondary" style="display:none;" type="button">Install App</button>
-                    <button id="enableNotificationsBtn" class="button secondary" style="display:none;" type="button">Enable Notifications</button>
-                </div>
-            </div>
-        </div>
     </header>
+
+    <section class="hero-actions-section">
+        <div class="hero-actions reveal">
+            <a class="button" href="student_login.php" data-am="የተማሪ ግባ" data-en="Student Access">Student Access</a>
+            <a class="button secondary" href="#about" data-am="ተጨማሪ ይወቁ" data-en="Learn More">Learn More</a>
+            <button id="installAppBtn" class="button secondary" style="display:none;" type="button">Install App</button>
+            <button id="enableNotificationsBtn" class="button secondary" style="display:none;" type="button">Enable Notifications</button>
+        </div>
+    </section>
 
     <section class="card reveal hero-stats-section" aria-label="LMS stats">
         <h2 data-am="የቤተ ገብርኤል አጠቃላይ ዕይታ" data-en="Professional LMS Features">Professional LMS Features</h2>
@@ -313,6 +361,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         usort($contactFiles, function($a, $b) { return $b['mtime'] - $a['mtime']; });
     }
     ?>
+    <script>
+        (function(){
+            var navToggle = document.getElementById('navToggle');
+            var nav = document.querySelector('nav');
+            var langBtn = document.getElementById('langBtn');
+            var langOptions = document.getElementById('langOptions');
+
+            if (navToggle && nav) {
+                navToggle.addEventListener('click', function(e){
+                    e.stopPropagation();
+                    var open = nav.classList.toggle('open');
+                    navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+                });
+            }
+
+            if (langBtn && langOptions) {
+                langBtn.addEventListener('click', function(e){
+                    e.stopPropagation();
+                    var open = langOptions.classList.toggle('open');
+                    langBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+                    langOptions.setAttribute('aria-hidden', open ? 'false' : 'true');
+                });
+
+                langOptions.addEventListener('click', function(e){
+                    var btn = e.target.closest('button[data-lang]');
+                    if (!btn) return;
+                    var code = btn.getAttribute('data-lang');
+                    var params = new URLSearchParams(window.location.search);
+                    params.set('lang', code);
+                    window.location.search = params.toString();
+                });
+            }
+
+            // close on outside click for both nav and lang dropdown
+            document.addEventListener('click', function(e){
+                if (nav && nav.classList.contains('open')) {
+                    if (!(nav.contains(e.target) || (navToggle && e.target === navToggle))) {
+                        nav.classList.remove('open');
+                        if (navToggle) navToggle.setAttribute('aria-expanded','false');
+                    }
+                }
+                if (langOptions && langOptions.classList.contains('open')) {
+                    if (!(langOptions.contains(e.target) || (langBtn && e.target === langBtn))) {
+                        langOptions.classList.remove('open');
+                        if (langBtn) { langBtn.setAttribute('aria-expanded','false'); }
+                        langOptions.setAttribute('aria-hidden','true');
+                    }
+                }
+            });
+
+            // close on escape
+            document.addEventListener('keydown', function(e){
+                if (e.key === 'Escape') {
+                    if (nav && nav.classList.contains('open')) { nav.classList.remove('open'); if (navToggle) navToggle.setAttribute('aria-expanded','false'); }
+                    if (langOptions && langOptions.classList.contains('open')) { langOptions.classList.remove('open'); if (langBtn) langBtn.setAttribute('aria-expanded','false'); langOptions.setAttribute('aria-hidden','true'); }
+                }
+            });
+        })();
+    </script>
     <?php if (!empty($contactFiles)): ?>
         <section class="card reveal" aria-label="Uploaded contact files">
             <h2 data-am="የተስተካከሉ ፋይሎች" data-en="Uploaded Files">Uploaded Files</h2>
@@ -457,7 +564,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
                 </div>
                 <div class="form-field">
                     <label for="support_email" data-am="ኢሜይል" data-en="Email">ኢሜይል</label>
-                    <input id="support_email" name="email" type="email" placeholder="example@mail.com" required>
+                    <input id="support_email" name="email" type="email" placeholder="enter email" required>
                 </div>
                 <div class="form-field">
                     <label for="support_subject" data-am="ጉዳይ" data-en="Subject">ጉዳይ</label>
@@ -641,10 +748,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         <div id="formMsg" class="small" aria-live="polite"></div>
     </section>
 
-    <div class="card reveal">
-        <h2 data-am="እባክዎ ያነጋግሩኝ" data-en="Please contact me">እባክዎ ያነጋግሩኝ</h2>
-        <p><?php echo safe($contactEmail); ?></p>
-    </div>
+   
 
     <section class="card reveal" aria-label="Live chat" style="background: linear-gradient(135deg, #f8fbff 0%, #f5f3ff 100%); border:1px solid #dbeafe;">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
@@ -699,7 +803,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         <div style="max-width:1100px; margin:0 auto; display:grid; gap:24px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); align-items:start;">
             <div>
                 <h3 style="margin:0 0 10px; color:#fff;" data-am="ስለ እኛ" data-en="About Us">About Us</h3>
-                <p style="margin:4px 0 14px; max-width:320px; color:#cbd5e1;" data-am="በቤተ ክርስቲያን እና በመመሪያ ከፍተኛ ጥናት የተመሰረተ ዌብሳይት ነው።" data-en="A church-centered learning platform built for trusted knowledge and community growth.">A church-centered learning platform built for trusted knowledge and community growth.</p>
+                <p style="margin:4px 0 14px; max-width:320px; color:#cbd5e1;" data-am="በቤተ ክርስቲያን እና በመመሪያ ከፍተኛ ጥናት በዲ/ን ሶፎንያስ ደመቀ የተመሰረተና የተሰራ ዌብሳይት ነው።" data-en="A church-centered learning platform built for trusted knowledge and community growth.">A church-centered learning platform built for trusted knowledge and community growth.</p>
                 <a href="sofonyas2.php#about" style="color:#93c5fd; text-decoration:none; font-weight:600;" data-am="ይህን ይጎብኙ" data-en="Visit About">Visit About</a>
             </div>
             <div>
@@ -731,6 +835,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
                         <a href="https://t.me/sophonyasbetmichael" style="color:#bfdbfe; text-decoration:none;" data-am="ፌስቡክ" data-en="Facebook">Facebook</a>
                         <a href="https://www.instagram.com/" style="color:#bfdbfe; text-decoration:none;" data-am="Instagram" data-en="Instagram">Instagram</a>
                     </div>
+                </div>
+            </div>
+            <div>
+                <h3 style="margin:0 0 10px; color:#fff;" data-am="" data-en=""></h3>
+                <div style="display:flex; flex-direction:column; gap:8px; color:#bfdbfe;">
+                    <a href="mailto:<?php echo safe($contactEmail); ?>" style="color:#bfdbfe; text-decoration:none;" aria-label="Email"><?php echo safe($contactEmail); ?></a>
+                    <a href="<?php echo safe($callLink); ?>" style="color:#bfdbfe; text-decoration:none;" aria-label="Phone"><?php echo safe($phoneNumber); ?></a>
+                    <a href="sofonyas2.php#about" style="color:#bfdbfe; text-decoration:none;" data-am="" data-en=""></a>
                 </div>
             </div>
         </div>
@@ -1090,7 +1202,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         window.addEventListener('load', () => {
             loader.classList.add('hidden');
             setTimeout(() => loader.remove(), 400);
-            applyLanguage('am');
+            applyLanguage('<?php echo safe($lang); ?>');
             updateNotificationButton();
             startSlider();
             startHeroSlider();

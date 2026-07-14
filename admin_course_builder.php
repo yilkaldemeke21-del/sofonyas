@@ -121,6 +121,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $instructor_image = normalizeText($_POST['instructor_image'] ?? '');
     $tutorial_topic = normalizeText($_POST['tutorial_topic'] ?? '');
     $tutorial_text = sanitizeRichText($_POST['tutorial_text'] ?? '');
+
+    if ($short_description === '' && $description !== '') {
+        $short_description = $description;
+    }
+
+    if ($description === '' && $tutorial_text !== '') {
+        $description = $tutorial_text;
+    }
+
+    if ($tutorial_text === '' && $description !== '') {
+        $tutorial_text = $description;
+    }
+
     $tutorial_image = normalizeText($_POST['tutorial_image'] ?? '');
     $tutorial_audio = normalizeText($_POST['tutorial_audio'] ?? '');
     $tutorial_video = normalizeText($_POST['tutorial_video'] ?? '');
