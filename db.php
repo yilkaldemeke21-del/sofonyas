@@ -94,6 +94,7 @@ if ($pdo instanceof PDO) {
         ensureCourseColumns($pdo);
         ensureUtf8mb4CourseSchema($pdo);
         ensureUtf8mb4TextColumns($pdo, 'courses', ['description', 'short_description', 'tutorial_text', 'assignment', 'quiz', 'certificate_requirements']);
+        ensureBlogPoetrySchema($pdo);
     } catch (Throwable $e) {
         error_log('Course schema validation failed: ' . $e->getMessage());
     }
@@ -164,6 +165,59 @@ function ensureStudentLocationColumns(PDO $pdo): void
             } catch (PDOException $e) {
                 error_log('Student location schema migration warning for students.' . $columnName . ': ' . $e->getMessage());
             }
+        }
+    }
+}
+
+function ensureBlogPoetrySchema(PDO $pdo): void
+{
+    $pdo->exec("CREATE TABLE IF NOT EXISTS content_categories (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        slug VARCHAR(100) NOT NULL,
+        type VARCHAR(20) NOT NULL DEFAULT 'blog',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_category (type, slug),
+        INDEX idx_type (type)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS content_posts (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        author_type VARCHAR(20) NOT NULL DEFAULT 'admin',
+        author_id INT DEFAULT NULL,
+        author_name VARCHAR(150) NOT NULL,
+        title VARCHAR(220) NOT NULL,
+        slug VARCHAR(220) NOT NULL,
+        excerpt TEXT DEFAULT NULL,
+        body LONGTEXT DEFAULT NULL,
+        post_type VARCHAR(20) NOT NULL DEFAULT 'blog',
+        category_id INT DEFAULT NULL,
+        category_name VARCHAR(100) DEFAULT NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'draft',
+        is_featured TINYINT(1) NOT NULL DEFAULT 0,
+        view_count INT NOT NULL DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_type_status (post_type, status, created_at),
+        INDEX idx_category (category_id),
+        INDEX idx_author (author_type, author_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $defaultCategories = [
+        ['name' => 'General', 'slug' => 'general', 'type' => 'blog'],
+        ['name' => 'Faith', 'slug' => 'faith', 'type' => 'blog'],
+        ['name' => 'Leadership', 'slug' => 'leadership', 'type' => 'blog'],
+        ['name' => 'Devotional', 'slug' => 'devotional', 'type' => 'poetry'],
+        ['name' => 'Inspirational', 'slug' => 'inspirational', 'type' => 'poetry'],
+        ['name' => 'Prayer', 'slug' => 'prayer', 'type' => 'poetry'],
+    ];
+
+    foreach ($defaultCategories as $category) {
+        try {
+            $stmt = $pdo->prepare('INSERT IGNORE INTO content_categories (name, slug, type) VALUES (:name, :slug, :type)');
+            $stmt->execute($category);
+        } catch (PDOException $e) {
+            error_log('Blog/poetry category seed warning: ' . $e->getMessage());
         }
     }
 }

@@ -569,6 +569,14 @@ $student_events = $stmt->fetchAll();
 $stmt = $pdo->query('SELECT * FROM live_class_sessions ORDER BY session_date ASC, id DESC LIMIT 4');
 $live_sessions = $stmt->fetchAll();
 
+$stmt = $pdo->prepare('SELECT * FROM content_posts WHERE status = :status AND post_type = :type ORDER BY is_featured DESC, created_at DESC LIMIT 4');
+$stmt->execute([':status' => 'published', ':type' => 'blog']);
+$studentBlogPosts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$stmt = $pdo->prepare('SELECT * FROM content_posts WHERE status = :status AND post_type = :type ORDER BY created_at DESC LIMIT 4');
+$stmt->execute([':status' => 'published', ':type' => 'poetry']);
+$studentPoetryPosts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
 if (empty($notifications)) {
     $notifications = [
         ['message' => 'አዲስ ትምህርት ለመጀመር ዝግጁ ነው።', 'created_at' => date('Y-m-d H:i:s')],
@@ -589,8 +597,14 @@ if (empty($notifications)) {
         body { font-family: Arial, sans-serif; background:
             radial-gradient(circle at top, rgba(191,219,254,0.35), transparent 20%),
             linear-gradient(135deg,#eef4ff 0%, #f8fafc 100%);
-            color: var(--ink); margin: 0; padding: 20px; }
-        .container { max-width: 1320px; margin: auto; background: rgba(255,255,255,0.92); border: 1px solid rgba(148,163,184,0.18); border-radius: 24px; box-shadow: 0 18px 45px rgba(15,23,42,0.12); padding: 24px; backdrop-filter: blur(8px); }
+            color: var(--ink); margin: 0; padding: 96px 20px 20px; }
+        .container { max-width: 1320px; margin: 0 auto; background: rgba(255,255,255,0.92); border: 1px solid rgba(148,163,184,0.18); border-radius: 24px; box-shadow: 0 18px 45px rgba(15,23,42,0.12); padding: 24px; backdrop-filter: blur(8px); }
+        .top-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 1100; background: linear-gradient(135deg, #0f3d91 0%, #1d4ed8 60%, #2563eb 100%); border-bottom: 1px solid rgba(255,255,255,0.18); box-shadow: 0 10px 24px rgba(15,23,42,0.18); padding: 10px 16px; }
+        .top-nav-inner { max-width: 1380px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .top-nav-links { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
+        .top-nav-links::-webkit-scrollbar { display: none; }
+        .top-nav-links a, .top-nav .theme-toggle { white-space: nowrap; text-decoration: none; color: #f8fafc; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.18); border-radius: 999px; padding: 8px 12px; font-weight: 700; font-size: 13px; transition: background 0.2s ease, transform 0.2s ease; }
+        .top-nav-links a:hover, .top-nav .theme-toggle:hover { background: rgba(255,255,255,0.22); transform: translateY(-1px); }
         .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 18px; }
         .header h1 { font-size: 28px; color: #111827; margin: 0 0 6px; }
         .header p { color: var(--muted); margin: 0; font-size: 15px; line-height: 1.55; }
@@ -638,7 +652,11 @@ if (empty($notifications)) {
             cursor: pointer;
             font-weight: 700;
         }
-        .quick-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; }
+        .top-nav .theme-toggle {
+            background: rgba(255,255,255,0.12);
+            color: #f8fafc;
+            border: 1px solid rgba(255,255,255,0.18);
+        }
         .account-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 12px; }
         .account-actions .button { min-width: 150px; }
         .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
@@ -705,31 +723,35 @@ if (empty($notifications)) {
         .info-note { font-size: 14px; line-height: 1.5; color: #334155; }
         .profile-box { display:flex; gap:16px; align-items:center; }
         .avatar { width: 64px; height: 64px; border-radius: 50%; display:grid; place-items:center; background: linear-gradient(135deg,#2563eb,#7c3aed); color:white; font-size: 24px; font-weight: 800; }
-        @media (max-width: 991px) { .header { flex-direction: column; } .quick-actions { justify-content: flex-start; } }
-        @media (max-width: 768px) { body { padding: 10px; } .container { padding: 14px; border-radius: 18px; } .stats, .grid-2, .grid-3 { grid-template-columns: 1fr; } }
-        @media (max-width: 576px) { .header h1 { font-size: 24px; } .button { width: 100%; } .quick-actions { width: 100%; } .quick-actions a { flex: 1 1 auto; text-align: center; } .account-actions { flex-direction: column; align-items: stretch; } .account-actions .button { width: 100%; min-width: 0; } }
+        @media (max-width: 991px) { .header { flex-direction: column; } }
+        @media (max-width: 768px) { body { padding: 92px 12px 12px; } .container { padding: 14px; border-radius: 18px; } .stats, .grid-2, .grid-3 { grid-template-columns: 1fr; } .top-nav { padding: 8px 12px; } .top-nav-inner { gap: 8px; } .top-nav-links a, .top-nav .theme-toggle { padding: 7px 10px; font-size: 12px; } }
+        @media (max-width: 576px) { .header h1 { font-size: 24px; } .button { width: 100%; } .account-actions { flex-direction: column; align-items: stretch; } .account-actions .button { width: 100%; min-width: 0; } }
     </style>
 </head>
 <body>
+<nav class="top-nav" aria-label="Student navigation">
+    <div class="top-nav-inner">
+        <div class="top-nav-links">
+            <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle theme">🌙 Dark</button>
+            <a href="sofonyas%20(2).html">መጀመሪያ</a>
+            <a href="tutorial.php">ኮርሶች</a>
+            <a href="my_courses.php">የኔ ኮርሶች</a>
+            <a href="ai_personal_tutor.php">AI ቱቶሪያል</a>
+            <a href="smart_learning_path.php">Learning Path</a>
+            <a href="live_class.php">ላይቭ ክላስ</a>
+            <a href="discussion_forum.php">ፎርም</a>
+            <a href="library.php">ላይብራሪ</a>
+            <a href="student_id_card.php">የID Card እይ</a>
+            <a href="student_logout.php">ውጣ</a>
+        </div>
+    </div>
+</nav>
 <div class="container">
     <div class="header">
         <div>
             <div class="live-pill"><span class="dot"></span> የላይቭ ትምህርት• <span id="liveClock">--:--</span></div>
             <h1>እንኳን በደህና መጡ, <?php echo safe($studentName); ?></h1>
             <p>የኢሜይልዎ: <?php echo safe($studentEmail); ?> • በአሁኑ ጊዜ ኮርሶችዎን ቀጥለው እና እድገትዎን ተመልከቱ።</p>
-        </div>
-        <div class="quick-actions">
-            <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle theme">🌙 Dark</button>
-            <a class="button" href="sofonyas%20(2).html">መጀመሪያ</a>
-            <a class="button" href="tutorial.php">ኮርሶች</a>
-            <a class="button" href="my_courses.php">የኔ ኮርሶች</a>
-            <a class="button" href="ai_personal_tutor.php">AI ቱቶሪያል</a>
-            <a class="button" href="smart_learning_path.php">Learning Path</a>
-            <a class="button" href="live_class.php">ላይቭ ክላስ</a>
-            <a class="button" href="discussion_forum.php">ፎርም</a>
-            <a class="button" href="library.php">ላይብራሪ</a>
-            <a class="button" href="student_id_card.php">የID Card እይ</a>
-            <a class="button secondary" href="student_logout.php">ውጣ</a>
         </div>
     </div>
 
@@ -747,6 +769,46 @@ if (empty($notifications)) {
         <p class="section-sub">የትምህርት ማስረጃዎችን እና ኮርስ ማጣሪያዎችን እንዲሁም የሚገባዎትን ኮርሶች ይገናኙ።</p>
         <div id="aiRecommendations" style="display:grid; gap:14px; margin-top: 16px;">
             <p class="muted">Loading personalized recommendations...</p>
+        </div>
+    </div>
+
+    <div class="card" style="margin-bottom: 24px;">
+        <h2 class="section-title" data-am="✍️ የተማሪ ብሎግ እና ግጥም መረቃ" data-en="✍️ Student Blog & Poetry Feed">✍️ Student Blog & Poetry Feed</h2>
+        <p class="section-sub" data-am="የቅርብ ጊዜ ብሎግ እና ግጥም ልጥፎችን ተከታተሉ።" data-en="Follow recent blog posts and poetry pieces prepared for your learning community.">Follow recent blog posts and poetry pieces prepared for your learning community.</p>
+        <div class="grid-2">
+            <div>
+                <h3 style="margin:0 0 8px;" data-am="የቅርብ ጊዜ ብሎግ ልጥፎች" data-en="Latest blog posts">Latest blog posts</h3>
+                <?php if (empty($studentBlogPosts)): ?>
+                    <p class="muted">No blog posts yet.</p>
+                <?php else: ?>
+                    <div style="display:grid; gap:10px;">
+                        <?php foreach ($studentBlogPosts as $post): ?>
+                            <div class="mini-card">
+                                <strong><?php echo safe($post['title']); ?></strong>
+                                <p class="muted" style="margin:6px 0 0;"><?php echo safe($post['excerpt'] ?: substr(strip_tags((string)$post['body']), 0, 120)); ?></p>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+            <div>
+                <h3 style="margin:0 0 8px;" data-am="የቅርብ ጊዜ ግጥሞች" data-en="Recent poetry">Recent poetry</h3>
+                <?php if (empty($studentPoetryPosts)): ?>
+                    <p class="muted">No poetry yet.</p>
+                <?php else: ?>
+                    <div style="display:grid; gap:10px;">
+                        <?php foreach ($studentPoetryPosts as $post): ?>
+                            <div class="mini-card">
+                                <strong><?php echo safe($post['title']); ?></strong>
+                                <p class="muted" style="margin:6px 0 0;"><?php echo safe($post['excerpt'] ?: substr(strip_tags((string)$post['body']), 0, 120)); ?></p>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+        <div style="margin-top:12px;">
+            <a class="button" href="content_manage.php?type=blog" data-am="የራስዎን ልጥፍ ፃፍ" data-en="Write your own post">Write your own post</a>
         </div>
     </div>
 

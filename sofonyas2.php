@@ -56,6 +56,26 @@ try {
     $chatMessages = [];
 }
 
+$searchTerm = trim((string)($_GET['content_search'] ?? ''));
+$homepageContentQuery = 'SELECT * FROM content_posts WHERE status = :status AND post_type = :post_type';
+$homepageContentParams = [':status' => 'published', ':post_type' => 'blog'];
+if ($searchTerm !== '') {
+    $homepageContentQuery .= ' AND (title LIKE :search OR body LIKE :search OR excerpt LIKE :search)';
+    $homepageContentParams[':search'] = '%' . $searchTerm . '%';
+}
+$homepageContentQuery .= ' ORDER BY is_featured DESC, created_at DESC LIMIT 6';
+$stmt = $pdo->prepare($homepageContentQuery);
+$stmt->execute($homepageContentParams);
+$homepagePosts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$stmt = $pdo->prepare('SELECT * FROM content_posts WHERE status = :status AND post_type = :post_type ORDER BY is_featured DESC, created_at DESC LIMIT 4');
+$stmt->execute([':status' => 'published', ':post_type' => 'poetry']);
+$homepagePoetry = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$stmt = $pdo->prepare('SELECT * FROM content_posts WHERE status = :status ORDER BY created_at DESC LIMIT 5');
+$stmt->execute([':status' => 'published']);
+$latestContent = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['chat_message']) && trim($_POST['chat_message']) !== '') {
     $senderName = trim((string)($_POST['chat_name'] ?? 'Guest'));
     $senderName = $senderName === '' ? 'Guest' : $senderName;
@@ -106,36 +126,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         html { min-height: 100%; scroll-behavior: smooth; }
         body { min-height: 100%; background: radial-gradient(circle at top left, rgba(124,58,237,0.18), transparent 22%), radial-gradient(circle at bottom right, rgba(59,130,246,0.12), transparent 18%), linear-gradient(135deg, #f8fbff 0%, #eef2ff 100%); color: #0f172a; }
         body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(circle at 25% 20%, rgba(99,102,241,0.12), transparent 16%), radial-gradient(circle at 80% 10%, rgba(236,72,153,0.1), transparent 14%), radial-gradient(circle at 50% 90%, rgba(14,165,233,0.08), transparent 16%); pointer-events: none; z-index: 0; }
-        nav { position: sticky; top: 0; z-index: 20; background: rgba(248,251,255,0.95); backdrop-filter: blur(18px); border-bottom: 1px solid rgba(148,163,184,0.18); height: 64px; overflow: visible; }
+        nav { position: sticky; top: 0; z-index: 20; background: linear-gradient(135deg, #0f3d91 0%, #1d4ed8 60%, #2563eb 100%); backdrop-filter: blur(18px); border-bottom: 1px solid rgba(255,255,255,0.16); height: 64px; overflow: visible; box-shadow: 0 8px 24px rgba(15,23,42,0.18); }
         nav ul { display: flex; flex-wrap: nowrap; gap: 12px; align-items: center; justify-content: flex-start; margin: 0; padding: 0 18px; list-style: none; white-space: nowrap; height:100%; }
         nav ul > li { flex: 0 0 auto; }
         nav a { line-height: 1; }
-        nav a { color: #0f172a; text-decoration: none; font-weight: 600; transition: color 0.18s ease, transform 0.18s ease, background 0.18s ease; }
-        nav a:hover { color: #4338ca; transform: translateY(-1px); }
+        nav a { color: #f8fafc; text-decoration: none; font-weight: 700; transition: color 0.18s ease, transform 0.18s ease, background 0.18s ease; padding: 8px 12px; border-radius: 999px; }
+        nav a:hover { color: #ffffff; background: rgba(255,255,255,0.16); transform: translateY(-1px); }
         .nav-lang { margin-left: auto; display: flex; align-items: center; }
         .lang-form { display: flex; align-items: center; }
         /* Custom dropdown that opens absolute so it won't push nav height */
         .lang-dropdown { position: relative; }
-        .lang-btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(15,23,42,0.12); background: #fff; color: #0f172a; font-weight: 700; cursor: pointer; }
-        .lang-btn:focus { outline: none; box-shadow: 0 6px 18px rgba(67,56,202,0.08); }
+        .lang-btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.24); background: rgba(255,255,255,0.16); color: #fff; font-weight: 700; cursor: pointer; box-shadow: inset 0 1px 0 rgba(255,255,255,0.16); }
+        .lang-btn:focus { outline: none; box-shadow: 0 6px 18px rgba(15,23,42,0.18); }
         .lang-options { position: absolute; right: 0; top: calc(100% + 8px); display: none; min-width: 150px; background: #fff; border-radius: 10px; box-shadow: 0 12px 36px rgba(15,23,42,0.12); z-index: 5000; padding: 6px 6px; pointer-events: auto; }
         .lang-options.open { display: block; }
         .lang-dropdown { position: relative; z-index: 4000; }
         .lang-options button { display: block; width: 100%; text-align: left; padding: 8px 12px; border: none; background: transparent; color: #0f172a; font-weight: 700; border-radius: 8px; cursor: pointer; }
-        .lang-options button:hover { background: rgba(67,56,202,0.06); color: #4338ca; }
+        .lang-options button:hover { background: rgba(37,99,235,0.08); color: #1d4ed8; }
         .visually-hidden { position: absolute !important; height: 1px; width: 1px; overflow: hidden; clip: rect(1px, 1px, 1px, 1px); white-space: nowrap; }
 
         /* Mobile hamburger */
         .nav-toggle { display: none; background: transparent; border: none; width: 44px; height: 44px; align-items: center; justify-content: center; cursor: pointer; }
-        .nav-toggle .hamburger { position: relative; width: 22px; height: 2px; background: #0f172a; display: block; border-radius: 2px; }
-        .nav-toggle .hamburger::before, .nav-toggle .hamburger::after { content: ''; position: absolute; left: 0; right: 0; height: 2px; background: #0f172a; border-radius: 2px; }
+        .nav-toggle .hamburger { position: relative; width: 22px; height: 2px; background: #fff; display: block; border-radius: 2px; }
+        .nav-toggle .hamburger::before, .nav-toggle .hamburger::after { content: ''; position: absolute; left: 0; right: 0; height: 2px; background: #fff; border-radius: 2px; }
         .nav-toggle .hamburger::before { top: -7px; }
         .nav-toggle .hamburger::after { top: 7px; }
 
         @media (max-width: 900px) {
             nav ul { display: none; }
             .nav-toggle { display: inline-flex; }
-            nav.open ul { display: flex; flex-direction: column; gap: 12px; background: rgba(255,255,255,0.98); padding: 12px 18px; position: absolute; right: 14px; top: 56px; border-radius: 12px; box-shadow: 0 8px 36px rgba(15,23,42,0.12); z-index: 1200; }
+            nav.open ul { display: flex; flex-direction: column; gap: 12px; background: linear-gradient(135deg, #0f3d91 0%, #1d4ed8 100%); padding: 12px 18px; position: absolute; right: 14px; top: 56px; border-radius: 12px; box-shadow: 0 8px 36px rgba(15,23,42,0.12); z-index: 1200; }
             nav.open ul li { white-space: nowrap; }
             .nav-lang { margin-left: 0; }
         }
@@ -489,6 +509,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         <h2 data-am="ስለ ቤተ ገብርኤል" data-en="About the Community">ስለ ቤተ ገብርኤል</h2>
         <p data-am="ቤተ ገብርኤል በመቅደላ አምባ ዩኒቨርሲቲ በፈለገ ሰላም አዲስ አምባ ግቢ ጉባኤ የቤተሰብ እናት አባት አደረጃጀት ውስጥ አንዱና ተናፋቂው ቡድን ነው፣ይህ ድር ገፅ በእውነተኛ ባክኤንድ ገፆች ላይ የተመሰረተ ነው። ኮርስ መመዝገብ፣ ተማሪ እና አስተዳዳሪ ዳሽቦርድ፣ ፎርም ቀጥታ መግባት እና ማስታወቂያ በአንድ አጠቃቀም ይሰራሉ።" data-en="The community is a vibrant and active group within the family structure of the church, dedicated to spiritual growth and shared service.">ቤተ ገብርኤል በመቅደላ አምባ ዩኒቨርሲቲ በፈለገ ሰላም አዲስ አምባ ግቢ ጉባኤ የቤተሰብ እናት አባት አደረጃጀት ውስጥ አንዱና ተናፋቂው ቡድን ነው</p>
     </div>
+
+    <section class="card reveal" aria-label="Blog and poetry content">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
+            <div>
+                <h2 style="margin:0;" data-am="📚 ብሎግ እና ግጥም ማዕከል" data-en="📚 Blog & Poetry Corner">📚 Blog & Poetry Corner</h2>
+                <p class="muted" style="margin:6px 0 0;" data-am="የቅርብ ጊዜ ልጥፎችን ያንብቡ፣ በርዕስ ይፈልጉ እና የእርስዎን ልምድ ያካፍሉ።" data-en="Read the latest posts, search by topic, and share your own experience.">Read the latest posts, search by topic, and share your own experience.</p>
+            </div>
+            <form method="get" style="display:flex; gap:8px; flex-wrap:wrap; min-width:min(360px,100%);">
+                <input type="text" name="content_search" value="<?php echo safe($searchTerm); ?>" placeholder="<?php echo safe(translateText('ብሎግ ወይም ግጥም ይፈልጉ', 'Search blog or poetry')); ?>" style="flex:1; min-width:180px; padding:10px 12px; border-radius:999px; border:1px solid #cbd5e1;">
+                <button type="submit" class="button" style="padding:10px 14px;" data-am="ፈልግ" data-en="Search">Search</button>
+            </form>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px; margin-top:12px;">
+            <div style="grid-column:1 / -1;">
+                <h3 style="margin:0 0 8px;" data-am="የተመረጡ ብሎግ ልጥፎች" data-en="Featured blog posts">Featured blog posts</h3>
+                <?php if (empty($homepagePosts)): ?>
+                    <p class="muted">No published blog content yet.</p>
+                <?php else: ?>
+                    <div style="display:grid; gap:10px;">
+                        <?php foreach ($homepagePosts as $post): ?>
+                            <article style="border:1px solid #e2e8f0; border-radius:14px; padding:12px; background:#f8fafc;">
+                                <div style="font-size:0.82rem; color:#7c3aed; font-weight:700; text-transform:uppercase; margin-bottom:6px;"><?php echo safe($post['category_name'] ?: 'General'); ?></div>
+                                <h4 style="margin:0 0 6px;"><?php echo safe($post['title']); ?></h4>
+                                <p style="margin:0; color:#475569; line-height:1.55;"><?php echo safe($post['excerpt'] ?: substr(strip_tags((string)$post['body']), 0, 140)); ?></p>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+            <div>
+                <h3 style="margin:0 0 8px;" data-am="የቅርብ ጊዜ ግጥሞች" data-en="Recent poetry">Recent poetry</h3>
+                <?php if (empty($homepagePoetry)): ?>
+                    <p class="muted">No poetry posted yet.</p>
+                <?php else: ?>
+                    <div style="display:grid; gap:10px;">
+                        <?php foreach ($homepagePoetry as $post): ?>
+                            <article style="border:1px solid #e2e8f0; border-radius:14px; padding:12px; background:#fff;">
+                                <strong><?php echo safe($post['title']); ?></strong>
+                                <p style="margin:6px 0 0; color:#475569;"><?php echo safe($post['excerpt'] ?: substr(strip_tags((string)$post['body']), 0, 100)); ?></p>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+            <div>
+                <h3 style="margin:0 0 8px;" data-am="የቅርብ ጊዜ ልጥፎች" data-en="Latest posts">Latest posts</h3>
+                <?php if (empty($latestContent)): ?>
+                    <p class="muted">No content available.</p>
+                <?php else: ?>
+                    <div style="display:grid; gap:10px;">
+                        <?php foreach ($latestContent as $post): ?>
+                            <div style="padding:10px 12px; border-radius:12px; background:linear-gradient(135deg,#eef2ff,#f8fafc); border:1px solid #dbeafe;">
+                                <div style="font-size:0.8rem; color:#4338ca; font-weight:700; text-transform:uppercase; margin-bottom:4px;"><?php echo safe($post['post_type']); ?></div>
+                                <div style="font-weight:700; color:#0f172a;"><?php echo safe($post['title']); ?></div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+        <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
+            <a class="button" href="content_manage.php?type=blog" data-am="ብሎግ ልጥፍ ፃፍ" data-en="Write a blog post">Write a blog post</a>
+            <a class="button secondary" href="content_manage.php?type=poetry" data-am="ግጥም ፃፍ" data-en="Write poetry">Write poetry</a>
+        </div>
+    </section>
 <section class="card reveal" aria-label="Quick Start">
         <h2>አጭር ማሰስ / Quick Start</h2>
         <div class="quick-grid">
