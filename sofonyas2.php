@@ -40,6 +40,8 @@ if (strpos($whatsappNumber, '251') !== 0) {
 }
 $whatsappLink = 'https://wa.me/' . $whatsappNumber;
 $telegramLink = 'https://t.me/sophonyasbetmichael';
+$facebookLink = 'https://www.facebook.com/share/p/1DSw2cn99f/';
+$instagramLink = 'https://www.instagram.com/';
 $callLink = 'tel:' . rawurlencode($phoneNumber !== '' ? $phoneNumber : '+251927603731');
 
 $lang = getCurrentLanguage();
@@ -1111,9 +1113,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
                 <div style="margin-top:16px;">
                     <h4 style="margin:0 0 10px; color:#fff;" data-am="ማህበራዊ መረብ" data-en="Social Links">Social Links</h4>
                     <div style="display:flex; flex-wrap:wrap; gap:10px;">
-                        <a href="https://t.me/sophonyasbetmichael" style="color:#bfdbfe; text-decoration:none;" data-am="ቴሌግራም" data-en="Telegram">Telegram</a>
-                        <a href="https://t.me/sophonyasbetmichael" style="color:#bfdbfe; text-decoration:none;" data-am="ፌስቡክ" data-en="Facebook">Facebook</a>
-                        <a href="https://www.instagram.com/" style="color:#bfdbfe; text-decoration:none;" data-am="Instagram" data-en="Instagram">Instagram</a>
+                        <a href="<?php echo safe($telegramLink); ?>" style="color:#bfdbfe; text-decoration:none;" data-am="ቴሌግራም" data-en="Telegram">Telegram</a>
+                        <a href="<?php echo safe($facebookLink); ?>" style="color:#bfdbfe; text-decoration:none;" data-am="ፌስቡክ" data-en="Facebook">Facebook</a>
+                        <a href="<?php echo safe($instagramLink); ?>" style="color:#bfdbfe; text-decoration:none;" data-am="Instagram" data-en="Instagram">Instagram</a>
                     </div>
                 </div>
             </div>
