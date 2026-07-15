@@ -126,7 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         html { min-height: 100%; scroll-behavior: smooth; }
         body { min-height: 100%; background: radial-gradient(circle at top left, rgba(124,58,237,0.18), transparent 22%), radial-gradient(circle at bottom right, rgba(59,130,246,0.12), transparent 18%), linear-gradient(135deg, #f8fbff 0%, #eef2ff 100%); color: #0f172a; }
         body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(circle at 25% 20%, rgba(99,102,241,0.12), transparent 16%), radial-gradient(circle at 80% 10%, rgba(236,72,153,0.1), transparent 14%), radial-gradient(circle at 50% 90%, rgba(14,165,233,0.08), transparent 16%); pointer-events: none; z-index: 0; }
-        nav { position: sticky; top: 0; z-index: 20; background: linear-gradient(135deg, #0f3d91 0%, #1d4ed8 60%, #2563eb 100%); backdrop-filter: blur(18px); border-bottom: 1px solid rgba(255,255,255,0.16); height: 64px; overflow: visible; box-shadow: 0 8px 24px rgba(15,23,42,0.18); }
+        nav { position: sticky; top: 40px; z-index: 20; background: linear-gradient(135deg, #0f3d91 0%, #1d4ed8 60%, #2563eb 100%); backdrop-filter: blur(18px); border-bottom: 1px solid rgba(255,255,255,0.16); height: 64px; overflow: visible; box-shadow: 0 8px 24px rgba(15,23,42,0.18); }
         nav ul { display: flex; flex-wrap: nowrap; gap: 12px; align-items: center; justify-content: flex-start; margin: 0; padding: 0 18px; list-style: none; white-space: nowrap; height:100%; }
         nav ul > li { flex: 0 0 auto; }
         nav a { line-height: 1; }
@@ -158,6 +158,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
             nav.open ul { display: flex; flex-direction: column; gap: 12px; background: linear-gradient(135deg, #0f3d91 0%, #1d4ed8 100%); padding: 12px 18px; position: absolute; right: 14px; top: 56px; border-radius: 12px; box-shadow: 0 8px 36px rgba(15,23,42,0.12); z-index: 1200; }
             nav.open ul li { white-space: nowrap; }
             .nav-lang { margin-left: 0; }
+        }
+        .announcement-ticker {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 45;
+            overflow: hidden;
+            width: 100%;
+            margin: 0;
+            padding: 10px 0;
+            border-radius: 0;
+            border-bottom: 1px solid rgba(250, 204, 21, 0.45);
+            background: linear-gradient(135deg, rgba(15,23,42,0.98), rgba(30,64,175,0.96), rgba(76,29,149,0.96));
+            box-shadow: 0 10px 28px rgba(15,23,42,0.16), inset 0 1px 0 rgba(255,255,255,0.12);
+        }
+        .announcement-track {
+            display: flex;
+            align-items: center;
+            width: max-content;
+            min-width: 100%;
+            white-space: nowrap;
+            will-change: transform;
+            animation: announcement-scroll 20s linear infinite;
+        }
+        .announcement-track:hover { animation-play-state: paused; }
+        .announcement-track span {
+            display: inline-block;
+            flex: 0 0 auto;
+            white-space: nowrap;
+            padding: 0 1.4rem;
+            font-size: clamp(1rem, 2vw, 1.35rem);
+            font-weight: 900;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            background: linear-gradient(90deg, #fff7d6 0%, #facc15 30%, #fde68a 52%, #f59e0b 78%, #fff7d6 100%);
+            background-size: 240% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 8px rgba(8, 249, 4, 0.94), 0 0 18px rgba(250,204,21,0.88), 0 0 28px rgba(245,158,11,0.72), 0 0 40px rgba(251,191,36,0.56);
+            -webkit-text-stroke: 0.35px rgba(255,255,255,0.2);
+            animation: announcement-glow 4s linear infinite;
+        }
+        @keyframes announcement-scroll {
+            from { transform: translateX(0); }
+            to { transform: translateX(-50%); }
+        }
+        @keyframes announcement-glow {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 300% 50%; }
         }
         .welcome-banner {
             position: relative;
@@ -296,24 +347,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
             min-width: 100%;
             white-space: nowrap;
             will-change: transform;
-            animation: welcome-scroll 26s linear infinite;
+            animation: welcome-scroll 30s linear infinite;
         }
         .hero-intro .welcome-marquee span {
             display: inline-block;
             flex: 0 0 auto;
             white-space: nowrap;
-            padding: 0 1.15rem;
-            font-size: clamp(1rem, 2.1vw, 1.4rem);
-            font-weight: 900;
+            padding: 0 1.3rem;
+            font-size: clamp(2.1rem, 4.4vw, 3.1rem);
+            font-weight: 950;
             letter-spacing: 0.01em;
-            line-height: 1.2;
-            background: linear-gradient(90deg, #f472b6, #60a5fa, #22c55e, #f59e0b, #f43f5e, #a855f7, #f472b6);
-            background-size: 300% 100%;
+            line-height: 1.12;
+            background: linear-gradient(90deg, #ef0887, #fde68a, #60a5fa, #22c55e, #c3f804, #f5072f, #7c04f4, #0606ea);
+            background-size: 320% 100%;
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
-            text-shadow: 0 0 12px rgba(255,255,255,0.35), 0 0 24px rgba(96,165,250,0.35);
-            animation: welcome-glow 5s linear infinite;
+            text-shadow: 0 0 8px rgba(174, 244, 11, 0.9), 0 0 18px rgba(53, 10, 227, 0.65), 0 0 30px rgba(165, 180, 197, 0.9), 0 0 46px rgba(244,63,94,0.6), 0 0 60px rgba(5, 241, 92, 0.88);
+            -webkit-text-stroke: 0.5px hsla(251, 90%, 50%, 0.90);
+            filter: saturate(1.35) brightness(1.1);
+            animation: welcome-glow 4.2s linear infinite;
         }
         .hero-intro p { margin: 0; font-size: 1.05rem; color: rgba(15,23,42,0.78); line-height: 1.75; text-align: left; }
         @keyframes welcome-scroll {
@@ -425,6 +478,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
     <div class="page-loader" id="pageLoader" aria-hidden="true">
         <div class="loader-ring"></div>
     </div>
+    <section class="announcement-ticker" aria-label="Latest announcements">
+        <div class="announcement-track">
+            <span>•እንኳን ወደ ዲ/ን ሶፎንያስ ደመቀ ቤተ ገብርኤል ዌቭሣይት በደህና መጡ!•</span>
+            <span>ቤተ ገብርኤል በመቅደላ አምባ ዩኒቨርሲቲ በፈለገ ሰላም አዲስ አምባ ግቢ ጉባኤ የቤተሰብ እናት አባት አደረጃጀት ውስጥ አንዱና ተናፋቂው ቡድን ነው•</span>
+            <span>ይህ ድር ገፅ በእውነተኛ ባክኤንድ ገፆች ላይ የተመሰረተ ኢንተርአክቲቭ ፕላትፎርም ነው። ኮርስ መመዝገብዳሽቦርድ መመልከት•ፎርም መግባት እና ትምህርት ማየት በአንድ ቦታ ይሰራሉ።•</span>
+            <span>እንኳን ወደ ዲ/ን ሶፎንያስ ደመቀ ቤተ ገብርኤል ዌቭሣይት በደህና መጡ!•</span>
+        </div>
+    </section>
 <section class="hero-intro">
         <div class="hero-intro-inner">
             <a href="sofonyas2.php" class="logo-wrap" aria-label="<?php echo safe($siteName); ?>">
