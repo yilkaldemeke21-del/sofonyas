@@ -998,12 +998,14 @@ function cleanText($value): string {
 }
 
 function sanitizeRichText($value): string {
-    return (string)($value ?? '');
+    $text = (string)($value ?? '');
+    $text = str_replace(['&nbsp;', '&#160;', "\xC2\xA0"], ' ', $text);
+    return trim($text);
 }
 
 function renderSafeCourseContent($value): string
 {
-    $html = trim((string)($value ?? ''));
+    $html = sanitizeRichText($value);
     if ($html === '') {
         return '';
     }

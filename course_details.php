@@ -101,7 +101,7 @@ $notes = $noteStmt->fetchAll();
     <title><?php echo htmlspecialchars($course['course_name'] ?? 'Course', ENT_QUOTES, 'UTF-8'); ?></title>
     <link rel="stylesheet" href="sofonyas (1).css">
     <style>
-        body { background: #f8fafc; color: #0f172a; font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+        body { background: #f8fafc; color: #0f172a; font-family: Arial, sans-serif; margin: 0; padding: 20px; overflow-x: hidden; }
         nav ul { display:flex; flex-wrap:wrap; gap:18px; list-style:none; padding:0; margin:0 0 24px; }
         nav a { color:#2563eb; text-decoration:none; font-weight:700; }
         .card { background:#ffffff; border:1px solid #e2e8f0; border-radius:22px; box-shadow:0 10px 30px rgba(15,23,42,0.06); padding:24px; margin-bottom:24px; }
@@ -119,7 +119,20 @@ $notes = $noteStmt->fetchAll();
         .tab-menu .tab-btn.active { background:#eef2ff; border-color:#c7d2fe; box-shadow:0 8px 18px rgba(37,99,235,0.12); }
         .tab-pane { display:none; padding-top:18px; }
         .tab-pane.active { display:block; }
-        @media (max-width: 860px) { nav ul { justify-content:center; } .card { padding:18px; } }
+        .course-hero-card { margin-top:24px; }
+        .course-hero-grid { display:grid; gap:24px; grid-template-columns: minmax(280px, 360px) 1fr; align-items:start; }
+        .course-hero-media img { width:100%; border-radius:18px; object-fit:contain; max-height:420px; box-shadow:0 18px 40px rgba(15,23,42,0.08); background:#f8fafc; }
+        .course-tag-row, .course-hero-actions, .resume-actions { display:flex; flex-wrap:wrap; gap:10px; }
+        .course-tag-row { margin-top:18px; }
+        .course-hero-copy h2 { margin:0 0 12px; font-size: clamp(1.4rem, 2vw, 2rem); line-height:1.3; word-break:break-word; overflow-wrap:anywhere; }
+        .course-hero-copy .muted { margin-top:0; line-height:1.75; }
+        .course-stat-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:14px; margin:18px 0; }
+        .course-stat-card { padding:12px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:16px; min-width:0; }
+        .course-stat-card strong { display:block; margin-bottom:6px; }
+        .course-stat-card span { display:block; word-break:break-word; overflow-wrap:anywhere; }
+        .course-overview-copy { margin-top:18px; }
+        .course-hero-copy .rich-content, .course-hero-copy .muted, .course-hero-copy p, .tab-pane h3, .tab-pane h4 { overflow-wrap:anywhere; word-break:break-word; }
+        @media (max-width: 860px) { nav ul { justify-content:center; } .card { padding:18px; } .course-hero-grid { grid-template-columns: 1fr; } .course-hero-copy h2 { text-align:center; } .course-hero-actions, .resume-actions { justify-content:center; } }
     </style>
 </head>
 <body>
@@ -130,12 +143,12 @@ $notes = $noteStmt->fetchAll();
         </ul>
     </nav>
 
-    <section class="card" style="margin-top:24px;">
-        <div style="display:grid; gap:24px; grid-template-columns: minmax(280px, 360px) 1fr; align-items:start;">
-            <div>
-                <img src="<?php echo htmlspecialchars(publicMediaUrl($course['thumbnail'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($course['course_name'] ?? 'Course', ENT_QUOTES, 'UTF-8'); ?>" style="width:100%; border-radius:18px; object-fit:cover; max-height:420px; box-shadow:0 18px 40px rgba(15,23,42,0.08);">
+    <section class="card course-hero-card">
+        <div class="course-hero-grid">
+            <div class="course-hero-media">
+                <img src="<?php echo htmlspecialchars(publicMediaUrl($course['thumbnail'] ?? ''), ENT_QUOTES, 'UTF-8'); ?>" alt="<?php echo htmlspecialchars($course['course_name'] ?? 'Course', ENT_QUOTES, 'UTF-8'); ?>">
 
-                <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:18px;">
+                <div class="course-tag-row">
                     <span class="pill info"><?php echo safe($course['category'] ?? 'General'); ?></span>
                     <span class="pill success"><?php echo safe($course['level'] ?? 'Beginner'); ?></span>
                     <span class="pill" style="background:#eef2ff; color:#1d4ed8;"><?php echo number_format((float)($course['price'] ?? 0), 2); ?> ብር</span>
@@ -156,27 +169,27 @@ $notes = $noteStmt->fetchAll();
                 <?php endif; ?>
             </div>
 
-            <div>
+            <div class="course-hero-copy">
                 <h2><?php echo htmlspecialchars($course['course_name'] ?? 'Course', ENT_QUOTES, 'UTF-8'); ?></h2>
                 <?php if ($message !== ''): ?>
                     <p style="color: <?php echo $messageType === 'success' ? '#166534' : ($messageType === 'info' ? '#1d4ed8' : '#b91c1c'); ?>; font-weight:700;">
                         <?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?>
                     </p>
                 <?php endif; ?>
-                <p class="muted" style="margin-top:0; line-height:1.75;"><?php echo renderSafeCourseContent($courseSummaryCopy !== '' ? $courseSummaryCopy : 'No course summary is available yet.'); ?></p>
-                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:14px; margin:18px 0;">
-                    <div class="card" style="padding:12px 14px; background:#f8fafc; border:1px solid #e2e8f0;"><strong>Instructor</strong><br><?php echo safe($course['instructor'] ?? 'Staff'); ?></div>
-                    <div class="card" style="padding:12px 14px; background:#f8fafc; border:1px solid #e2e8f0;"><strong>Price</strong><br><?php echo number_format((float)($course['price'] ?? 0), 2); ?> ብር</div>
-                    <div class="card" style="padding:12px 14px; background:#f8fafc; border:1px solid #e2e8f0;"><strong>Status</strong><br><?php echo $isEnrolled ? 'Enrolled' : 'Not enrolled'; ?></div>
+                <p class="muted"><?php echo renderSafeCourseContent($courseSummaryCopy !== '' ? $courseSummaryCopy : 'No course summary is available yet.'); ?></p>
+                <div class="course-stat-grid">
+                    <div class="course-stat-card"><strong>Instructor</strong><span><?php echo safe($course['instructor'] ?? 'Staff'); ?></span></div>
+                    <div class="course-stat-card"><strong>Price</strong><span><?php echo number_format((float)($course['price'] ?? 0), 2); ?> ብር</span></div>
+                    <div class="course-stat-card"><strong>Status</strong><span><?php echo $isEnrolled ? 'Enrolled' : 'Not enrolled'; ?></span></div>
                 </div>
-                <div style="display:flex; flex-wrap:wrap; gap:10px;">
+                <div class="course-hero-actions">
                     <form method="post" style="margin:0;">
                         <input type="hidden" name="enroll_course_id" value="<?php echo (int)$courseId; ?>">
                         <button class="button" type="submit" <?php echo $isEnrolled ? 'disabled style="opacity:.6;cursor:not-allowed;"' : ''; ?>><?php echo $isEnrolled ? 'Enrolled' : 'Enroll Now'; ?></button>
                     </form>
                     <a class="button secondary" href="student_dashboard.php">Back to Dashboard</a>
                 </div>
-                <div style="margin-top:18px;">
+                <div class="course-overview-copy">
                     <p class="rich-content"><?php echo renderSafeCourseContent($courseOverviewContent !== '' ? $courseOverviewContent : 'No course description is available yet.'); ?></p>
                 </div>
             </div>

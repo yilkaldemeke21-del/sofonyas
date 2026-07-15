@@ -45,6 +45,44 @@ function extractCourseModules($value): array
     ]];
 }
 
+function getCoursePreviewText($value, int $limit = 140): string
+{
+    $text = trim(preg_replace('/\s+/', ' ', strip_tags((string)($value ?? ''))));
+    if ($text === '') {
+        return 'Explore this course and continue your learning journey with guided lessons, resources, and practical activities.';
+    }
+
+    if (mb_strlen($text) > $limit) {
+        return mb_substr($text, 0, $limit) . '…';
+    }
+
+    return $text;
+}
+
+function estimateCourseDuration($course): string
+{
+    $modules = extractCourseModules((string)($course['modules'] ?? ''));
+    $lessonCount = 0;
+    foreach ($modules as $module) {
+        $lessonCount += is_array($module['lessons'] ?? null) ? count($module['lessons']) : 0;
+    }
+
+    $bodyText = trim((string)($course['description'] ?? $course['tutorial_text'] ?? $course['short_description'] ?? ''));
+    $bodyLength = mb_strlen(strip_tags($bodyText));
+
+    if ($lessonCount >= 12 || $bodyLength >= 3000) {
+        return '4 weeks';
+    }
+    if ($lessonCount >= 6 || $bodyLength >= 1800) {
+        return '3 weeks';
+    }
+    if ($lessonCount >= 3 || $bodyLength >= 900) {
+        return '2 weeks';
+    }
+
+    return '1 week';
+}
+
 function getInitialLetter($value): string
 {
     $text = trim((string)($value ?? ''));
@@ -130,7 +168,7 @@ try {
 } catch (PDOException $e) {
 }
 
-$stmt = $pdo->prepare('SELECT r.*, c.id AS course_id, c.course_code, c.short_description, c.description, c.instructor, c.thumbnail, c.price AS course_price, c.category, c.level, c.tutorial_topic, c.tutorial_text, c.tutorial_image, c.tutorial_audio, c.tutorial_video, c.pdf_file, c.modules, c.quiz, c.assignment, c.certificate_requirements FROM registrations r LEFT JOIN courses c ON c.id = r.course_id OR c.course_name = r.course WHERE r.student_id = :student_id ORDER BY r.created_at DESC');
+$stmt = $pdo->prepare('SELECT r.*, c.id AS course_id, c.course_name, c.course_code, c.short_description, c.description, c.instructor, c.instructor_image, c.thumbnail, c.price AS course_price, c.category, c.level, c.tutorial_topic, c.tutorial_text, c.tutorial_image, c.tutorial_audio, c.tutorial_video, c.pdf_file, c.modules, c.quiz, c.assignment, c.certificate_requirements FROM registrations r LEFT JOIN courses c ON c.id = r.course_id OR c.course_name = r.course WHERE r.student_id = :student_id ORDER BY r.created_at DESC');
 $stmt->execute([':student_id' => $studentId]);
 $registrations = $stmt->fetchAll();
 
@@ -597,14 +635,18 @@ if (empty($notifications)) {
         body { font-family: Arial, sans-serif; background:
             radial-gradient(circle at top, rgba(191,219,254,0.35), transparent 20%),
             linear-gradient(135deg,#eef4ff 0%, #f8fafc 100%);
-            color: var(--ink); margin: 0; padding: 96px 20px 20px; }
-        .container { max-width: 1320px; margin: 0 auto; background: rgba(255,255,255,0.92); border: 1px solid rgba(148,163,184,0.18); border-radius: 24px; box-shadow: 0 18px 45px rgba(15,23,42,0.12); padding: 24px; backdrop-filter: blur(8px); }
+            color: var(--ink); margin: 0; padding: 96px 20px 20px; overflow-x: hidden; }
+        .container { max-width: 1320px; margin: 0 auto; background: rgba(255,255,255,0.92); border: 1px solid rgba(148,163,184,0.18); border-radius: 24px; box-shadow: 0 18px 45px rgba(15,23,42,0.12); padding: 24px; backdrop-filter: blur(8px); overflow-x: hidden; }
         .top-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 1100; background: linear-gradient(135deg, #0f3d91 0%, #1d4ed8 60%, #2563eb 100%); border-bottom: 1px solid rgba(255,255,255,0.18); box-shadow: 0 10px 24px rgba(15,23,42,0.18); padding: 10px 16px; }
         .top-nav-inner { max-width: 1380px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .top-nav-brand { display: flex; align-items: center; gap: 10px; color: #fff; font-weight: 800; font-size: 14px; min-width: 160px; }
+        .top-nav-brand-badge { width: 34px; height: 34px; border-radius: 10px; background: rgba(255,255,255,0.18); display: grid; place-items: center; font-size: 16px; border: 1px solid rgba(255,255,255,0.25); }
         .top-nav-links { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
         .top-nav-links::-webkit-scrollbar { display: none; }
-        .top-nav-links a, .top-nav .theme-toggle { white-space: nowrap; text-decoration: none; color: #f8fafc; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.18); border-radius: 999px; padding: 8px 12px; font-weight: 700; font-size: 13px; transition: background 0.2s ease, transform 0.2s ease; }
-        .top-nav-links a:hover, .top-nav .theme-toggle:hover { background: rgba(255,255,255,0.22); transform: translateY(-1px); }
+        .top-nav-links a, .top-nav .theme-toggle, .top-nav .nav-toggle { white-space: nowrap; text-decoration: none; color: #f8fafc; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.18); border-radius: 999px; padding: 8px 12px; font-weight: 700; font-size: 13px; transition: background 0.2s ease, transform 0.2s ease, opacity 0.2s ease; }
+        .top-nav-links a:hover, .top-nav .theme-toggle:hover, .top-nav .nav-toggle:hover { background: rgba(255,255,255,0.22); transform: translateY(-1px); }
+        .top-nav-links a.active { background: rgba(255,255,255,0.25); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18); }
+        .top-nav .nav-toggle { display: none; cursor: pointer; }
         .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 18px; }
         .header h1 { font-size: 28px; color: #111827; margin: 0 0 6px; }
         .header p { color: var(--muted); margin: 0; font-size: 15px; line-height: 1.55; }
@@ -666,12 +708,44 @@ if (empty($notifications)) {
         .card p { font-size: 17px; font-weight: 800; margin: 0; color: var(--primary); }
         .section-title { font-size: 20px; color: #ca1484; margin: 0 0 6px; font-weight: 800; }
         .section-sub { color: #475569; margin-bottom: 12px; font-size: 14px; line-height: 1.55; }
-        .grid-2, .grid-3 { display: grid; gap: 18px; margin-bottom: 24px; }
+        .grid-1, .grid-2, .grid-3 { display: grid; gap: 16px; margin-bottom: 18px; align-items: start; }
+        .grid-1 { grid-template-columns: 1fr; }
         .grid-2 { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
         .grid-3 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+        .course-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            align-items: stretch;
+            grid-auto-rows: 1fr;
+        }
         .course-card, .mini-card { background: linear-gradient(135deg, var(--surface), var(--surface-3)); border: 1px solid var(--border); border-radius: 14px; padding: 14px; color: var(--text); }
         .course-card img { width: 220px; border-radius: 50px; height: 310px; object-fit: contain; background: linear-gradient(135deg,#dbeafe,#c4b5fd); }
         .course-card h3, .mini-card h3 { font-size: 20px; color: var(--text); margin: 10px 0 6px; font-weight: 800; line-height: 1.35; }
+        .course-preview-card { display: flex; flex-direction: column; gap: 10px; min-height: 100%; height: 100%; background: linear-gradient(135deg, var(--surface), var(--surface-3)); border: 1px solid var(--border); border-radius: 18px; padding: 12px; box-shadow: 0 10px 22px rgba(15,23,42,0.08); transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; position: relative; overflow: hidden; }
+        .course-preview-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(37,99,235,0.08), rgba(124,58,237,0.04)); opacity: 0; transition: opacity 0.2s ease; pointer-events: none; }
+        .course-preview-card:hover { transform: translateY(-4px); border-color: rgba(37,99,235,0.25); box-shadow: 0 18px 32px rgba(37,99,235,0.14); }
+        .course-preview-card:hover::before { opacity: 1; }
+        .course-preview-media { display: flex; align-items: stretch; justify-content: center; }
+        .course-preview-media img, .course-preview-placeholder { width: 100%; height: 200px; object-fit: contain; border-radius: 16px; background: linear-gradient(135deg,#dbeafe,#c4b5fd); display: grid; place-items: center; color: #1d4ed8; font-weight: 800; box-shadow: inset 0 0 0 1px rgba(37,99,235,0.08); }
+        .course-preview-body { display: flex; flex-direction: column; gap: 8px; position: relative; z-index: 1; min-width: 0; flex: 1 1 auto; }
+        .course-dashboard-shell { display: grid; gap: 14px; }
+        .course-dashboard-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+        .course-dashboard-title { margin: 0; font-size: 24px; color: var(--text); line-height: 1.25; }
+        .course-dashboard-subtitle { margin: 6px 0 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
+        .course-dashboard-stats { display: flex; flex-wrap: wrap; gap: 8px; }
+        .course-dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; align-items: start; grid-auto-rows: 1fr; }
+        .course-preview-top { display: flex; flex-wrap: wrap; gap: 8px; }
+        .course-preview-title { font-size: 18px; font-weight: 800; color: var(--text); margin: 0; line-height: 1.35; overflow-wrap: anywhere; word-break: break-word; }
+        .course-instructor { display: flex; align-items: center; gap: 8px; }
+        .course-instructor img, .course-instructor-avatar { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; background: linear-gradient(135deg,#ffffff,#e0e7ff); color: #1d4ed8; display: grid; place-items: center; font-weight: 800; border: 1px solid rgba(37,99,235,0.18); box-shadow: 0 6px 14px rgba(37,99,235,0.12); }
+        .course-instructor-name { font-weight: 700; color: var(--text); }
+        .course-instructor-role { font-size: 12px; color: var(--muted); }
+        .course-meta { display: flex; flex-wrap: wrap; gap: 10px; color: var(--muted); font-size: 13px; font-weight: 700; }
+        .course-progress { width: 100%; height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden; }
+        .course-progress > span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg,#2563eb,#38bdf8); }
+        .course-preview-text { margin: 0; color: var(--muted); line-height: 1.55; font-size: 14px; overflow-wrap: anywhere; word-break: break-word; }
+        .course-preview-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
         .muted { color: var(--muted); font-size: 16px; line-height: 1.35; font-weight: 500; }
         .tab-menu .tab-btn { cursor: pointer; border: 1px solid transparent; background: transparent; padding: 10px 14px; border-radius: 999px; font-weight: 700; color: var(--primary); }
         .tab-menu .tab-btn.active { background: var(--surface); border-color: var(--border); box-shadow: 0 6px 16px rgba(37,99,235,0.08); }
@@ -724,25 +798,42 @@ if (empty($notifications)) {
         .profile-box { display:flex; gap:16px; align-items:center; }
         .avatar { width: 64px; height: 64px; border-radius: 50%; display:grid; place-items:center; background: linear-gradient(135deg,#2563eb,#7c3aed); color:white; font-size: 24px; font-weight: 800; }
         @media (max-width: 991px) { .header { flex-direction: column; } }
-        @media (max-width: 768px) { body { padding: 92px 12px 12px; } .container { padding: 14px; border-radius: 18px; } .stats, .grid-2, .grid-3 { grid-template-columns: 1fr; } .top-nav { padding: 8px 12px; } .top-nav-inner { gap: 8px; } .top-nav-links a, .top-nav .theme-toggle { padding: 7px 10px; font-size: 12px; } }
+        @media (max-width: 768px) {
+            body { padding: 92px 12px 12px; }
+            .container { padding: 14px; border-radius: 18px; }
+            .stats, .grid-2, .grid-3, .course-grid { grid-template-columns: 1fr; }
+            .top-nav { padding: 8px 12px; }
+            .top-nav-inner { gap: 8px; align-items: stretch; flex-wrap: wrap; }
+            .top-nav-brand { min-width: 0; }
+            .top-nav-links { display: none; width: 100%; flex-wrap: wrap; padding-top: 4px; }
+            .top-nav-links.open { display: flex; }
+            .top-nav .nav-toggle { display: inline-flex; }
+            .top-nav-links a, .top-nav .theme-toggle { padding: 7px 10px; font-size: 12px; }
+        }
         @media (max-width: 576px) { .header h1 { font-size: 24px; } .button { width: 100%; } .account-actions { flex-direction: column; align-items: stretch; } .account-actions .button { width: 100%; min-width: 0; } }
     </style>
 </head>
 <body>
 <nav class="top-nav" aria-label="Student navigation">
     <div class="top-nav-inner">
-        <div class="top-nav-links">
+        <div class="top-nav-brand">
+            <div class="top-nav-brand-badge">🎓</div>
+            <span>ዲ/ን ሶፎንያስ ዌብሳይት</span>
+        </div>
+        <button class="nav-toggle" id="navToggle" type="button" aria-label="Toggle menu">☰ Menu</button>
+        <div class="top-nav-links" id="topNavLinks">
             <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle theme">🌙 Dark</button>
-            <a href="sofonyas%20(2).html">መጀመሪያ</a>
-            <a href="tutorial.php">ኮርሶች</a>
-            <a href="my_courses.php">የኔ ኮርሶች</a>
-            <a href="ai_personal_tutor.php">AI ቱቶሪያል</a>
+            <a class="active" href="student_dashboard.php">Dashboard</a>
+            <a href="sofonyas%20(2).html">Home</a>
+            <a href="tutorial.php">Courses</a>
+            <a href="my_courses.php">My Courses</a>
+            <a href="ai_personal_tutor.php">AI Tutor</a>
             <a href="smart_learning_path.php">Learning Path</a>
-            <a href="live_class.php">ላይቭ ክላስ</a>
-            <a href="discussion_forum.php">ፎርም</a>
-            <a href="library.php">ላይብራሪ</a>
-            <a href="student_id_card.php">የID Card እይ</a>
-            <a href="student_logout.php">ውጣ</a>
+            <a href="live_class.php">Live Class</a>
+            <a href="discussion_forum.php">Forum</a>
+            <a href="library.php">Library</a>
+            <a href="student_id_card.php">ID Card</a>
+            <a href="student_logout.php">Logout</a>
         </div>
     </div>
 </nav>
@@ -911,31 +1002,39 @@ if (empty($notifications)) {
     <div class="card" style="margin-bottom: 24px;">
         <h2 class="section-title">🧩 Enroll ኮርስ</h2>
         <p class="section-sub">እዚህ ኮርስ ፎቶ፣ ስም፣ አጭር መግለጫ እና ሙሉ አንቀጽ መግለጫ ከዳታቤዝ ጋር ይታያል። በአንድ ጠቅታ እንዲመዘገቡ እንደሚችሉ ይምረጡ።</p>
-        <div class="grid-3">
+        <div class="course-grid">
             <?php if (empty($available_courses)): ?>
                 <p class="muted">እስካሁን ምንም ኮርስ አልተጨመረም።</p>
             <?php else: ?>
                 <?php foreach ($available_courses as $course): ?>
-                    <div class="course-card">
-                        <?php if (!empty($course['thumbnail'])): ?>
-                            <img src="<?php echo safe(publicMediaUrl($course['thumbnail'])); ?>" alt="<?php echo safe($course['course_name']); ?>">
-                        <?php else: ?>
-                            <img src="IMG_20241202_031425_251.jpg" alt="Course preview">
-                        <?php endif; ?>
-                        <?php
-                            $availableCourseSummary = trim((string)($course['short_description'] ?? ''));
-                            $availableCourseOverview = trim((string)($course['description'] ?? ''));
-                            $availableCourseTutorial = trim((string)($course['tutorial_text'] ?? ''));
-                            $availableCourseBody = $availableCourseOverview !== '' ? $availableCourseOverview : ($availableCourseTutorial !== '' ? $availableCourseTutorial : $availableCourseSummary);
-                        ?>
-                        <h3><?php echo safe($course['course_name']); ?></h3>
-                        <div class="muted rich-content" style="margin-bottom:8px;"><?php echo renderSafeCourseContent($availableCourseSummary !== '' ? $availableCourseSummary : $availableCourseBody); ?></div>
-                        <div class="muted rich-content" style="margin-bottom:8px;"><?php echo renderSafeCourseContent($availableCourseBody !== '' ? $availableCourseBody : 'No course details are available yet.'); ?></div>
-                        <p class="muted"><span class="instructor-line">ኢንስትራክተር:</span> <?php echo safe($course['instructor'] ?? 'Admin Instructor'); ?></p>
-                        <p class="muted"><span class="instructor-line">ዋጋ:</span> <?php echo number_format((float)($course['price'] ?? 0), 2); ?> ብር</p>
-                        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
-                            <a class="button" href="student_register.php?course=<?php echo rawurlencode($course['course_name']); ?>&amount=<?php echo (float)($course['price'] ?? 0); ?>">Enroll Now</a>
-                            <a class="button secondary" href="course_details.php?id=<?php echo (int)$course['id']; ?>">View Details</a>
+                    <?php
+                        $availableCourseSummary = trim((string)($course['short_description'] ?? ''));
+                        $availableCourseOverview = trim((string)($course['description'] ?? ''));
+                        $availableCourseTutorial = trim((string)($course['tutorial_text'] ?? ''));
+                        $availableCourseBody = $availableCourseOverview !== '' ? $availableCourseOverview : ($availableCourseTutorial !== '' ? $availableCourseTutorial : $availableCourseSummary);
+                        $availableCourseDuration = estimateCourseDuration($course);
+                        $availableInstructorName = trim((string)($course['instructor'] ?? 'Admin Instructor'));
+                        $availableInstructorImage = trim((string)($course['instructor_image'] ?? ''));
+                    ?>
+                    <div class="course-preview-card">
+                        <div class="course-preview-media">
+                            <?php $fallbackCourseImage = (string)($course['course_name'] ?? '') === 'ሐዋርያዊ ተልዕኮ' ? 'hawaryawi telieko.jpg' : ((string)($course['course_name'] ?? '') === 'ነገረ ሃይማኖት' ? 'negere hayimanot.jpg' : 'kibat wetewahdo.jpg'); ?>
+                            <img src="<?php echo safe(publicMediaUrl(!empty($course['thumbnail']) ? $course['thumbnail'] : $fallbackCourseImage)); ?>" alt="<?php echo safe($course['course_name']); ?>">
+                        </div>
+                        <div class="course-preview-body">
+                            <h3 class="course-preview-title"><?php echo safe($course['course_name']); ?></h3>
+                            <div class="course-instructor">
+                                <img src="<?php echo safe(publicMediaUrl($availableInstructorImage !== '' ? $availableInstructorImage : 'sofi fikr.jpg')); ?>" alt="<?php echo safe($availableInstructorName); ?>">
+                                <div>
+                                    <div class="course-instructor-name"><?php echo safe($availableInstructorName); ?></div>
+                                    <div class="course-instructor-role">Instructor</div>
+                                </div>
+                            </div>
+                            <p class="course-preview-text"><?php echo safe(getCoursePreviewText($availableCourseSummary !== '' ? $availableCourseSummary : $availableCourseBody)); ?></p>
+                            <div class="course-preview-actions">
+                                <a class="button" href="student_register.php?course=<?php echo rawurlencode($course['course_name']); ?>&amount=<?php echo (float)($course['price'] ?? 0); ?>">Go To Course</a>
+                                <a class="button secondary" href="course_details.php?id=<?php echo (int)$course['id']; ?>">View Details</a>
+                            </div>
                         </div>
                     </div>
                 <?php endforeach; ?>
@@ -943,22 +1042,28 @@ if (empty($notifications)) {
         </div>
     </div>
 
-    <div class="grid-2">
+    <div class="grid-1">
         <div class="card">
-            <div class="section-title" style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
-                <div>
-                    <h2 style="margin:0;">📘 የእኔ ኮርሶች</h2>
-                    <p class="section-sub" style="margin:6px 0 0;">እያንዳንዱ ኮርስ የሚሰጠውን ሙሉ ይዘት፣ ቱቶሪያል፣ መማሪያዎች፣ ኩዊዝ፣ ሥራዎች እና ሪሶርሶች በመልክ ያሳያል።</p>
+            <div class="course-dashboard-shell">
+                <div class="course-dashboard-header">
+                    <div>
+                        <h2 class="course-dashboard-title">📘 My Enrolled Courses</h2>
+                        <p class="course-dashboard-subtitle">Continue where you left off with a clean, focused preview of your enrolled learning paths.</p>
+                    </div>
+                    <div class="course-dashboard-stats">
+                        <span class="pill info"><?php echo (int)$summary['total']; ?> Enrolled</span>
+                        <span class="pill success"><?php echo (int)$progress_percentage; ?>% Progress</span>
+                    </div>
                 </div>
-            </div>
-            <?php if (empty($registrations)): ?>
-                <div class="course-player-empty">ምንም ተመዝጋቢ ኮርስ የለም።</div>
-            <?php else: ?>
-                <div class="course-player-grid">
-                    <?php foreach ($registrations as $row): ?>
+                <?php if (empty($registrations)): ?>
+                    <div class="course-player-empty">ምንም ተመዝጋቢ ኮርስ የለም።</div>
+                <?php else: ?>
+                    <div class="course-grid">
+                        <?php foreach ($registrations as $row): ?>
                         <?php
                             $courseName = $row['course'] ?: ($row['course_name'] ?? 'Course');
-                            $courseThumb = !empty($row['thumbnail']) ? publicMediaUrl($row['thumbnail']) : 'IMG_20241202_031425_251.jpg';
+                            $fallbackCourseImage = $courseName === 'ሐዋርያዊ ተልዕኮ' ? 'hawaryawi telieko.jpg' : ($courseName === 'ነገረ ሃይማኖት' ? 'negere hayimanot.jpg' : 'kibat wetewahdo.jpg');
+                            $courseThumb = !empty($row['thumbnail']) ? publicMediaUrl($row['thumbnail']) : publicMediaUrl($fallbackCourseImage);
                             $courseSummary = trim((string)($row['short_description'] ?? ''));
                             $courseOverview = trim((string)($row['description'] ?? ''));
                             $courseTutorialContent = trim((string)($row['tutorial_text'] ?? ''));
@@ -983,144 +1088,31 @@ if (empty($notifications)) {
                                 $assignmentData = json_decode($row['assignment'], true);
                             }
                         ?>
-                        <article class="course-player-card">
-                            <div class="course-player-hero">
+                        <article class="course-preview-card">
+                            <div class="course-preview-media">
                                 <img src="<?php echo safe($courseThumb); ?>" alt="<?php echo safe($courseName); ?>">
-                                <div class="course-player-meta">
-                                    <span class="pill info">Progress <?php echo $progressValue; ?>%</span>
-                                    <h3><?php echo safe($courseName); ?></h3>
-                                    <div class="muted rich-content"><?php echo renderSafeCourseContent($courseSummary !== '' ? $courseSummary : $courseDescription); ?></div>
-                                    <p class="muted" style="margin-top:6px;"><strong>Instructor:</strong> <?php echo safe($row['instructor'] ?? 'Admin Instructor'); ?></p>
-                                    <div class="course-player-actions">
-                                        <a class="button" href="course_content.php?course_id=<?php echo $courseIdParam; ?>">View Course</a>
-                                        <a class="button" href="lesson.php?course_id=<?php echo $courseIdParam; ?>">Start Lesson</a>
-                                        <a class="button secondary" href="course_details.php?id=<?php echo $courseIdParam; ?>">Course Details</a>
+                            </div>
+                            <div class="course-preview-body">
+                                <h3 class="course-preview-title"><?php echo safe($courseName); ?></h3>
+                                <div class="course-instructor">
+                                    <?php $instructorName = trim((string)($row['instructor'] ?? 'Admin Instructor')); $instructorImage = trim((string)($row['instructor_image'] ?? '')); ?>
+                                    <img src="<?php echo safe(publicMediaUrl($instructorImage !== '' ? $instructorImage : 'sofi fikr.jpg')); ?>" alt="<?php echo safe($instructorName); ?>">
+                                    <div>
+                                        <div class="course-instructor-name"><?php echo safe($instructorName); ?></div>
+                                        <div class="course-instructor-role">Instructor</div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="course-player-layout">
-                                <aside class="course-player-sidebar">
-                                    <div class="sidebar-title">Modules &amp; Lessons</div>
-                                    <?php if (!empty($modules)): ?>
-                                        <?php foreach ($modules as $moduleIndex => $module): ?>
-                                            <details class="module-accordion" <?php echo $moduleIndex === 0 ? 'open' : ''; ?>>
-                                                <summary><?php echo safe($module['title'] ?? 'Module ' . ($moduleIndex + 1)); ?></summary>
-                                                <div class="module-panel">
-                                                    <?php if (!empty($module['content'])): ?>
-                                                        <div class="rich-content"><?php echo renderSafeCourseContent($module['content']); ?></div>
-                                                    <?php endif; ?>
-                                                    <?php if (!empty($module['lessons'])): ?>
-                                                        <ul class="module-lessons">
-                                                            <?php foreach ($module['lessons'] as $lessonItem): ?>
-                                                                <li><?php echo safe($lessonItem); ?></li>
-                                                            <?php endforeach; ?>
-                                                        </ul>
-                                                    <?php endif; ?>
-                                                </div>
-                                            </details>
-                                        <?php endforeach; ?>
-                                    <?php else: ?>
-                                        <div class="course-player-empty">No module outline has been added yet.</div>
-                                    <?php endif; ?>
-                                </aside>
-                                <div class="course-player-main">
-                                    <div class="tab-menu">
-                                        <button type="button" class="tab-btn active" data-tab-group="<?php echo $courseKey; ?>" data-tab="overview">Overview</button>
-                                        <button type="button" class="tab-btn" data-tab-group="<?php echo $courseKey; ?>" data-tab="tutorial">Tutorials</button>
-                                        <button type="button" class="tab-btn" data-tab-group="<?php echo $courseKey; ?>" data-tab="lesson">Lessons</button>
-                                        <button type="button" class="tab-btn" data-tab-group="<?php echo $courseKey; ?>" data-tab="quiz">Quiz</button>
-                                        <button type="button" class="tab-btn" data-tab-group="<?php echo $courseKey; ?>" data-tab="assignment">Assignments</button>
-                                        <button type="button" class="tab-btn" data-tab-group="<?php echo $courseKey; ?>" data-tab="resources">Resources</button>
-                                        <button type="button" class="tab-btn" data-tab-group="<?php echo $courseKey; ?>" data-tab="discussion">Discussion</button>
-                                    </div>
-                                    <div class="tab-pane active" id="<?php echo $courseKey; ?>_overview">
-                                        <h4>Course Overview</h4>
-                                        <div class="rich-content"><?php echo renderSafeCourseContent($courseDescription !== '' ? $courseDescription : 'No course overview has been added yet.'); ?></div>
-                                    </div>
-                                    <div class="tab-pane" id="<?php echo $courseKey; ?>_tutorial">
-                                        <h4>Tutorials</h4>
-                                        <?php if (!empty($row['tutorial_topic'])): ?><h5><?php echo safe($row['tutorial_topic']); ?></h5><?php endif; ?>
-                                        <div class="rich-content"><?php echo renderSafeCourseContent($courseTutorialContent !== '' ? $courseTutorialContent : 'No tutorial content added yet.'); ?></div>
-                                        <?php if (!empty($row['tutorial_image'])): ?>
-                                            <p><strong>Image:</strong> <a class="action-link" href="<?php echo safe(publicMediaUrl($row['tutorial_image'])); ?>" target="_blank" rel="noopener noreferrer">View image</a></p>
-                                        <?php endif; ?>
-                                        <?php if (!empty($row['tutorial_audio'])): ?>
-                                            <p><strong>Audio:</strong> <a class="action-link" href="<?php echo safe(publicMediaUrl($row['tutorial_audio'])); ?>" target="_blank" rel="noopener noreferrer">Play audio</a></p>
-                                        <?php endif; ?>
-                                        <?php if (!empty($row['tutorial_video'])): ?>
-                                            <p><strong>Video:</strong> <a class="action-link" href="<?php echo safe(publicMediaUrl($row['tutorial_video'])); ?>" target="_blank" rel="noopener noreferrer">Watch video</a></p>
-                                        <?php endif; ?>
-                                    </div>
-                                    <div class="tab-pane" id="<?php echo $courseKey; ?>_lesson">
-                                        <h4>Lessons</h4>
-                                        <div class="rich-content"><?php echo renderSafeCourseContent($courseLessonOutline !== '' ? $courseLessonOutline : 'No lesson outline available.'); ?></div>
-                                    </div>
-                                    <div class="tab-pane" id="<?php echo $courseKey; ?>_quiz">
-                                        <h4>Quiz</h4>
-                                        <?php if (!empty($quizData) && is_array($quizData)): ?>
-                                            <ul style="padding-left:18px;">
-                                                <?php foreach ($quizData as $quiz): ?>
-                                                    <li>
-                                                        <strong><?php echo safe($quiz['title'] ?? 'Quiz'); ?></strong>
-                                                        <?php if (!empty($quiz['question_count'])): ?> — <?php echo (int)$quiz['question_count']; ?> questions<?php endif; ?>
-                                                    </li>
-                                                <?php endforeach; ?>
-                                            </ul>
-                                        <?php else: ?>
-                                            <div class="rich-content"><?php echo renderSafeCourseContent($row['quiz'] ?? 'No quiz information available.'); ?></div>
-                                        <?php endif; ?>
-                                    </div>
-                                    <div class="tab-pane" id="<?php echo $courseKey; ?>_assignment">
-                                        <h4>Assignments</h4>
-                                        <?php if (!empty($assignmentData) && is_array($assignmentData)): ?>
-                                            <ul style="padding-left:18px;">
-                                                <?php foreach ($assignmentData as $assignment): ?>
-                                                    <li>
-                                                        <strong><?php echo safe($assignment['title'] ?? 'Assignment'); ?></strong>
-                                                        <?php if (!empty($assignment['due_date'])): ?> — Due <?php echo safe($assignment['due_date']); ?><?php endif; ?>
-                                                        <?php if (!empty($assignment['description'])): ?>
-                                                            <div class="muted rich-content" style="margin-top:6px;"><?php echo renderSafeCourseContent($assignment['description']); ?></div>
-                                                        <?php endif; ?>
-                                                    </li>
-                                                <?php endforeach; ?>
-                                            </ul>
-                                        <?php else: ?>
-                                            <div class="rich-content"><?php echo renderSafeCourseContent($row['assignment'] ?? 'No assignment details available.'); ?></div>
-                                        <?php endif; ?>
-                                    </div>
-                                    <div class="tab-pane" id="<?php echo $courseKey; ?>_resources">
-                                        <h4>Resources</h4>
-                                        <div class="rich-content">
-                                            <?php if (!empty($row['pdf_file'])): ?>
-                                                <p><strong>Course PDF:</strong> <a class="action-link" href="<?php echo safe(publicMediaUrl($row['pdf_file'])); ?>" target="_blank" rel="noopener noreferrer">Open resource</a></p>
-                                            <?php endif; ?>
-                                            <?php if (!empty($row['tutorial_image'])): ?>
-                                                <p><strong>Image:</strong> <a class="action-link" href="<?php echo safe(publicMediaUrl($row['tutorial_image'])); ?>" target="_blank" rel="noopener noreferrer">View image</a></p>
-                                            <?php endif; ?>
-                                            <?php if (!empty($row['tutorial_audio'])): ?>
-                                                <p><strong>Audio:</strong> <a class="action-link" href="<?php echo safe(publicMediaUrl($row['tutorial_audio'])); ?>" target="_blank" rel="noopener noreferrer">Play audio</a></p>
-                                            <?php endif; ?>
-                                            <?php if (!empty($row['tutorial_video'])): ?>
-                                                <p><strong>Video:</strong> <a class="action-link" href="<?php echo safe(publicMediaUrl($row['tutorial_video'])); ?>" target="_blank" rel="noopener noreferrer">Watch video</a></p>
-                                            <?php endif; ?>
-                                            <?php if (empty($row['pdf_file']) && empty($row['tutorial_image']) && empty($row['tutorial_audio']) && empty($row['tutorial_video'])): ?>
-                                                <p class="course-player-empty">No additional resources are available for this course yet.</p>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-                                    <div class="tab-pane" id="<?php echo $courseKey; ?>_discussion">
-                                        <h4>Discussion</h4>
-                                        <div class="rich-content">
-                                            <p>Start a discussion with your instructor and classmates about this course.</p>
-                                            <p><a class="button secondary" href="discussion_forum.php?course_id=<?php echo $courseIdParam; ?>">Open discussion forum</a></p>
-                                        </div>
-                                    </div>
+                                <p class="course-preview-text"><?php echo safe(getCoursePreviewText($courseSummary !== '' ? $courseSummary : $courseDescription)); ?></p>
+                                <div class="course-preview-actions">
+                                    <a class="button" href="course_content.php?course_id=<?php echo $courseIdParam; ?>">Go To Course</a>
+                                    <a class="button secondary" href="course_details.php?id=<?php echo $courseIdParam; ?>">View Details</a>
                                 </div>
                             </div>
                         </article>
                     <?php endforeach; ?>
-                </div>
-            <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
         </div>
 
         <div class="card">
@@ -1284,18 +1276,34 @@ if (empty($notifications)) {
             <div style="margin-top: 16px;">
                 <p style="margin:0 0 8px; font-weight:700; color:#1f2937;">📱 የመግቢያ መሣሪያዎች</p>
                 <?php if (!empty($deviceSessions)): ?>
-                    <ul style="padding-left:18px; margin:0; color:#334155; display:flex; flex-direction:column; gap:8px;">
-                        <?php foreach ($deviceSessions as $deviceSession): ?>
-                            <li>
-                                <strong><?php echo safe($deviceSession['device_label'] ?? 'Device'); ?></strong>
-                                <div class="muted" style="font-size:13px;">
-                                    <?php echo safe($deviceSession['ip_address'] ?? 'Unknown IP'); ?> ·
-                                    <?php echo safe(date('M d, Y H:i', strtotime($deviceSession['last_seen_at']))); ?>
-                                    <?php if ((string)($deviceSession['session_id'] ?? '') === session_id()): ?> · <span style="color:#16a34a;">Current device</span><?php endif; ?>
+                    <?php
+                        $currentDeviceSession = null;
+                        $recentDeviceCount = 0;
+                        foreach ($deviceSessions as $deviceSession) {
+                            if ((string)($deviceSession['session_id'] ?? '') === session_id()) {
+                                $currentDeviceSession = $deviceSession;
+                            } else {
+                                $recentDeviceCount++;
+                            }
+                        }
+                    ?>
+                    <div style="display:flex; flex-direction:column; gap:10px; color:#334155;">
+                        <?php if ($currentDeviceSession): ?>
+                            <div style="padding:10px 12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px;">
+                                <strong><?php echo safe($currentDeviceSession['device_label'] ?? 'Current device'); ?></strong>
+                                <div class="muted" style="font-size:13px; margin-top:4px;">
+                                    <?php echo safe($currentDeviceSession['ip_address'] ?? 'Unknown IP'); ?> ·
+                                    <?php echo safe(date('M d, Y H:i', strtotime($currentDeviceSession['last_seen_at']))); ?>
+                                    <span style="color:#16a34a; font-weight:700;"> · Current device</span>
                                 </div>
-                            </li>
-                        <?php endforeach; ?>
-                    </ul>
+                            </div>
+                        <?php endif; ?>
+                        <?php if ($recentDeviceCount > 0): ?>
+                            <div class="muted" style="font-size:13px;">
+                                <?php echo (int)$recentDeviceCount; ?> other recent sign-in device<?php echo $recentDeviceCount === 1 ? '' : 's'; ?> recorded.
+                            </div>
+                        <?php endif; ?>
+                    </div>
                 <?php else: ?>
                     <p class="muted">ምንም የመግቢያ መሣሪያ አልተመዘገበም።</p>
                 <?php endif; ?>
@@ -1410,7 +1418,7 @@ if (empty($notifications)) {
                             <td>
                                 <strong><?php echo safe($courseName); ?></strong>
                                 <?php if (!empty($row['short_description']) || !empty($row['description'])): ?>
-                                    <br><div class="muted rich-content" style="margin-top:6px;"><?php echo renderSafeCourseContent($row['short_description'] ?: $row['description'] ?: ''); ?></div>
+                                    <div class="muted" style="margin-top:6px;"><?php echo safe(getCoursePreviewText($row['short_description'] ?: $row['description'] ?: '')); ?></div>
                                 <?php endif; ?>
                             </td>
                             <td><?php echo safe($row['amount'] ?? $row['course_price'] ?? 0); ?> ብር</td>
@@ -1441,6 +1449,8 @@ if (empty($notifications)) {
         (function () {
             const storageKey = 'sofnyas-theme';
             const toggle = document.getElementById('themeToggle');
+            const navToggle = document.getElementById('navToggle');
+            const navLinks = document.getElementById('topNavLinks');
             const applyTheme = (theme) => {
                 document.body.setAttribute('data-theme', theme);
                 if (toggle) {
@@ -1461,6 +1471,11 @@ if (empty($notifications)) {
                     const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
                     applyTheme(nextTheme);
                     localStorage.setItem(storageKey, nextTheme);
+                });
+            }
+            if (navToggle && navLinks) {
+                navToggle.addEventListener('click', () => {
+                    navLinks.classList.toggle('open');
                 });
             }
 

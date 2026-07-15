@@ -159,6 +159,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
             nav.open ul li { white-space: nowrap; }
             .nav-lang { margin-left: 0; }
         }
+        .welcome-banner {
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+            margin: 14px auto 0;
+            padding: 10px 0;
+            border-radius: 18px;
+            border: 1px solid rgba(96, 165, 250, 0.28);
+            background: linear-gradient(135deg, rgba(15,23,42,0.96), rgba(30,64,175,0.92));
+            box-shadow: 0 12px 28px rgba(15,23,42,0.16);
+        }
+        .welcome-marquee {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            width: max-content;
+            min-width: 100%;
+            white-space: nowrap;
+            will-change: transform;
+            animation: welcome-scroll 30s linear infinite;
+        }
+        .welcome-marquee:hover {
+            animation-play-state: paused;
+        }
+        .welcome-marquee span {
+            display: inline-block;
+            white-space: nowrap;
+            flex: 0 0 auto;
+            padding: 0 1.25rem;
+            font-size: clamp(1rem, 2.2vw, 1.45rem);
+            font-weight: 900;
+            letter-spacing: 0.01em;
+            background: linear-gradient(90deg, #f472b6, #60a5fa, #22c55e, #f59e0b, #f43f5e, #a855f7, #f472b6);
+            background-size: 300% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 12px rgba(255,255,255,0.35), 0 0 24px rgba(96,165,250,0.35);
+            animation: welcome-glow 5s linear infinite;
+        }
+        @keyframes welcome-scroll {
+            from { transform: translateX(0); }
+            to { transform: translateX(-50%); }
+        }
+        @keyframes welcome-glow {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 300% 50%; }
+        }
+        @media (max-width: 768px) {
+            .welcome-banner { margin-top: 10px; border-radius: 14px; }
+            .welcome-marquee span { padding: 0 0.8rem; }
+        }
         .card { background: rgba(216, 11, 124, 0.88); border: 1px solid rgba(236, 13, 191, 0.42); border-radius: 28px; box-shadow: 0 34px 80px rgba(15,23,42,0.1); padding: 26px; backdrop-filter: blur(18px); }
         .card h2 { margin-top: 0; }
         .quick-card { background: rgba(229, 11, 175, 0.9); border: 1px solid rgba(148,163,184,0.18); border-radius: 24px; padding: 24px; box-shadow: 0 24px 50px rgba(15,23,42,0.08); transition: transform 0.25s ease, box-shadow 0.25s ease; }
@@ -187,13 +239,91 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         .hero-copy { color: #fff; max-width: 660px; }
         .hero-copy h1 { font-size: clamp(2.4rem, 4vw, 3.8rem); line-height: 1.02; margin-bottom: 18px; text-shadow: 0 16px 45px rgba(15,23,42,0.3); letter-spacing: -0.03em; }
         .hero-copy p { font-size: 1.05rem; color: rgba(226,232,240,0.96); line-height: 1.75; max-width: 620px; }
-        .hero-intro { max-width: 1020px; margin: 22px auto 0; padding: 0 20px; }
-        .hero-intro-inner { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin: 0 auto; max-width: 940px; }
-        .hero-intro .logo-wrap { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; }
-        .hero-intro .logo-img { max-width: 140px; width: 140; height: 140px; object-fit: cover; border-radius: 80%; display: block; border: 2px solid rgba(67,56,202,0.18); }
-        .hero-intro .intro-copy { flex: 1 1 0; }
-        .hero-intro h1 { margin: 0 0 10px; font-size: 26px; color: #0f172a; letter-spacing: -0.03em; line-height: 1.15; text-align: left; }
+        .hero-intro { max-width: 1200px; margin: 22px auto 0; padding: 0 20px; }
+        .hero-intro-inner {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            margin: 0 auto;
+            max-width: 1180px;
+            padding: 18px 20px;
+            border-radius: 24px;
+            border: 1px solid rgba(255,255,255,0.36);
+            background: linear-gradient(135deg, rgba(255,255,255,0.54), rgba(241,245,249,0.26));
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            box-shadow: 0 16px 38px rgba(15,23,42,0.12);
+        }
+        .hero-intro .logo-wrap {
+            flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 88px;
+            position: relative;
+            padding: 5px;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg, #22c55e, #60a5fa, #f43f5e, #a855f7, #22c55e);
+            box-shadow: 0 0 0 2px rgba(255,255,255,0.55), 0 0 24px rgba(96,165,250,0.52), 0 0 40px rgba(244,63,94,0.25);
+            animation: logoRingGlow 4s linear infinite;
+        }
+        .hero-intro .logo-wrap::after {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            background: conic-gradient(from 180deg, rgba(34,197,94,0.8), rgba(96,165,250,0.8), rgba(244,63,94,0.8), rgba(168,85,247,0.8), rgba(34,197,94,0.8));
+            filter: blur(6px);
+            z-index: -1;
+            opacity: 0.95;
+        }
+        .hero-intro .logo-img {
+            max-width: 140px;
+            width: 140px;
+            height: 140px;
+            object-fit: cover;
+            border-radius: 50%;
+            display: block;
+            border: 3px solid rgba(255,255,255,0.9);
+            box-shadow: 0 10px 24px rgba(15,23,42,0.12);
+            background: linear-gradient(135deg, #ffffff, #dbeafe);
+        }
+        .hero-intro .intro-copy { flex: 1 1 auto; min-width: 0; overflow: hidden; display: flex; align-items: center; }
+        .hero-intro .welcome-marquee {
+            display: flex;
+            align-items: center;
+            width: max-content;
+            min-width: 100%;
+            white-space: nowrap;
+            will-change: transform;
+            animation: welcome-scroll 26s linear infinite;
+        }
+        .hero-intro .welcome-marquee span {
+            display: inline-block;
+            flex: 0 0 auto;
+            white-space: nowrap;
+            padding: 0 1.15rem;
+            font-size: clamp(1rem, 2.1vw, 1.4rem);
+            font-weight: 900;
+            letter-spacing: 0.01em;
+            line-height: 1.2;
+            background: linear-gradient(90deg, #f472b6, #60a5fa, #22c55e, #f59e0b, #f43f5e, #a855f7, #f472b6);
+            background-size: 300% 100%;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 12px rgba(255,255,255,0.35), 0 0 24px rgba(96,165,250,0.35);
+            animation: welcome-glow 5s linear infinite;
+        }
         .hero-intro p { margin: 0; font-size: 1.05rem; color: rgba(15,23,42,0.78); line-height: 1.75; text-align: left; }
+        @keyframes welcome-scroll {
+            from { transform: translateX(0); }
+            to { transform: translateX(-50%); }
+        }
+        @keyframes welcome-glow {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 300% 50%; }
+        }
         .hero-actions-section { max-width: 1020px; margin: 18px auto 0; padding: 0 20px; display: flex; justify-content: center; }
         @media (max-width: 900px) { .hero-intro-inner { flex-direction: column; align-items: center; text-align: center; } .hero-intro .intro-copy { width: 100%; } .hero-intro h1, .hero-intro p { text-align: center; } .hero-intro .logo-wrap { width: 180px; } }
         .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 0; justify-content: center; }
@@ -301,8 +431,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
                 <img src="sofi fikr.jpg" alt="<?php echo safe($siteName); ?>" class="logo-img zoomable-img">
             </a>
             <div class="intro-copy">
-                <h1 class="animate-title reveal" data-am="እንኳን ወደ ዲ/ን ሶፎንያስ ደመቀ ቤተ ገብርኤል ዌብሳይት በደህና መጡ!" data-en="Welcome to Dr. Sofoniyas Demeke's Church Community Website!">እንኳን ወደ ዲ/ን ሶፎንያስ ደመቀ ቤተ ገብርኤል ዌብሳይት በደህና መጡ!</h1>
-               
+                <div class="welcome-marquee" aria-label="Welcome message">
+                    <span># እንኳን ወደ ዲ/ን ሶፎንያስ ደመቀ ቤተ ገብርኤል ዌብሳይት በደህና መጡ!</span>
+                    <span># እንኳን ወደ ዲ/ን ሶፎንያስ ደመቀ ቤተ ገብርኤል ዌብሳይት በደህና መጡ!</span>
+                    <span># እንኳን ወደ ዲ/ን ሶፎንያስ ደመቀ ቤተ ገብርኤል ዌብሳይት በደህና መጡ!</span>
+                    <span># እንኳን ወደ ዲ/ን ሶፎንያስ ደመቀ ቤተ ገብርኤል ዌብሳይት በደህና መጡ!</span>
+                </div>
             </div>
         </div>
     </section>

@@ -108,17 +108,17 @@ $progressPercent = $progressData['total'] > 0 ? min(100, (int)round(($completedL
     <title><?php echo htmlspecialchars($course['course_name'] ?? 'Course Content', ENT_QUOTES, 'UTF-8'); ?></title>
     <link rel="stylesheet" href="sofonyas (1).css">
     <style>
-        body { font-family: Arial, sans-serif; background:#f5f7fa; color:#1f2937; }
-        nav ul { display:flex; gap:12px; list-style:none; padding:20px; background:#ffffff; margin:0; }
+        body { font-family: Arial, sans-serif; background:#f5f7fa; color:#1f2937; margin:0; overflow-x:hidden; }
+        nav ul { display:flex; gap:12px; list-style:none; padding:20px; background:#ffffff; margin:0; flex-wrap:wrap; }
         nav a { color:#334155; text-decoration:none; font-weight:700; }
         .layout { max-width: 1200px; margin: 24px auto; padding: 0 20px; display:grid; grid-template-columns: 320px 1fr; gap:20px; }
-        .sidebar, .main-panel { background:white; border-radius:18px; padding:20px; box-shadow:0 12px 30px rgba(15,23,42,0.08); }
+        .sidebar, .main-panel { background:white; border-radius:18px; padding:20px; box-shadow:0 12px 30px rgba(15,23,42,0.08); min-width:0; }
         .sidebar h2, .main-panel h2 { margin-top:0; }
         .module-group { margin-bottom:18px; }
         .module-group h3 { font-size:1rem; margin-bottom:10px; color:#1d4ed8; }
         .lesson-list { list-style:none; padding-left:0; margin:0; }
         .lesson-list li { margin-bottom:8px; }
-        .lesson-link { display:block; padding:10px 12px; border-radius:12px; background:#f8fafc; color:#0f172a; text-decoration:none; transition:background .18s ease; }
+        .lesson-link { display:block; padding:10px 12px; border-radius:12px; background:#f8fafc; color:#0f172a; text-decoration:none; transition:background .18s ease; word-break:break-word; overflow-wrap:anywhere; }
         .lesson-link:hover { background:#e2e8f0; }
         .lesson-link.active { background:#c7d2fe; color:#1e3a8a; font-weight:700; }
         .meta-row { display:flex; flex-wrap:wrap; gap:12px; margin:10px 0 18px; }
@@ -129,6 +129,9 @@ $progressPercent = $progressData['total'] > 0 ? min(100, (int)round(($completedL
         .button.secondary { background:#e2e8f0; color:#1f2937; }
         .button:hover { opacity:0.95; }
         .section { margin-bottom:20px; }
+        .section h2, .sidebar h2, .main-panel h2, .module-group h3 { overflow-wrap:anywhere; word-break:break-word; }
+        .lesson-content-wrap, .lesson-content-wrap p, .lesson-content-wrap li, .lesson-content-wrap h1, .lesson-content-wrap h2, .lesson-content-wrap h3, .lesson-content-wrap h4 { overflow-wrap:anywhere; word-break:break-word; }
+        @media (max-width: 860px) { nav ul { justify-content:center; } .layout { grid-template-columns: 1fr; } .sidebar, .main-panel { padding:16px; } .action-row { justify-content:center; } .section h2, .sidebar h2, .main-panel h2 { text-align:center; } }
     </style>
 </head>
 <body>
@@ -204,7 +207,7 @@ $progressPercent = $progressData['total'] > 0 ? min(100, (int)round(($completedL
                         <?php echo htmlspecialchars($bookmarkMessage, ENT_QUOTES, 'UTF-8'); ?>
                     </div>
                 <?php endif; ?>
-                <div><?php echo $lessonContent; ?></div>
+                <div class="lesson-content-wrap"><?php echo $lessonContent; ?></div>
             </div>
             <div class="action-row">
                 <form method="post" style="margin:0;">

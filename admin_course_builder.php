@@ -759,6 +759,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .nav a { color: #fff; text-decoration: none; font-weight: 700; }
         .wrap { max-width: 1100px; margin: 0 auto; padding: 20px; }
         .panel { background: rgba(255,255,255,0.96); border-radius: 18px; box-shadow: 0 18px 36px rgba(15,23,42,0.10); border: 1px solid #dbeafe; padding: 22px; margin-bottom: 18px; }
+        .panel h2, .panel h3 { text-align: center; margin-top: 0; }
         .chip-row { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0 18px; }
         .chip { display: inline-block; padding: 8px 10px; border-radius: 999px; background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; text-decoration: none; font-weight: 700; font-size: 13px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
@@ -786,6 +787,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .ghost-btn { border: 1px solid #cbd5e1; background: #fff; color: #334155; border-radius: 8px; padding: 6px 10px; cursor: pointer; font-size: 12px; font-weight: 700; }
         .lesson-row { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
         .lesson-row input, .quiz-card input, .quiz-card textarea, .assignment-card input, .assignment-card textarea { width: 100%; border: 1px solid #cbd5e1; border-radius: 10px; padding: 8px 10px; font-size: 13px; margin-bottom: 6px; }
+        @media (max-width: 768px) {
+            .hero { justify-content: center; text-align: center; }
+            .builder-card-header, .lesson-row { flex-direction: column; align-items: stretch; }
+            .panel h2, .panel h3 { text-align: center; }
+        }
         .builder-output-card { border: 1px solid #dbeafe; background: #f8fbff; border-radius: 12px; padding: 10px; margin-top: 8px; }
         .builder-output-card h4 { margin: 0 0 6px; font-size: 15px; color: #1e3a8a; }
         .builder-output-card ul, .builder-output-card ol { margin: 0 0 6px 16px; padding-left: 0; }
