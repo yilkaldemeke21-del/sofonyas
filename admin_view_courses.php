@@ -381,7 +381,7 @@ try {
                                     <br><span class="muted rich-content"><strong>Certificate Requirements:</strong> <?php echo renderRichText($course['certificate_requirements']); ?></span>
                                 <?php endif; ?>
                                 <?php if (!empty($course['pdf_file'])): ?>
-                                    <br><a class="media-link" href="<?php echo safe($course['pdf_file']); ?>" target="_blank">📄 PDF እይ</a>
+                                    <br><a class="media-link" href="<?php echo safe(publicMediaUrl($course['pdf_file'])); ?>" target="_blank" rel="noopener">📄 PDF እይ</a>
                                 <?php endif; ?>
                                 <?php if (!empty($course['tutorial_topic'])): ?>
                                     <br><span class="muted"><strong>Topic:</strong> <?php echo safe($course['tutorial_topic']); ?></span>

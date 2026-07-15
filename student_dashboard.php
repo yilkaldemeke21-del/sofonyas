@@ -1075,6 +1075,7 @@ if (empty($notifications)) {
                             if ($courseLessonOutline === '') {
                                 $courseLessonOutline = $courseDescription;
                             }
+                            $coursePdfUrl = publicMediaUrl(trim((string)($row['pdf_file'] ?? '')));
                             $progressValue = (!empty($row['payment_status']) && $row['payment_status'] === 'paid') ? 65 : 35;
                             $courseIdParam = (int)($row['course_id'] ?? 0);
                             $courseKey = 'course_' . md5($courseName . $courseIdParam);
@@ -1105,6 +1106,9 @@ if (empty($notifications)) {
                                 <p class="course-preview-text"><?php echo safe(getCoursePreviewText($courseSummary !== '' ? $courseSummary : $courseDescription)); ?></p>
                                 <div class="course-preview-actions">
                                     <a class="button" href="course_content.php?course_id=<?php echo $courseIdParam; ?>">Go To Course</a>
+                                    <?php if ($coursePdfUrl !== ''): ?>
+                                        <a class="button secondary" href="<?php echo safe($coursePdfUrl); ?>" target="_blank" rel="noopener">Open PDF</a>
+                                    <?php endif; ?>
                                     <a class="button secondary" href="course_details.php?id=<?php echo $courseIdParam; ?>">View Details</a>
                                 </div>
                             </div>

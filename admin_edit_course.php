@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $tutorial_audio = safe($_POST['tutorial_audio'] ?? '');
     $tutorial_video = safe($_POST['tutorial_video'] ?? '');
     $pdf_file = $course['pdf_file'];
-    $uploadDir = __DIR__ . '/uploads/course_pdfs';
+    $uploadDir = __DIR__ . '/uploads/course_media/pdfs';
 
     if (!is_dir($uploadDir)) {
         mkdir($uploadDir, 0755, true);
@@ -97,7 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ($course['pdf_file'] && file_exists(__DIR__ . '/' . $course['pdf_file'])) {
                         @unlink(__DIR__ . '/' . $course['pdf_file']);
                     }
-                    $pdf_file = 'uploads/course_pdfs/' . $filename;
+                    $pdf_file = 'uploads/course_media/pdfs/' . $filename;
                 }
             }
         }
@@ -272,7 +272,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php if (!empty($course['pdf_file'])): ?>
                 <div class="form-group">
                     <label>አሁን ያለው PDF</label>
-                    <p><a href="<?php echo safe($course['pdf_file']); ?>" target="_blank">PDF እይ</a></p>
+                    <p><a href="<?php echo safe(publicMediaUrl($course['pdf_file'])); ?>" target="_blank" rel="noopener">PDF እይ</a></p>
                 </div>
             <?php endif; ?>
             

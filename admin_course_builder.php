@@ -900,7 +900,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div class="field-block">
                         <label for="pdf_file">PDF URL (optional)</label>
-                        <input id="pdf_file" name="pdf_file" placeholder="uploads/course_pdfs/example.pdf">
+                        <input id="pdf_file" name="pdf_file" placeholder="uploads/course_media/pdfs/example.pdf">
                     </div>
                 </div>
             </div>

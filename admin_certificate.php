@@ -13,46 +13,78 @@ function generate_certificate_pdf_file($certificate)
 
     $name = htmlspecialchars((string)($certificate['student_name'] ?? 'Student'), ENT_QUOTES, 'UTF-8');
     $exam = htmlspecialchars((string)($certificate['exam_type'] ?? 'Certificate'), ENT_QUOTES, 'UTF-8');
+    $title = htmlspecialchars((string)($certificate['certificate_title'] ?? 'የማጠናከር ሰርቲፊኬት'), ENT_QUOTES, 'UTF-8');
+    $seal_top = htmlspecialchars((string)($certificate['seal_text_top'] ?? 'ቤተ ገብርኤል'), ENT_QUOTES, 'UTF-8');
+    $seal_bottom = htmlspecialchars((string)($certificate['seal_text_bottom'] ?? 'ዲ/ን ሶፎንያስ ደመቀ'), ENT_QUOTES, 'UTF-8');
+    $signer = htmlspecialchars((string)($certificate['signer_name'] ?? 'Authorized Signatory'), ENT_QUOTES, 'UTF-8');
     $score = (int)($certificate['score'] ?? 0);
     $total = (int)($certificate['total_questions'] ?? 0);
     $issued = date('Y-m-d', strtotime((string)($certificate['issued_at'] ?? 'now')));
     $verify = 'VC-' . str_pad((string)($certificate['id'] ?? 0), 6, '0', STR_PAD_LEFT);
+    $instructor_photo = htmlspecialchars((string)(publicMediaUrl($certificate['instructor_photo'] ?? 'sofi photo.jpg')), ENT_QUOTES, 'UTF-8');
+    $student_photo = htmlspecialchars((string)(publicMediaUrl($certificate['student_photo'] ?? 'yesofi 1 photo.jpg')), ENT_QUOTES, 'UTF-8');
+    $watermark_lines = htmlspecialchars("ዲ/ን ሶፎንያስ ደመቀ\nቤተ ገብርኤል ዌብሳይት", ENT_QUOTES, 'UTF-8');
+    $watermark_lines = str_replace("\n", '<br>', $watermark_lines);
+    $signature_markup = '';
+    if (!empty($certificate['signature_data'])) {
+        $signature_markup = '<div class="sig-img"><img src="' . htmlspecialchars((string)$certificate['signature_data'], ENT_QUOTES, 'UTF-8') . '" alt="Signature" /></div>';
+    } else {
+        $signature_markup = '<div class="sig-placeholder">Digital Signature</div>';
+    }
 
     $html = <<<HTML
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Certificate</title>
+  <title>Church Certificate</title>
   <style>
-    body { margin: 0; font-family: Arial, Helvetica, sans-serif; background: #fff; color: #111827; }
-    .page { width: 900px; min-height: 1200px; margin: 0 auto; padding: 48px 56px; box-sizing: border-box; border: 8px solid #8b5cf6; border-radius: 24px; background: linear-gradient(180deg, #ffffff 0%, #f5f3ff 100%); }
-    .topbar { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 14px; }
-    .logo { width: 54px; height: 54px; border-radius: 14px; background: linear-gradient(135deg, #7c3aed, #a78bfa); color: #fff; display: grid; place-items: center; font-size: 22px; font-weight: bold; box-shadow: 0 10px 18px rgba(124,58,237,0.25); }
-    .brand { font-size: 16px; letter-spacing: 3px; color: #6d28d9; text-transform: uppercase; font-weight: bold; }
-    .badge { text-align: center; font-size: 13px; letter-spacing: 4px; text-transform: uppercase; color: #7c3aed; margin-bottom: 10px; }
-    h1 { text-align: center; font-size: 42px; margin: 8px 0 8px; color: #111827; }
-    .sub { text-align: center; font-size: 18px; color: #4b5563; margin-bottom: 8px; }
-    h2 { text-align: center; font-size: 32px; margin: 14px 0 10px; color: #111827; }
-    p { text-align: center; font-size: 18px; line-height: 1.6; margin: 8px 0; }
-    .name { font-size: 38px; font-weight: bold; color: #111827; margin: 18px 0; }
-    .highlight { display: inline-block; padding: 6px 10px; border-radius: 999px; background: #ede9fe; color: #5b21b6; font-size: 14px; font-weight: bold; }
-    .meta { font-size: 16px; color: #374151; }
-    .line { height: 2px; width: 180px; background: linear-gradient(90deg, #c4b5fd, #7c3aed); margin: 18px auto; }
-    .footer { margin-top: 44px; font-size: 14px; color: #4b5563; text-align: center; }
-    .sign { margin-top: 52px; display: flex; justify-content: space-between; font-size: 14px; color: #374151; }
-    .sign .box { width: 220px; border-top: 1px solid #cbd5e1; padding-top: 8px; text-align: center; }
+    body { margin: 0; font-family: Georgia, "Times New Roman", serif; background: #fff; color: #3a2318; }
+    .page { width: 920px; min-height: 1180px; margin: 0 auto; padding: 36px 46px; box-sizing: border-box; border: 8px solid #d2a54f; border-radius: 28px; background: radial-gradient(circle at top, #fffaf0 0%, #fffdf8 52%, #f2ead5 100%); position: relative; }
+    .page::before { content: ""; position: absolute; inset: 10px; border: 1px solid rgba(180,139,50,0.65); border-radius: 20px; pointer-events: none; }
+    .photo-header { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; margin-bottom: 14px; }
+    .photo-column { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .photo-frame { width: 116px; height: 116px; padding: 4px; border-radius: 50%; background: linear-gradient(135deg, #f2d894, #7a1f1f); box-shadow: 0 12px 24px rgba(122, 31, 31, 0.22); }
+    .photo-frame img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; border: 3px solid #f7e6ba; background: #fffdf7; }
+    .photo-label { font-size: 11px; line-height: 1.4; text-align: center; color: #7a1f1f; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+    .cross-badge { width: 92px; height: 92px; border-radius: 50%; display: grid; place-items: center; font-size: 34px; color: #7a1f1f; background: radial-gradient(circle at center, #fff7dd 0%, #f0d38b 54%, #a02a28 100%); border: 3px solid #8f5b18; box-shadow: 0 10px 22px rgba(122, 31, 31, 0.2); }
+    .title { text-align: center; font-size: 28px; color: #7a1f1f; text-transform: uppercase; margin: 10px 0 8px; font-weight: 800; }
+    .sub { text-align: center; font-size: 16px; color: #7e5330; margin: 0 0 18px; }
+    .name { text-align: center; font-size: 36px; margin: 20px 0 10px; color: #3d2418; font-weight: 800; }
+    .body-copy { text-align: center; font-size: 18px; line-height: 1.7; margin: 6px 0; }
+    .meta { text-align: center; font-size: 15px; color: #6d4b2d; margin-top: 10px; }
+    .sign-row { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 42px; position: relative; z-index: 1; }
+    .sign-box { width: 220px; text-align: center; font-size: 13px; color: #7a1f1f; border-top: 1px solid #b88b41; padding-top: 8px; font-weight: 700; text-transform: uppercase; }
+    .sig-img, .sig-placeholder { height: 86px; width: 180px; display: grid; place-items: center; }
+    .sig-img img { max-width: 160px; max-height: 70px; object-fit: contain; }
+    .sig-placeholder { border: 1px dashed #c99e42; border-radius: 12px; color: #7a1f1f; font-size: 12px; font-weight: 700; }
+    .watermark { position: absolute; inset: 0; display: grid; place-items: center; font-size: 58px; font-weight: 900; line-height: 1.3; letter-spacing: 3px; color: rgba(122,31,31,0.06); text-align: center; transform: rotate(-18deg); pointer-events: none; }
   </style>
 </head>
 <body>
   <div class="page">
-    <div class="badge">Official Certificate</div>
-    <h1>Certificate of Completion</h1>
-    <p>This certificate is proudly awarded to</p>
-    <h2 class="name">$name</h2>
-    <p>for successfully completing the <strong>$exam</strong> assessment with <strong>$score / $total</strong> marks.</p>
-    <p class="meta">Issued on: $issued &nbsp; | &nbsp; Verification Number: $verify</p>
-    <p class="footer">Generated by Sofyias Learning Platform</p>
+    <div class="watermark">$watermark_lines</div>
+    <div class="photo-header">
+      <div class="photo-column">
+        <div class="photo-frame"><img src="$instructor_photo" alt="Instructor photo" /></div>
+        <div class="photo-label">ዲ/ን ሶፎንያስ ደመቀ</div>
+      </div>
+      <div class="cross-badge">✚</div>
+      <div class="photo-column">
+        <div class="photo-frame"><img src="$student_photo" alt="Student photo" /></div>
+        <div class="photo-label">$name</div>
+      </div>
+    </div>
+    <div class="title">$title</div>
+    <div class="sub">This certificate is officially granted in recognition of the learner’s successful completion.</div>
+    <div class="name">$name</div>
+    <p class="body-copy">has successfully completed the <strong>$exam</strong> assessment with a score of <strong>$score / $total</strong>.</p>
+    <div class="meta">Issued On: $issued &nbsp; | &nbsp; Verification: $verify</div>
+    <div class="sign-row">
+      <div class="sign-box">$signer</div>
+      $signature_markup
+      <div class="sign-box">Church Registrar</div>
+    </div>
   </div>
 </body>
 </html>
