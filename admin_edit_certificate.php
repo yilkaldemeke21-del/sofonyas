@@ -15,6 +15,7 @@ if (!function_exists('ensureCertificatePhotoColumns')) {
         foreach ([
             'instructor_photo' => 'ALTER TABLE certificates ADD COLUMN instructor_photo VARCHAR(255) NULL AFTER seal_image',
             'student_photo' => 'ALTER TABLE certificates ADD COLUMN student_photo VARCHAR(255) NULL AFTER instructor_photo',
+            'signer_position' => 'ALTER TABLE certificates ADD COLUMN signer_position VARCHAR(255) NULL AFTER signer_name',
         ] as $columnName => $sql) {
             if (!isset($existingColumns[$columnName])) {
                 try {
@@ -172,7 +173,8 @@ $issued_at = $certificate['issued_at'] ?? date('Y-m-d H:i:s');
 $certificate_title = trim((string)($certificate['certificate_title'] ?? 'የማጠናከር ሰርቲፊኬት'));
 $seal_text_top = trim((string)($certificate['seal_text_top'] ?? 'ቤተ ገብርኤል'));
 $seal_text_bottom = trim((string)($certificate['seal_text_bottom'] ?? 'ዲ/ን ሶፎንያስ ደመቀ'));
-$signer_name = trim((string)($certificate['signer_name'] ?? 'Authorized Signatory'));
+$signer_name = trim((string)($certificate['signer_name'] ?? 'ዲ/ን ሶፎንያስ ደመቀ'));
+$signer_position = trim((string)($certificate['signer_position'] ?? 'የሰርቲፊኬት ሰጪ ተቋም'));
 $signature_data = trim((string)($certificate['signature_data'] ?? ''));
 $instructor_photo = safeCertificatePhotoPath((string)($certificate['instructor_photo'] ?? ''));
 $student_photo = safeCertificatePhotoPath((string)($certificate['student_photo'] ?? ''));
@@ -180,15 +182,19 @@ $seal_image_url = '';
 if (!empty($certificate['seal_image'])) {
     $seal_image_url = htmlspecialchars(publicMediaUrl($certificate['seal_image']), ENT_QUOTES, 'UTF-8');
 }
-$instructor_photo_url = $instructor_photo !== '' ? htmlspecialchars(publicMediaUrl($instructor_photo), ENT_QUOTES, 'UTF-8') : htmlspecialchars(publicMediaUrl('sofi photo.jpg'), ENT_QUOTES, 'UTF-8');
+$photoVersion = time();
+$instructor_photo_url = $instructor_photo !== '' ? htmlspecialchars(publicMediaUrl($instructor_photo), ENT_QUOTES, 'UTF-8') : htmlspecialchars(publicMediaUrl('sofi fikr.jpg'), ENT_QUOTES, 'UTF-8');
 $student_photo_url = $student_photo !== '' ? htmlspecialchars(publicMediaUrl($student_photo), ENT_QUOTES, 'UTF-8') : htmlspecialchars(publicMediaUrl('yesofi 1 photo.jpg'), ENT_QUOTES, 'UTF-8');
+$instructor_photo_url .= '?v=' . $photoVersion;
+$student_photo_url .= '?v=' . $photoVersion;
 $show_watermark = !empty($certificate['show_watermark']) || !empty($certificate['watermark_mode']);
 
 foreach ([
     'ALTER TABLE certificates ADD COLUMN IF NOT EXISTS certificate_title VARCHAR(255) NOT NULL DEFAULT "የማጠናከር ሰርቲፊኬት"',
     'ALTER TABLE certificates ADD COLUMN IF NOT EXISTS seal_text_top VARCHAR(255) NOT NULL DEFAULT "ቤተ ገብርኤል"',
     'ALTER TABLE certificates ADD COLUMN IF NOT EXISTS seal_text_bottom VARCHAR(255) NOT NULL DEFAULT "ዲ/ን ሶፎንያስ ደመቀ"',
-    'ALTER TABLE certificates ADD COLUMN IF NOT EXISTS signer_name VARCHAR(255) NOT NULL DEFAULT "Authorized Signatory"',
+    'ALTER TABLE certificates ADD COLUMN IF NOT EXISTS signer_name VARCHAR(255) NOT NULL DEFAULT "ዲ/ን ሶፎንያስ ደመቀ"',
+    'ALTER TABLE certificates ADD COLUMN IF NOT EXISTS signer_position VARCHAR(255) NOT NULL DEFAULT "የሰርቲፊኬት ሰጪ ተቋም"',
     'ALTER TABLE certificates ADD COLUMN IF NOT EXISTS signature_data LONGTEXT NULL',
     'ALTER TABLE certificates ADD COLUMN IF NOT EXISTS seal_image VARCHAR(255) NULL',
     'ALTER TABLE certificates ADD COLUMN IF NOT EXISTS instructor_photo VARCHAR(255) NULL',
@@ -204,8 +210,8 @@ foreach ([
 
 $seal_top = htmlspecialchars($seal_text_top, ENT_QUOTES, 'UTF-8');
 $seal_bottom = htmlspecialchars($seal_text_bottom, ENT_QUOTES, 'UTF-8');
-$instructor_photo_url = htmlspecialchars(publicMediaUrl('sofi photo.jpg'), ENT_QUOTES, 'UTF-8');
-$student_photo_url = htmlspecialchars(publicMediaUrl('yesofi 1 photo.jpg'), ENT_QUOTES, 'UTF-8');
+$instructor_photo_url = htmlspecialchars(publicMediaUrl('sofi fikr.jpg'), ENT_QUOTES, 'UTF-8') . '?v=' . time();
+$student_photo_url = htmlspecialchars(publicMediaUrl('emaye photo.jpg'), ENT_QUOTES, 'UTF-8') . '?v=' . time();
 $watermark_text = htmlspecialchars("ዲ/ን ሶፎንያስ ደመቀ\nቤተ ገብርኤል ዌብሳይት", ENT_QUOTES, 'UTF-8');
 $watermark_text = str_replace("\n", '<br>', $watermark_text);
 $seal_html = '
@@ -319,14 +325,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'ስም እና ፈተና አይነት ያስገቡ።';
     } else {
         try {
-            $stmt = $pdo->prepare('UPDATE certificates SET student_name = :student_name, exam_type = :exam_type, certificate_title = :certificate_title, seal_text_top = :seal_text_top, seal_text_bottom = :seal_text_bottom, signer_name = :signer_name, signature_data = :signature_data, score = :score, total_questions = :total_questions, issued_at = :issued_at, instructor_photo = :instructor_photo, student_photo = :student_photo WHERE id = :id');
+            $stmt = $pdo->prepare('UPDATE certificates SET student_name = :student_name, exam_type = :exam_type, certificate_title = :certificate_title, seal_text_top = :seal_text_top, seal_text_bottom = :seal_text_bottom, signer_name = :signer_name, signer_position = :signer_position, signature_data = :signature_data, score = :score, total_questions = :total_questions, issued_at = :issued_at, instructor_photo = :instructor_photo, student_photo = :student_photo WHERE id = :id');
             $stmt->execute([
                 ':student_name' => $student_name,
                 ':exam_type' => $exam_type,
-                ':certificate_title' => $certificate_title !== '' ? $certificate_title : 'የማጠናከር ሰርቲፊኬት',
+                ':certificate_title' => $certificate_title !== '' ? $certificate_title : 'የቤተ ገብርኤል የምስክር ወረቀት',
                 ':seal_text_top' => $seal_text_top !== '' ? $seal_text_top : 'ቤተ ገብርኤል',
                 ':seal_text_bottom' => $seal_text_bottom !== '' ? $seal_text_bottom : 'ዲ/ን ሶፎንያስ ደመቀ',
-                ':signer_name' => $signer_name !== '' ? $signer_name : 'Authorized Signatory',
+                ':signer_name' => $signer_name !== '' ? $signer_name : 'ዲ/ን ሶፎንያስ ደመቀ',
+                ':signer_position' => $signer_position !== '' ? $signer_position : 'የሰርቲፊኬት ሰጪ ተቋም',
                 ':signature_data' => $signature_data,
                 ':score' => $score,
                 ':total_questions' => $total_questions,
@@ -338,10 +345,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $success = 'ሰርቲፊኬት በትክክል ተስተካክሏል።';
             $certificate['student_name'] = $student_name;
             $certificate['exam_type'] = $exam_type;
-            $certificate['certificate_title'] = $certificate_title !== '' ? $certificate_title : 'የማጠናከር ሰርቲፊኬት';
+            $certificate['certificate_title'] = $certificate_title !== '' ? $certificate_title : 'የቤተ ገብርኤል የምስክር ወረቀት';
             $certificate['seal_text_top'] = $seal_text_top !== '' ? $seal_text_top : 'ቤተ ገብርኤል';
             $certificate['seal_text_bottom'] = $seal_text_bottom !== '' ? $seal_text_bottom : 'ዲ/ን ሶፎንያስ ደመቀ';
-            $certificate['signer_name'] = $signer_name !== '' ? $signer_name : 'Authorized Signatory';
+            $certificate['signer_name'] = $signer_name !== '' ? $signer_name : 'ዲ/ን ሶፎንያስ ደመቀ';
+            $certificate['signer_position'] = $signer_position !== '' ? $signer_position : 'የሰርቲፊኬት ሰጪ ተቋም';
             $certificate['signature_data'] = $signature_data;
             $certificate['score'] = $score;
             $certificate['total_questions'] = $total_questions;
@@ -375,13 +383,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .field { margin-bottom: 12px; }
         .preview { border: 1px solid #e8d8b1; border-radius: 18px; padding: 18px; background: linear-gradient(135deg, #fffdf7 0%, #f7f0df 100%); margin-bottom: 16px; box-shadow: 0 16px 40px rgba(122,31,31,0.12); border: 2px solid #d8ba76; }
+        .certificate-container { position: relative; }
         .preview-frame { position: relative; overflow: hidden; border: 8px solid #d2a54f; border-radius: 28px; padding: 18px 20px; background: radial-gradient(circle at top, #fffaf0 0%, #fffdf8 52%, #f2ead5 100%); }
         .preview-frame::before { content: ""; position: absolute; inset: 10px; border: 1px solid rgba(180, 139, 50, 0.65); border-radius: 20px; pointer-events: none; }
-        .photo-header { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 14px; margin-bottom: 12px; }
+        .photo-header { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 14px; margin: 0 0 16px; }
         .photo-column { display: flex; flex-direction: column; align-items: center; gap: 8px; }
         .photo-frame { width: 116px; height: 116px; padding: 4px; border-radius: 50%; background: linear-gradient(135deg, #f2d894, #7a1f1f); box-shadow: 0 12px 24px rgba(122, 31, 31, 0.22); }
         .photo-frame img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; border: 3px solid #f7e6ba; background: #fffdf7; }
         .photo-label { font-size: 11px; line-height: 1.4; text-align: center; color: #7a1f1f; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+        .certificate-verse { position: relative; z-index: 1; width: min(100%, 520px); margin: 0 auto 14px; text-align: center; padding: 2px 0 6px; }
+        .certificate-verse .verse-text {
+            display: block;
+            font-size: 18px;
+            font-weight: 900;
+            line-height: 1.45;
+            letter-spacing: 0.06em;
+            text-transform: none;
+            color: #10285e;
+            background: linear-gradient(90deg, #10285e 0%, #c59a2f 50%, #10285e 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 1px 1px rgba(243, 7, 86, 0.5), 0 0 10px rgba(16, 40, 94, 0.18), 0 0 12px rgba(197, 154, 47, 0.18);
+        }
+        .certificate-verse .verse-reference {
+            margin-top: 4px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            color: #8b6323;
+            text-shadow: 0 1px 1px rgba(255,255,255,0.48);
+        }
+        .certificate-verse .verse-divider {
+            margin-top: 10px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #c5962e, transparent);
+            box-shadow: 0 0 10px rgba(194, 150, 45, 0.5);
+        }
         .cross-badge { width: 92px; height: 92px; border-radius: 50%; display: grid; place-items: center; font-size: 34px; color: #7a1f1f; background: radial-gradient(circle at center, #fff7dd 0%, #f0d38b 54%, #a02a28 100%); border: 3px solid #8f5b18; box-shadow: 0 10px 22px rgba(122, 31, 31, 0.2); }
         .preview h3 { margin: 10px 0 8px; font-size: 24px; letter-spacing: 0.04em; color: #7a1f1f; text-transform: uppercase; }
         .preview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 16px; }
@@ -390,14 +427,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .mini strong { color: #7a1f1f; }
         .church-title { margin: 10px 0 8px; font-size: 22px; font-weight: 800; letter-spacing: 0.04em; text-align: center; color: #7a1f1f; text-transform: uppercase; }
         .church-title span { color: #a02a28; }
+        .church-title-main { margin: 18px 0 4px; font-size: 42px; line-height: 1.1; font-weight: 900; letter-spacing: 0.06em; text-align: center; color: #7a1f1f; text-transform: uppercase; background: linear-gradient(135deg, #f6df9f 0%, #c49c32 42%, #7a1f1f 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-shadow: 0 0 10px rgba(194, 150, 45, 0.24); }
+        .authority-header { position: relative; z-index: 1; margin: 12px 0 12px; text-align: center; }
+        .authority-label { font-size: 12px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #8b6323; margin-bottom: 6px; }
+        .authority-name { font-size: 28px; line-height: 1.15; font-weight: 900; color: #7a1f1f; text-transform: uppercase; letter-spacing: 0.05em; text-shadow: 0 1px 0 #f6ddb0; }
+        .authority-position { margin-top: 4px; font-size: 16px; font-weight: 700; color: #8d5f22; text-transform: uppercase; letter-spacing: 0.08em; }
         .meta-row { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
         .meta-card { border: 1px solid #dcbf83; border-radius: 12px; padding: 10px 12px; background: rgba(255,250,240,0.84); }
         .meta-label { display: block; font-size: 11px; color: #885e2f; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700; }
         .meta-value { display: block; margin-top: 4px; font-size: 13px; font-weight: 800; color: #4b2a1d; word-break: break-word; }
         .signature-row { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 180px 1fr; align-items: center; gap: 16px; margin-top: 18px; }
+        .signature-column { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .signature-authority { font-size: 18px; font-weight: 900; color: #7a1f1f; text-align: center; text-transform: uppercase; letter-spacing: 0.04em; }
         .signature-line { border-top: 1px solid #b88b41; padding-top: 8px; text-align: center; font-size: 12px; color: #7a1f1f; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
-        .signature-image { min-height: 70px; display: flex; align-items: center; justify-content: center; }
-        .signature-image img { max-width: 150px; max-height: 68px; object-fit: contain; }
+        .signature-image { min-height: 90px; display: flex; align-items: center; justify-content: center; padding: 8px; border-radius: 12px; background: rgba(255, 252, 241, 0.92); box-shadow: 0 0 16px rgba(122, 31, 31, 0.16); }
+        .signature-image img { width: 230px; max-width: 230px; height: 110px; object-fit: contain; filter: drop-shadow(0 2px 0 rgba(19,19,19,0.48)) drop-shadow(0 8px 12px rgba(0,0,0,0.22)); }
         .sign-placeholder { border: 1px dashed #c99e42; border-radius: 12px; padding: 10px; color: #7a1f1f; font-weight: 700; font-size: 12px; background: rgba(247,236,207,0.8); }
         .seal { display: flex; justify-content: center; align-items: center; }
         .seal-svg { width: 170px; height: 170px; overflow: visible; filter: drop-shadow(0 8px 14px rgba(122,31,31,0.18)); }
@@ -419,7 +463,114 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
         .print-btn { display: inline-block; padding: 10px 14px; border-radius: 6px; background: #7a1f1f; color: white; text-decoration: none; border: 0; cursor: pointer; }
         .print-btn:hover { background: #5e1717; }
-        @media print { .topbar, .no-print, .msg, .actions { display: none !important; } body { background: #fff; } .card { box-shadow: none; border: 1px solid #ddd; } .preview-frame { border-color: #b88b41; } .watermark { opacity: 0.65; } }
+        @page {
+            size: A4 landscape;
+            margin: 0;
+        }
+        @media print {
+            html, body {
+                width: 297mm;
+                height: 210mm;
+                margin: 0;
+                padding: 0;
+                overflow: hidden;
+                background: #fff;
+            }
+            .topbar, .no-print, .msg, .actions { display: none !important; }
+            .wrap {
+                width: 297mm;
+                height: 210mm;
+                max-width: none;
+                margin: 0;
+                padding: 0;
+            }
+            .card {
+                width: 297mm;
+                height: 210mm;
+                box-shadow: none;
+                border: none;
+                background: transparent;
+                padding: 0;
+                margin: 0;
+                border-radius: 0;
+            }
+            .preview {
+                border: none;
+                box-shadow: none;
+                background: transparent;
+                margin: 0;
+                padding: 0;
+                border-radius: 0;
+            }
+            .certificate-container {
+                width: 297mm;
+                height: 210mm;
+                margin: 0;
+                padding: 0;
+                box-shadow: none;
+                background:
+                    linear-gradient(#fffdf8, #fffdf8) padding-box,
+                    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 700'%3E%3Crect x='8' y='8' width='984' height='684' fill='none' stroke='%23c5962e' stroke-width='4'/%3E%3Crect x='24' y='24' width='952' height='652' fill='none' stroke='%23f0dc8f' stroke-width='1.5'/%3E%3Ctext x='20' y='40' font-family='Georgia, serif' font-size='24' fill='%23c5962e'%3E✠%3C/text%3E%3Ctext x='960' y='40' font-family='Georgia, serif' font-size='24' fill='%23c5962e' text-anchor='end'%3E✠%3C/text%3E%3Ctext x='20' y='680' font-family='Georgia, serif' font-size='24' fill='%23c5962e'%3E✠%3C/text%3E%3Ctext x='960' y='680' font-family='Georgia, serif' font-size='24' fill='%23c5962e' text-anchor='end'%3E✠%3C/text%3E%3C/svg%3E") center/100% 100% no-repeat;
+            }
+            .certificate-container::before {
+                content: "";
+                position: absolute;
+                inset: 7mm;
+                border: 1px solid rgba(197, 150, 47, 0.75);
+                box-shadow: 0 0 12px rgba(197, 150, 47, 0.18);
+                pointer-events: none;
+            }
+            .preview-frame {
+                width: 100%;
+                height: 100%;
+                border: none !important;
+                border-radius: 0 !important;
+                padding: 10mm 12mm !important;
+                background: transparent !important;
+                box-shadow: none !important;
+                overflow: hidden;
+            }
+            .preview-frame::before {
+                inset: 6mm;
+                border: 1px solid rgba(197, 150, 47, 0.55);
+                border-radius: 0;
+            }
+            .certificate-verse {
+                width: 100%;
+                max-width: 520px;
+                margin: 0 auto 10px;
+                text-align: center;
+                position: relative;
+                left: 0;
+                transform: none;
+            }
+            .certificate-verse .verse-text {
+                display: block !important;
+                width: 100%;
+                text-align: center !important;
+                font-size: 18px !important;
+                font-weight: 900 !important;
+                line-height: 1.45 !important;
+                color: #10285e !important;
+                background: linear-gradient(90deg, #10285e 0%, #c59a2f 50%, #10285e 100%);
+                -webkit-background-clip: text !important;
+                -webkit-text-fill-color: transparent !important;
+                text-shadow: 0 1px 1px rgba(255,255,255,0.55), 0 0 10px rgba(16, 40, 94, 0.18) !important;
+            }
+            .certificate-verse .verse-reference {
+                display: block !important;
+                margin-top: 4px;
+                font-size: 12px !important;
+                font-weight: 800 !important;
+                letter-spacing: 0.12em !important;
+                color: #8b6323 !important;
+                text-shadow: 0 1px 1px rgba(255,255,255,0.48);
+            }
+            .certificate-verse .verse-divider {
+                margin-top: 8px;
+            }
+            .watermark { opacity: 0.65; }
+        }
         @media (max-width: 768px) { .preview-grid { grid-template-columns: 1fr; } .meta-row { grid-template-columns: 1fr; } .photo-header { grid-template-columns: 1fr; } .cross-badge { margin: 0 auto; } .signature-row { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -434,8 +585,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php if ($success): ?><div class="msg ok"><?php echo safe($success); ?></div><?php endif; ?>
 
         <div class="preview">
-            <div class="preview-frame">
+            <div class="preview-frame certificate-container">
                 <?php echo $watermark_html; ?>
+                <div class="certificate-verse">
+                    <div class="verse-text">"በጉብዝናህ ወራት ፈጣሪህን አስብ"መ.መክብብ 12፥1</div>
+                    <div class="verse-divider"></div>
+                </div>
                 <div class="photo-header">
                     <div class="photo-column">
                         <div class="photo-frame">
@@ -451,8 +606,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="photo-label"><?php echo safe($student_name ?: 'Student'); ?></div>
                     </div>
                 </div>
-                <div class="church-title"><?php echo safe($certificate_title ?: 'የማጠናከር ሰርቲፊኬት'); ?></div>
-                <p class="mini" style="text-align:center;">ይህ ሰርቲፊኬት በቤተ ገብርኤል እና በእምነተ ማህደረ ትምህርት በማወቅ የተሰጠ በአንድነት የሚቀባ መረጃ ነው።</p>
+                <div class="church-title"><?php echo safe($certificate_title ?: 'የምስክር ወረቀት'); ?></div>
+                <p class="mini" style="text-align:center;">ይህ ሰርቲፊኬት በቤተ ገብርኤል እና በእምነት ማኅደረ ትምህርት የተዘጋጀ ሲሆን የምስክር ወረቀቱ የሚሰጠው በቤት ገብርኤል የተለያዩ የቤተ ክርስቲያን ትምህርት አጠናቆ የማጠቃለያ ጥያቄ ለወሰደ ነውና እርስዎም ትምህርቱን በሚገባ አጠናቀዉ የማጠካለያ ፈተና ስለወሰዱ ታላቅ የምስራችን እያበሰርንዎ ይህንን የምስክር ወረቀት ከታላቅ አክብሮት ጋር ሰጥተነዎታል። </p>
                 <div class="preview-grid">
                     <div>
                         <p class="mini"><strong>የተማሪ ስም</strong></p>
@@ -471,19 +626,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <p class="preview-value"><?php echo safe(date('Y-m-d H:i', strtotime($issued_at))); ?></p>
                     </div>
                 </div>
+                
                 <div class="signature-row">
-                    <div class="signature-line"><?php echo safe($signer_name ?: 'Authorized Signatory'); ?></div>
+                    <div class="signature-column">
+                        <div class="signature-authority"><?php echo safe($signer_name ?: ''); ?></div>
+                        <div class="signature-line">ተቋም</div>
+                    </div>
                     <?php echo $seal_html; ?>
-                    <div class="signature-line">Church Registrar</div>
+                    <div class="signature-line"><?php echo safe($signer_position ?: 'ወልደ ጊዮርጊስ'); ?></div>
                 </div>
                 <div class="signature-row" style="margin-top: 10px;">
-                    <div class="signature-line">Digital Signature</div>
+                    <div class="signature-column">
+                        <div class="signature-authority"><?php echo safe($signer_name ?: 'ዲ/ን ሶፎንያስ ደመቀ'); ?></div>
+                        <div class="signature-line">ልዩ ፊርማ</div>
+                    </div>
                     <?php if ($signature_data !== ''): ?>
                         <div class="signature-image"><img src="<?php echo safe($signature_data); ?>" alt="Saved signature" /></div>
                     <?php else: ?>
                         <div class="signature-image sign-placeholder">Add Signature</div>
                     <?php endif; ?>
-                    <div class="signature-line">Certificate Authority</div>
+                    <div class="signature-line"><?php echo safe($signer_position ?: 'የሰርቲፊኬት ሰጪ ተቋም'); ?></div>
                 </div>
             </div>
             <div class="actions no-print">
@@ -543,8 +705,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             </div>
             <div class="field">
-                <label for="signer_name">Signer Name</label>
+                <label for="signer_name">Certificate Authority Name</label>
                 <input type="text" id="signer_name" name="signer_name" value="<?php echo safe($signer_name); ?>">
+            </div>
+            <div class="field">
+                <label for="signer_position">Certificate Position</label>
+                <input type="text" id="signer_position" name="signer_position" value="<?php echo safe($signer_position); ?>">
             </div>
             <div class="row">
                 <div class="field">
