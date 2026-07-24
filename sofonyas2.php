@@ -670,7 +670,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
             <span class="header-particle particle-2" aria-hidden="true"></span>
             <span class="header-particle particle-3" aria-hidden="true"></span>
             <span class="header-particle particle-4" aria-hidden="true"></span>
-            <img src="https://tse3.mm.bing.net/th/id/OIP.Nj3szR2BWazatQZf6LE5CwAAAA?r=0&pid=ImgDet&w=178&h=178&c=7&dpr=1.5&o=7&rm=3" alt="Holy Spirit dove illustration" class="holy-dove" aria-hidden="true">
+            <img src="ergib sofi.webp" alt="Holy Spirit dove illustration" class="holy-dove" aria-hidden="true">
         </div>
     </section>
     <nav>
