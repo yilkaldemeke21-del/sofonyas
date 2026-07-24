@@ -157,10 +157,15 @@ if ($courseId > 0) {
     .btn { display: inline-block; background: #2563eb; color: #fff; padding: 10px 14px; border-radius: 8px; text-decoration: none; margin-right: 8px; }
     .muted { color: #475569; }
     .video-card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px; background: #fff; margin-top: 12px; }
+    .video-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(220px, 0.75fr); gap: 12px; align-items: start; }
     .video-frame { width: 100%; border-radius: 10px; background: #0f172a; }
     .video-meta { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
-    .video-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .video-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
     .video-actions .btn { margin-right: 0; padding: 8px 12px; font-size: 13px; }
+    .video-actions select, .notes-panel textarea { border: 1px solid #cbd5e1; border-radius: 10px; padding: 8px 10px; font-size: 13px; }
+    .notes-panel { display: flex; flex-direction: column; gap: 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px; min-height: 220px; }
+    .notes-panel label { font-size: 12px; font-weight: 700; color: #475569; }
+    .notes-panel textarea { min-height: 180px; resize: vertical; }
     .pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; background: #eff6ff; color: #1d4ed8; font-size: 12px; font-weight: 700; }
     .progress-track { width: 100%; height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin-top: 8px; }
     .progress-fill { height: 100%; background: linear-gradient(90deg,#2563eb,#38bdf8); border-radius: 999px; width: 0%; }
@@ -308,31 +313,49 @@ if ($courseId > 0) {
             <div style="border:1px solid #e5e7eb; border-radius:10px; padding:14px; background:#f8fafc;">
               <h3 style="margin-top:0;"><?php echo htmlspecialchars($course['course_name']); ?></h3>
               <?php if (!empty($course['tutorial_video'])): ?>
-                <div class="video-card" data-course-id="<?php echo (int)$course['id']; ?>" data-course-title="<?php echo htmlspecialchars($course['course_name']); ?>" data-video-url="<?php echo htmlspecialchars($course['tutorial_video']); ?>">
-                  <?php if (preg_match('/youtube\.com|youtu\.be/i', (string)$course['tutorial_video'])): ?>
-                    <iframe class="video-frame" height="220" src="<?php echo htmlspecialchars($course['tutorial_video']); ?>" title="Lesson video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-                  <?php else: ?>
-                    <video class="video-frame" controls preload="metadata" playsinline>
-                      <source src="<?php echo htmlspecialchars($course['tutorial_video']); ?>">
-                      Your browser does not support the video tag.
-                    </video>
-                  <?php endif; ?>
-                  <div class="video-meta">
-                    <div class="video-actions">
-                      <button class="btn" type="button" data-play-btn>▶ Play</button>
-                      <button class="btn" type="button" data-resume-btn>↻ Resume</button>
+                <div class="video-card" data-course-id="<?php echo (int)$course['id']; ?>" data-course-title="<?php echo htmlspecialchars($course['course_name']); ?>" data-video-url="<?php echo htmlspecialchars(publicMediaUrl($course['tutorial_video'])); ?>" data-next-url="<?php echo $firstLessonId ? 'tutorial.php?course_id=' . (int)$course['id'] . '&lesson_id=' . (int)$firstLessonId : 'course_details.php?id=' . (int)$course['id']; ?>">
+                  <div class="video-layout">
+                    <div>
+                      <?php if (preg_match('/youtube\.com|youtu\.be/i', (string)$course['tutorial_video'])): ?>
+                        <iframe class="video-frame" height="220" src="<?php echo htmlspecialchars($course['tutorial_video']); ?>" title="Lesson video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+                      <?php else: ?>
+                        <video class="video-frame" controls preload="metadata" playsinline>
+                          <source src="<?php echo htmlspecialchars(publicMediaUrl($course['tutorial_video'])); ?>">
+                          Your browser does not support the video tag.
+                        </video>
+                      <?php endif; ?>
+                      <div class="video-meta">
+                        <div class="video-actions">
+                          <button class="btn" type="button" data-play-btn>▶ Play</button>
+                          <button class="btn" type="button" data-resume-btn>↻ Resume</button>
+                          <button class="btn" type="button" data-pip-btn>🪟 PiP</button>
+                          <button class="btn" type="button" data-fullscreen-btn>⛶ Fullscreen</button>
+                          <select aria-label="Playback speed" data-speed-select>
+                            <option value="0.5">0.5x</option>
+                            <option value="1" selected>1x</option>
+                            <option value="1.25">1.25x</option>
+                            <option value="1.5">1.5x</option>
+                            <option value="2">2x</option>
+                          </select>
+                          <button class="btn" type="button" data-bookmark-btn>🔖 Bookmark</button>
+                        </div>
+                        <span class="pill" data-status-label>Start video</span>
+                      </div>
+                      <div class="progress-track"><div class="progress-fill" data-progress-fill></div></div>
+                      <div class="video-meta" style="margin-top:8px;">
+                        <span class="pill" data-completion-label>Completion 0%</span>
+                      </div>
+                      <div class="history-panel" data-history-panel>
+                        <h5>Watch History</h5>
+                        <div class="history-list" data-history-list></div>
+                      </div>
+                      <p class="muted" style="margin-top:8px;">Play, resume, bookmark, switch speed, or jump to the next lesson when this video ends.</p>
                     </div>
-                    <span class="pill" data-status-label>Start video</span>
+                    <div class="notes-panel">
+                      <label for="lesson-notes-<?php echo (int)$course['id']; ?>">Notes beside video</label>
+                      <textarea id="lesson-notes-<?php echo (int)$course['id']; ?>" data-notes-area placeholder="Add your quick notes while watching this lesson..."></textarea>
+                    </div>
                   </div>
-                  <div class="progress-track"><div class="progress-fill" data-progress-fill></div></div>
-                  <div class="video-meta" style="margin-top:8px;">
-                    <span class="pill" data-completion-label>Completion 0%</span>
-                  </div>
-                  <div class="history-panel" data-history-panel>
-                    <h5>Watch History</h5>
-                    <div class="history-list" data-history-list></div>
-                  </div>
-                  <p class="muted" style="margin-top:8px;">Play, resume, or revisit your last watched position for this lesson.</p>
                 </div>
               <?php endif; ?>
               <?php if (!empty($course['thumbnail'])): ?>
@@ -433,6 +456,7 @@ if ($courseId > 0) {
   (function () {
     const prefix = 'lms_video_progress_';
     const historyKey = 'lms_watch_history';
+    const videoBookmarksKey = 'lms_bookmarked_videos';
 
     function formatTime(seconds) {
       if (!Number.isFinite(seconds) || seconds <= 0) return '0:00';
@@ -484,12 +508,18 @@ if ($courseId > 0) {
       const fill = card.querySelector('[data-progress-fill]');
       const playBtn = card.querySelector('[data-play-btn]');
       const resumeBtn = card.querySelector('[data-resume-btn]');
+      const bookmarkBtn = card.querySelector('[data-bookmark-btn]');
       const percent = Math.min(100, Math.max(0, Number(saved && saved.percent ? saved.percent : 0) || 0));
       if (fill) fill.style.width = percent + '%';
       if (completion) completion.textContent = 'Completion ' + percent + '%';
       if (label) label.textContent = percent >= 95 ? 'Completed' : (saved && saved.currentTime ? 'Resume video' : 'Start video');
       if (playBtn) playBtn.disabled = false;
       if (resumeBtn) resumeBtn.style.display = saved && saved.currentTime ? 'inline-block' : 'none';
+      if (bookmarkBtn) {
+        const bookmarks = JSON.parse(localStorage.getItem(videoBookmarksKey) || '[]');
+        const isBookmarked = bookmarks.some(function (item) { return String(item.courseId) === String(card.getAttribute('data-course-id')); });
+        bookmarkBtn.textContent = isBookmarked ? '✅ Bookmarked' : '🔖 Bookmark';
+      }
     }
 
     document.querySelectorAll('.video-card').forEach(function (card) {
@@ -499,9 +529,23 @@ if ($courseId > 0) {
       const iframe = card.querySelector('iframe');
       const playBtn = card.querySelector('[data-play-btn]');
       const resumeBtn = card.querySelector('[data-resume-btn]');
+      const speedSelect = card.querySelector('[data-speed-select]');
+      const pipBtn = card.querySelector('[data-pip-btn]');
+      const fullscreenBtn = card.querySelector('[data-fullscreen-btn]');
+      const bookmarkBtn = card.querySelector('[data-bookmark-btn]');
+      const notesArea = card.querySelector('[data-notes-area]');
+      const nextUrl = card.getAttribute('data-next-url') || '';
       let saved = JSON.parse(localStorage.getItem(storageKey) || '{}');
       updateUi(card, saved);
       updateHistory(card);
+
+      if (notesArea) {
+        const noteKey = 'lms_notes_' + courseId;
+        notesArea.value = localStorage.getItem(noteKey) || '';
+        notesArea.addEventListener('input', function () {
+          localStorage.setItem(noteKey, notesArea.value);
+        });
+      }
 
       function saveProgress() {
         if (!video || !isFinite(video.duration) || !video.duration) return;
@@ -522,6 +566,12 @@ if ($courseId > 0) {
           }, { once: true });
         }
 
+        if (speedSelect) {
+          speedSelect.addEventListener('change', function () {
+            video.playbackRate = Number(speedSelect.value) || 1;
+          });
+        }
+
         video.addEventListener('timeupdate', function () {
           if (video.duration) saveProgress();
         });
@@ -533,6 +583,9 @@ if ($courseId > 0) {
           saveHistory(card, progress);
           updateUi(card, progress);
           updateHistory(card);
+          if (nextUrl) {
+            setTimeout(function () { window.location.href = nextUrl; }, 1100);
+          }
         });
       }
 
@@ -557,6 +610,38 @@ if ($courseId > 0) {
           } else if (iframe) {
             window.open(iframe.getAttribute('src') || card.getAttribute('data-video-url'), '_blank', 'noopener');
           }
+        });
+      }
+
+      if (pipBtn && video) {
+        pipBtn.addEventListener('click', function () {
+          if (document.pictureInPictureEnabled && video.requestPictureInPicture) {
+            video.requestPictureInPicture().catch(function () {});
+          }
+        });
+      }
+
+      if (fullscreenBtn && video) {
+        fullscreenBtn.addEventListener('click', function () {
+          if (video.requestFullscreen) {
+            video.requestFullscreen().catch(function () {});
+          }
+        });
+      }
+
+      if (bookmarkBtn) {
+        bookmarkBtn.addEventListener('click', function () {
+          const bookmarks = JSON.parse(localStorage.getItem(videoBookmarksKey) || '[]');
+          const courseId = card.getAttribute('data-course-id');
+          const courseTitle = card.getAttribute('data-course-title') || 'Lesson';
+          const existingIndex = bookmarks.findIndex(function (item) { return String(item.courseId) === String(courseId); });
+          if (existingIndex >= 0) {
+            bookmarks.splice(existingIndex, 1);
+          } else {
+            bookmarks.push({ courseId: courseId, title: courseTitle, videoUrl: card.getAttribute('data-video-url') || '', createdAt: Date.now() });
+          }
+          localStorage.setItem(videoBookmarksKey, JSON.stringify(bookmarks));
+          updateUi(card, JSON.parse(localStorage.getItem(storageKey) || '{}'));
         });
       }
     });

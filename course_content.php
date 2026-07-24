@@ -128,6 +128,15 @@ $progressPercent = $progressData['total'] > 0 ? min(100, (int)round(($completedL
         .button { background:#2563eb; color:white; }
         .button.secondary { background:#e2e8f0; color:#1f2937; }
         .button:hover { opacity:0.95; }
+        .reader-grid { display:grid; grid-template-columns: minmax(0, 1.2fr) minmax(260px, 0.8fr); gap:16px; margin-top:20px; }
+        .reader-panel, .reader-notes { background:#f8fafc; border:1px solid #e2e8f0; border-radius:16px; padding:14px; }
+        .reader-tools { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+        .reader-tools input, .reader-tools textarea { width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:10px; }
+        .reader-notes textarea { min-height:170px; resize:vertical; }
+        .reader-summary { margin-top:12px; padding:12px; background:#eff6ff; border-radius:12px; color:#1e3a8a; }
+        .reader-panel.night { background:#0f172a; color:#e2e8f0; }
+        .reader-panel.night .reader-summary { background:#111827; color:#e2e8f0; }
+        .reader-frame { width:100%; min-height:520px; border:0; border-radius:14px; background:#ffffff; }
         .section { margin-bottom:20px; }
         .section h2, .sidebar h2, .main-panel h2, .module-group h3 { overflow-wrap:anywhere; word-break:break-word; }
         .lesson-content-wrap, .lesson-content-wrap p, .lesson-content-wrap li, .lesson-content-wrap h1, .lesson-content-wrap h2, .lesson-content-wrap h3, .lesson-content-wrap h4 { overflow-wrap:anywhere; word-break:break-word; }
@@ -208,6 +217,29 @@ $progressPercent = $progressData['total'] > 0 ? min(100, (int)round(($completedL
                     </div>
                 <?php endif; ?>
                 <div class="lesson-content-wrap"><?php echo $lessonContent; ?></div>
+                <?php if (!empty($course['pdf_file'])): ?>
+                    <div class="reader-grid">
+                        <div class="reader-panel" id="pdfReaderPanel">
+                            <div class="reader-tools">
+                                <input type="search" id="pdfReaderSearch" placeholder="Search highlights or notes" aria-label="Search reader">
+                                <button class="button secondary" type="button" id="readerBookmarkBtn">🔖 Bookmark PDF</button>
+                                <button class="button secondary" type="button" id="readerNightBtn">🌙 Night Mode</button>
+                                <button class="button secondary" type="button" id="readerZoomOutBtn">− Zoom</button>
+                                <button class="button secondary" type="button" id="readerZoomInBtn">+ Zoom</button>
+                                <button class="button secondary" type="button" id="readerSpeakBtn">🔊 AI Text to Speech</button>
+                            </div>
+                            <iframe class="reader-frame" src="<?php echo htmlspecialchars(publicMediaUrl($course['pdf_file'])); ?>" title="Smart PDF Reader"></iframe>
+                            <div class="reader-summary" id="readerSummaryBox">
+                                AI Summary: <?php echo htmlspecialchars(substr(strip_tags((string)$lessonContent), 0, 220), ENT_QUOTES, 'UTF-8'); ?>
+                            </div>
+                        </div>
+                        <div class="reader-notes">
+                            <h3 style="margin-top:0;">Notes beside video</h3>
+                            <textarea id="readerNotesArea" placeholder="Write your notes, highlight key points, and keep your study ideas here."></textarea>
+                            <div class="reader-summary" id="readerHighlightsBox">Highlights: key ideas, exam hints, and critical concepts can be noted here for quick revision.</div>
+                        </div>
+                    </div>
+                <?php endif; ?>
             </div>
             <div class="action-row">
                 <form method="post" style="margin:0;">
@@ -224,5 +256,100 @@ $progressPercent = $progressData['total'] > 0 ? min(100, (int)round(($completedL
             </div>
         </main>
     </div>
+    <script>
+        (function () {
+            const readerPanel = document.getElementById('pdfReaderPanel');
+            const readerSearch = document.getElementById('pdfReaderSearch');
+            const readerNightBtn = document.getElementById('readerNightBtn');
+            const readerZoomOutBtn = document.getElementById('readerZoomOutBtn');
+            const readerZoomInBtn = document.getElementById('readerZoomInBtn');
+            const readerSpeakBtn = document.getElementById('readerSpeakBtn');
+            const readerBookmarkBtn = document.getElementById('readerBookmarkBtn');
+            const readerSummaryBox = document.getElementById('readerSummaryBox');
+            const readerNotesArea = document.getElementById('readerNotesArea');
+            const readerHighlightsBox = document.getElementById('readerHighlightsBox');
+            const lessonText = document.querySelector('.lesson-content-wrap') ? document.querySelector('.lesson-content-wrap').innerText.trim() : '';
+            let zoomLevel = 1;
+
+            function safeText(text) { return (text || '').replace(/\s+/g, ' ').trim(); }
+
+            if (readerSearch) {
+                readerSearch.addEventListener('input', function () {
+                    const term = readerSearch.value.trim().toLowerCase();
+                    if (!term) {
+                        readerHighlightsBox.textContent = 'Highlights: key ideas, exam hints, and critical concepts can be noted here for quick revision.';
+                        return;
+                    }
+                    const matches = safeText(lessonText).toLowerCase().includes(term);
+                    readerHighlightsBox.textContent = matches ? 'Highlight found in the lesson content: ' + term : 'No visible highlight match in the current lesson content.';
+                });
+            }
+
+            if (readerNightBtn && readerPanel) {
+                readerNightBtn.addEventListener('click', function () {
+                    readerPanel.classList.toggle('night');
+                    readerNightBtn.textContent = readerPanel.classList.contains('night') ? '☀️ Day Mode' : '🌙 Night Mode';
+                });
+            }
+
+            if (readerZoomOutBtn) {
+                readerZoomOutBtn.addEventListener('click', function () {
+                    zoomLevel = Math.max(0.75, Number((zoomLevel - 0.1).toFixed(2)));
+                    if (readerPanel) {
+                        readerPanel.style.zoom = String(zoomLevel);
+                    }
+                });
+            }
+
+            if (readerZoomInBtn) {
+                readerZoomInBtn.addEventListener('click', function () {
+                    zoomLevel = Math.min(1.6, Number((zoomLevel + 0.1).toFixed(2)));
+                    if (readerPanel) {
+                        readerPanel.style.zoom = String(zoomLevel);
+                    }
+                });
+            }
+
+            if (readerBookmarkBtn) {
+                readerBookmarkBtn.addEventListener('click', function () {
+                    const key = 'smart_pdf_bookmarks';
+                    const bookmarks = JSON.parse(localStorage.getItem(key) || '[]');
+                    const courseId = <?php echo (int)$courseId; ?>;
+                    const existing = bookmarks.find(function (item) { return String(item.courseId) === String(courseId); });
+                    if (!existing) {
+                        bookmarks.push({ courseId: courseId, title: <?php echo json_encode($course['course_name'] ?? 'Course'); ?>, updatedAt: Date.now() });
+                        localStorage.setItem(key, JSON.stringify(bookmarks));
+                        readerBookmarkBtn.textContent = '✅ PDF Bookmarked';
+                    } else {
+                        readerBookmarkBtn.textContent = '🔖 Bookmark PDF';
+                    }
+                });
+            }
+
+            if (readerNotesArea) {
+                const noteKey = 'smart_pdf_notes_' + <?php echo (int)$courseId; ?>;
+                readerNotesArea.value = localStorage.getItem(noteKey) || '';
+                readerNotesArea.addEventListener('input', function () {
+                    localStorage.setItem(noteKey, readerNotesArea.value);
+                });
+            }
+
+            if (readerSpeakBtn && 'speechSynthesis' in window) {
+                readerSpeakBtn.addEventListener('click', function () {
+                    const utterance = new SpeechSynthesisUtterance(safeText(lessonText));
+                    utterance.rate = 1;
+                    utterance.pitch = 1;
+                    window.speechSynthesis.cancel();
+                    window.speechSynthesis.speak(utterance);
+                    readerSummaryBox.textContent = 'AI Text-to-Speech started for the current lesson content.';
+                });
+            }
+
+            if (readerSummaryBox && lessonText) {
+                const summary = safeText(lessonText).slice(0, 260);
+                readerSummaryBox.textContent = 'AI Summary: ' + summary;
+            }
+        })();
+    </script>
 </body>
 </html>

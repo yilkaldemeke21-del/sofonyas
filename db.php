@@ -1298,7 +1298,7 @@ function publicMediaUrl($value): string
 
     $normalized = str_replace('\\', '/', $path);
     if (preg_match('~^(uploads/|course_media/|uploads$|course_media$)~i', $normalized) === 1) {
-        return '/' . ltrim($normalized, '/');
+        return buildAppUrl($normalized);
     }
 
     return $path;

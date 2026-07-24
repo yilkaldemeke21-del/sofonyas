@@ -36,7 +36,37 @@ try {
     exit;
 }
 
-if (!isset($_FILES['video_files']) || !is_array($_FILES['video_files']['name'])) {
+$videoInput = $_FILES['video_files'] ?? null;
+if (!is_array($videoInput) || !isset($videoInput['name'])) {
+    header('Location: vedio_admin.php?error=No+video+files+selected');
+    exit;
+}
+
+$videoEntries = [];
+if (is_array($videoInput['name'])) {
+    foreach ($videoInput['name'] as $index => $name) {
+        if ($name === '') {
+            continue;
+        }
+        $videoEntries[] = [
+            'name' => $name,
+            'tmp_name' => $videoInput['tmp_name'][$index] ?? '',
+            'error' => $videoInput['error'][$index] ?? UPLOAD_ERR_NO_FILE,
+        ];
+    }
+} else {
+    if ((string)$videoInput['name'] === '') {
+        header('Location: vedio_admin.php?error=No+video+files+selected');
+        exit;
+    }
+    $videoEntries[] = [
+        'name' => $videoInput['name'],
+        'tmp_name' => $videoInput['tmp_name'] ?? '',
+        'error' => $videoInput['error'] ?? UPLOAD_ERR_NO_FILE,
+    ];
+}
+
+if ($videoEntries === []) {
     header('Location: vedio_admin.php?error=No+video+files+selected');
     exit;
 }
@@ -45,15 +75,22 @@ $allowedExt = ['mp4', 'webm', 'mov', 'avi', 'mkv', 'ogg'];
 $uploaded = 0;
 $errorMessage = '';
 
-foreach ($_FILES['video_files']['name'] as $index => $name) {
-    if ($_FILES['video_files']['error'][$index] !== UPLOAD_ERR_OK) {
+foreach ($videoEntries as $file) {
+    $name = $file['name'];
+    $tmpName = $file['tmp_name'];
+    $uploadError = $file['error'];
+
+    if ($uploadError !== UPLOAD_ERR_OK) {
         continue;
     }
-    $tmpName = $_FILES['video_files']['tmp_name'][$index];
+
     $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
     $mime = mime_content_type($tmpName) ?: '';
 
-    if (!in_array($ext, $allowedExt, true) || stripos($mime, 'video/') !== 0) {
+    $isAllowedExt = in_array($ext, $allowedExt, true);
+    $isVideoMime = stripos($mime, 'video/') === 0;
+
+    if (!$isAllowedExt || (!$isVideoMime && $mime !== '')) {
         $errorMessage = 'Invalid video type. Allowed types: mp4, webm, mov, avi, mkv, ogg';
         continue;
     }

@@ -29,6 +29,68 @@ $trend_exams = $pdo->query('SELECT DATE(submitted_at) AS day, COUNT(*) AS total 
 $top_courses = $pdo->query('SELECT COALESCE(course, "Unknown") AS course_name, COUNT(*) AS total FROM registrations WHERE course IS NOT NULL AND TRIM(course) <> "" GROUP BY course_name ORDER BY total DESC LIMIT 5')->fetchAll(PDO::FETCH_ASSOC);
 $top_students = $pdo->query('SELECT es.student_id, es.student_name, ROUND(AVG(es.score / NULLIF(es.total_questions, 0) * 100), 0) AS avg_score, COUNT(*) AS attempts FROM exam_submissions es GROUP BY es.student_id, es.student_name ORDER BY avg_score DESC LIMIT 5')->fetchAll(PDO::FETCH_ASSOC);
 
+$studentPredictionRows = $pdo->query('SELECT s.student_id, s.name,
+    COALESCE((SELECT ROUND(AVG(es.score / NULLIF(es.total_questions, 0) * 100), 0) FROM exam_submissions es WHERE es.student_id = s.student_id), 0) AS avg_exam_score,
+    COALESCE((SELECT COUNT(*) FROM lesson_progress lp WHERE lp.student_id = s.student_id), 0) AS lessons_completed,
+    COALESCE((SELECT MAX(created_at) FROM registrations r WHERE r.student_id = s.student_id), s.created_at) AS last_activity
+    FROM students s
+    ORDER BY avg_exam_score ASC, lessons_completed ASC, last_activity ASC
+    LIMIT 5')->fetchAll(PDO::FETCH_ASSOC);
+
+$weakCourseRows = $pdo->query('SELECT c.course_name,
+    COALESCE(ROUND(AVG(lp.completion_rate), 0), 0) AS avg_completion_rate,
+    COUNT(DISTINCT r.student_id) AS learners
+    FROM courses c
+    LEFT JOIN registrations r ON r.course_id = c.id
+    LEFT JOIN (
+        SELECT lp.course_id, lp.student_id,
+            ROUND((COUNT(*) / NULLIF(cl.total_lessons, 0)) * 100, 0) AS completion_rate
+        FROM lesson_progress lp
+        JOIN (
+            SELECT course_id, COUNT(*) AS total_lessons
+            FROM course_lessons
+            GROUP BY course_id
+        ) cl ON cl.course_id = lp.course_id
+        GROUP BY lp.course_id, lp.student_id, cl.total_lessons
+    ) lp ON lp.course_id = c.id
+    GROUP BY c.id, c.course_name
+    HAVING avg_completion_rate < 70
+    ORDER BY avg_completion_rate ASC, learners DESC
+    LIMIT 5')->fetchAll(PDO::FETCH_ASSOC);
+
+$examStats = $pdo->query('SELECT COUNT(*) AS attempts,
+    COALESCE(ROUND(AVG(score / NULLIF(total_questions, 0) * 100), 0), 0) AS avg_score,
+    COALESCE(SUM(CASE WHEN score / NULLIF(total_questions, 0) * 100 >= 50 THEN 1 ELSE 0 END), 0) AS passed_count
+    FROM exam_submissions')->fetch(PDO::FETCH_ASSOC);
+
+$dropoutRiskRows = $pdo->query('SELECT s.student_id, s.name,
+    COALESCE((SELECT COUNT(*) FROM lesson_progress lp WHERE lp.student_id = s.student_id), 0) AS lessons_completed,
+    COALESCE((SELECT MAX(es.submitted_at) FROM exam_submissions es WHERE es.student_id = s.student_id), "Never") AS last_exam_attempt,
+    COALESCE((SELECT MAX(r.created_at) FROM registrations r WHERE r.student_id = s.student_id), s.created_at) AS last_activity
+    FROM students s
+    ORDER BY lessons_completed ASC, last_exam_attempt ASC
+    LIMIT 5')->fetchAll(PDO::FETCH_ASSOC);
+
+$aiSuggestions = [];
+if (!empty($studentPredictionRows)) {
+    foreach ($studentPredictionRows as $row) {
+        if ((int)$row['avg_exam_score'] < 50 || (int)$row['lessons_completed'] < 3) {
+            $aiSuggestions[] = 'Follow up with ' . safe($row['name']) . ' and add a short revision reminder for the next practice session.';
+        }
+    }
+}
+if (!empty($weakCourseRows)) {
+    foreach ($weakCourseRows as $row) {
+        $aiSuggestions[] = 'Strengthen ' . safe($row['course_name']) . ' with extra tasks because completion is only at ' . (int)$row['avg_completion_rate'] . '%.';
+    }
+}
+if ($examStats['avg_score'] < 70) {
+    $aiSuggestions[] = 'Review exam difficulty and shorten the learning gap with an easier practice set before the next exam window.';
+}
+if (empty($aiSuggestions)) {
+    $aiSuggestions[] = 'All monitored learners are stable right now. Continue the current teaching cadence and watch for new activity peaks.';
+}
+
 $latest_activity = $pdo->query('SELECT created_at, CONCAT("Registration: ", name, " (", course, ")") AS description FROM registrations ORDER BY created_at DESC LIMIT 4')->fetchAll(PDO::FETCH_ASSOC);
 $latest_exams = $pdo->query('SELECT submitted_at AS created_at, CONCAT("Quiz: ", student_name, " – ", score, "/", total_questions) AS description FROM exam_submissions ORDER BY submitted_at DESC LIMIT 4')->fetchAll(PDO::FETCH_ASSOC);
 
@@ -286,6 +348,91 @@ function safe($value): string {
                     <?php foreach ($smart_insights as $insight): ?>
                         <li><?php echo safe($insight); ?></li>
                     <?php endforeach; ?>
+                </ul>
+            </div>
+        </section>
+
+        <section class="grid-3" style="margin-bottom: 22px;">
+            <div class="table-card">
+                <h3>Student Prediction</h3>
+                <table>
+                    <thead>
+                        <tr><th>Student</th><th>Risk</th><th>Lessons</th></tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($studentPredictionRows)): ?>
+                            <tr><td colspan="3">No student prediction data available.</td></tr>
+                        <?php else: foreach ($studentPredictionRows as $row): ?>
+                            <tr>
+                                <td><?php echo safe($row['name']); ?></td>
+                                <td><?php echo safe(((int)$row['avg_exam_score'] < 50 || (int)$row['lessons_completed'] < 3) ? 'High' : 'Stable'); ?></td>
+                                <td><?php echo safe((int)$row['lessons_completed']); ?></td>
+                            </tr>
+                        <?php endforeach; endif; ?>
+                    </tbody>
+                </table>
+            </div>
+            <div class="table-card">
+                <h3>Weak Course Detection</h3>
+                <table>
+                    <thead>
+                        <tr><th>Course</th><th>Completion</th><th>Learners</th></tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($weakCourseRows)): ?>
+                            <tr><td colspan="3">No weak course signal detected.</td></tr>
+                        <?php else: foreach ($weakCourseRows as $row): ?>
+                            <tr>
+                                <td><?php echo safe($row['course_name']); ?></td>
+                                <td><?php echo safe((int)$row['avg_completion_rate']); ?>%</td>
+                                <td><?php echo safe((int)$row['learners']); ?></td>
+                            </tr>
+                        <?php endforeach; endif; ?>
+                    </tbody>
+                </table>
+            </div>
+            <div class="insight-card">
+                <h3>AI Suggestions</h3>
+                <ul>
+                    <?php foreach ($aiSuggestions as $suggestion): ?>
+                        <li><?php echo safe($suggestion); ?></li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+        </section>
+
+        <section class="grid-3" style="margin-bottom: 22px;">
+            <div class="metric-card">
+                <h3>Exam Statistics</h3>
+                <div class="value"><?php echo safe((int)$examStats['avg_score']); ?>%</div>
+                <div class="small-meta">Average score across all exam attempts</div>
+                <div class="small-meta">Attempts: <?php echo safe((int)$examStats['attempts']); ?> · Passed: <?php echo safe((int)$examStats['passed_count']); ?></div>
+            </div>
+            <div class="table-card">
+                <h3>Dropout Prediction</h3>
+                <table>
+                    <thead>
+                        <tr><th>Student</th><th>Lessons</th><th>Last activity</th></tr>
+                    </thead>
+                    <tbody>
+                        <?php if (empty($dropoutRiskRows)): ?>
+                            <tr><td colspan="3">No dropout signal available.</td></tr>
+                        <?php else: foreach ($dropoutRiskRows as $row): ?>
+                            <tr>
+                                <td><?php echo safe($row['name']); ?></td>
+                                <td><?php echo safe((int)$row['lessons_completed']); ?></td>
+                                <td><?php echo safe($row['last_exam_attempt'] ?? $row['last_activity']); ?></td>
+                            </tr>
+                        <?php endforeach; endif; ?>
+                    </tbody>
+                </table>
+            </div>
+            <div class="insight-card">
+                <h3>Prediction Summary</h3>
+                <ul>
+                    <li>Students with low exam performance and low lesson completion are flagged for quick intervention.</li>
+                    <li>Courses with weak completion rates are surfaced to support extra materials and revision planning.</li>
+                    <li>Exam statistics help admins monitor platform-wide assessment quality in a single view.</li>
                 </ul>
             </div>
         </section>

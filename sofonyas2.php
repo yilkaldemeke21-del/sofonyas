@@ -294,53 +294,177 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         .hero-copy p { font-size: 1.05rem; color: rgba(226,232,240,0.96); line-height: 1.75; max-width: 620px; }
         .hero-intro { max-width: 1200px; margin: 22px auto 0; padding: 0 20px; }
         .hero-intro-inner {
+            position: relative;
             display: flex;
             align-items: center;
             gap: 18px;
             margin: 0 auto;
             max-width: 1180px;
             padding: 18px 20px;
+            padding-right: clamp(110px, 15vw, 180px);
             border-radius: 24px;
             border: 1px solid rgba(255,255,255,0.36);
             background: linear-gradient(135deg, rgba(255,255,255,0.54), rgba(241,245,249,0.26));
             backdrop-filter: blur(15px);
             -webkit-backdrop-filter: blur(15px);
             box-shadow: 0 16px 38px rgba(15,23,42,0.12);
+            overflow: hidden;
+        }
+        .hero-intro-inner::before {
+            content: '';
+            position: absolute;
+            inset: -18% -10% auto auto;
+            width: 280px;
+            height: 280px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(250,204,21,0.62), rgba(250,204,21,0.24) 48%, transparent 74%);
+            filter: blur(8px);
+            animation: skyPulse 7s ease-in-out infinite;
+            pointer-events: none;
+        }
+        .hero-intro-inner::after {
+            content: '';
+            position: absolute;
+            inset: auto auto 10% 62%;
+            width: 160px;
+            height: 160px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.72), rgba(191,219,254,0.26) 55%, transparent 75%);
+            filter: blur(12px);
+            pointer-events: none;
+            animation: skyPulse 9s ease-in-out infinite;
         }
         .hero-intro .logo-wrap {
+            position: relative;
             flex: 0 0 auto;
             display: flex;
             align-items: center;
             justify-content: center;
-            min-width: 88px;
-            position: relative;
-            padding: 5px;
+            width: 226px;
+            height: 226px;
+            padding: 0;
             border-radius: 50%;
-            background: conic-gradient(from 0deg, #22c55e, #60a5fa, #f43f5e, #a855f7, #22c55e);
-            box-shadow: 0 0 0 2px rgba(255,255,255,0.55), 0 0 24px rgba(96,165,250,0.52), 0 0 40px rgba(244,63,94,0.25);
-            animation: logoRingGlow 4s linear infinite;
+            background: linear-gradient(180deg, #f7f0d6, #d9bf78);
+            box-shadow: 0 18px 38px rgba(10, 61, 145, 0.24), 0 0 0 3px rgba(255,255,255,0.75) inset;
+            overflow: visible;
+        }
+        .hero-intro .logo-wrap::before {
+            content: '';
+            position: absolute;
+            inset: 8px;
+            border-radius: 50%;
+            border: 4px solid #d4af37;
+            box-shadow: 0 0 0 2px rgba(10,61,145,0.9) inset, 0 0 0 6px rgba(212,175,55,0.72) inset;
+            z-index: 1;
         }
         .hero-intro .logo-wrap::after {
             content: '';
             position: absolute;
-            inset: -4px;
+            inset: 0;
             border-radius: 50%;
-            background: conic-gradient(from 180deg, rgba(34,197,94,0.8), rgba(96,165,250,0.8), rgba(244,63,94,0.8), rgba(168,85,247,0.8), rgba(34,197,94,0.8));
-            filter: blur(6px);
-            z-index: -1;
-            opacity: 0.95;
+            border: 8px solid #0a3d91;
+            box-shadow: 0 0 0 2px #d4af37, 0 0 18px rgba(212,175,55,0.32);
+            z-index: 0;
         }
         .hero-intro .logo-img {
-            max-width: 140px;
-            width: 140px;
-            height: 140px;
+            position: relative;
+            z-index: 3;
+            width: 150px;
+            height: 150px;
             object-fit: cover;
             border-radius: 50%;
             display: block;
-            border: 3px solid rgba(255,255,255,0.9);
-            box-shadow: 0 10px 24px rgba(15,23,42,0.12);
+            border: 4px solid rgba(255,255,255,0.96);
+            box-shadow: 0 10px 24px rgba(15,23,42,0.18), 0 0 18px rgba(212,175,55,0.35);
             background: linear-gradient(135deg, #ffffff, #dbeafe);
         }
+        .logo-circle-rim {
+            position: absolute;
+            inset: 18px;
+            border-radius: 50%;
+            border: 1px solid rgba(212,175,55,0.65);
+            z-index: 2;
+            pointer-events: none;
+        }
+        .logo-ring-text {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 4;
+            pointer-events: none;
+        }
+        .logo-ring-text text {
+            font-family: Georgia, Times New Roman, serif;
+            fill: #0a3d91;
+            letter-spacing: 0.5px;
+            font-weight: 800;
+            text-rendering: geometricPrecision;
+            text-shadow: 0 0 6px rgba(212,175,55,0.35);
+        }
+        .logo-ring-text .top-text { font-size: 14px; }
+        .logo-ring-text .bottom-text { font-size: 10.5px; }
+        .holy-dove {
+            position: absolute;
+            right: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: clamp(92px, 10vw, 142px);
+            height: clamp(92px, 10vw, 142px);
+            pointer-events: none;
+            border-radius: 50%;
+            object-fit: contain;
+            filter: drop-shadow(0 0 10px rgba(255,255,255,0.7)) drop-shadow(0 0 20px rgba(255,255,255,0.45));
+            z-index: 1;
+            animation: doveFloat 3.8s ease-in-out infinite;
+            transform-origin: center center;
+        }
+        .header-cloud {
+            position: absolute;
+            height: 20px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, rgba(255,255,255,0.45), rgba(255,255,255,0.78), rgba(255,255,255,0.45));
+            opacity: 0.5;
+            filter: blur(0.8px);
+            animation: floatCloud 18s linear infinite;
+            z-index: 0;
+        }
+        .header-cloud::before,
+        .header-cloud::after {
+            content: '';
+            position: absolute;
+            background: inherit;
+            border-radius: inherit;
+        }
+        .header-cloud::before {
+            width: 48%;
+            height: 200%;
+            left: 14%;
+            top: -60%;
+        }
+        .header-cloud::after {
+            width: 34%;
+            height: 160%;
+            right: 14%;
+            top: -38%;
+        }
+        .cloud-1 { width: 104px; top: 18%; right: 18%; }
+        .cloud-2 { width: 84px; top: 38%; right: 26%; animation-duration: 22s; opacity: 0.42; }
+        .header-particle {
+            position: absolute;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,255,255,1), rgba(255,255,255,0.38));
+            box-shadow: 0 0 12px rgba(255,255,255,0.95);
+            opacity: 0.9;
+            animation: twinkle 4.8s ease-in-out infinite;
+            z-index: 0;
+        }
+        .particle-1 { top: 18%; right: 34%; }
+        .particle-2 { top: 48%; right: 12%; animation-delay: 1.1s; }
+        .particle-3 { top: 24%; right: 44%; animation-delay: 1.9s; }
+        .particle-4 { top: 56%; right: 38%; animation-delay: 0.5s; }
         .hero-intro .intro-copy { flex: 1 1 auto; min-width: 0; overflow: hidden; display: flex; align-items: center; }
         .hero-intro .welcome-marquee {
             display: flex;
@@ -375,12 +499,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
             from { transform: translateX(0); }
             to { transform: translateX(-50%); }
         }
+        @keyframes doveFloat {
+            0%, 100% { transform: translateY(-50%) rotate(0deg) scale(1); }
+            20% { transform: translateY(-52%) rotate(-1.2deg) scale(1.02); }
+            50% { transform: translateY(-56%) rotate(1.6deg) scale(1.05); }
+            70% { transform: translateY(-52%) rotate(-1deg) scale(1.02); }
+        }
+        @keyframes skyPulse {
+            0%, 100% { opacity: 0.72; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.08); }
+        }
+        @keyframes floatCloud {
+            0% { transform: translateX(0); }
+            50% { transform: translateX(-12px); }
+            100% { transform: translateX(0); }
+        }
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.35; transform: scale(0.9); }
+            50% { opacity: 1; transform: scale(1.3); }
+        }
         @keyframes welcome-glow {
             0% { background-position: 0% 50%; }
             100% { background-position: 300% 50%; }
         }
         .hero-actions-section { max-width: 1020px; margin: 18px auto 0; padding: 0 20px; display: flex; justify-content: center; }
-        @media (max-width: 900px) { .hero-intro-inner { flex-direction: column; align-items: center; text-align: center; } .hero-intro .intro-copy { width: 100%; } .hero-intro h1, .hero-intro p { text-align: center; } .hero-intro .logo-wrap { width: 180px; } }
+        @media (max-width: 900px) {
+            .hero-intro-inner { flex-direction: column; align-items: center; text-align: center; padding-right: 20px; }
+            .hero-intro .intro-copy { width: 100%; }
+            .hero-intro h1, .hero-intro p { text-align: center; }
+            .hero-intro .logo-wrap { width: 180px; }
+            .holy-dove { position: static; transform: none; margin: 0 auto; order: 2; }
+            .header-cloud, .header-particle { display: none; }
+        }
         .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 0; justify-content: center; }
         .button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: linear-gradient(135deg, #f10eb1, #4f46e5); color: white; text-decoration: none; padding: 14px 22px; border-radius: 999px; font-weight: 800; letter-spacing: 0.01em; box-shadow: 0 16px 40px rgba(37,99,235,0.22); transition: transform 0.24s ease, box-shadow 0.24s ease, filter 0.24s ease; }
         .button:hover { transform: translateY(-2px); filter: brightness(1.05); }
@@ -484,14 +634,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         <div class="announcement-track">
             <span>•እንኳን ወደ ዲ/ን ሶፎንያስ ደመቀ ቤተ ገብርኤል ዌቭሣይት በደህና መጡ!•</span>
             <span>ቤተ ገብርኤል በመቅደላ አምባ ዩኒቨርሲቲ በፈለገ ሰላም አዲስ አምባ ግቢ ጉባኤ የቤተሰብ እናት አባት አደረጃጀት ውስጥ አንዱና ተናፋቂው ቡድን ነው•</span>
-            <span>ይህ ድር ገፅ በእውነተኛ ባክኤንድ ገፆች ላይ የተመሰረተ ኢንተርአክቲቭ ፕላትፎርም ነው። ኮርስ መመዝገብዳሽቦርድ መመልከት•ፎርም መግባት እና ትምህርት ማየት በአንድ ቦታ ይሰራሉ።•</span>
+            <span>ይህ ድር ገፅ በእውነተኛ ባክኤንድ ገፆች ላይ የተመሰረተ ኢንተርአክቲቭ ፕላትፎርም ነው። ኮርስ መመዝገብ ዳሽቦርድ መመልከት•ፎርም መግባት እና ትምህርት ማየት በአንድ ቦታ ይሰራሉ።•</span>
             <span>እንኳን ወደ ዲ/ን ሶፎንያስ ደመቀ ቤተ ገብርኤል ዌቭሣይት በደህና መጡ!•</span>
         </div>
     </section>
 <section class="hero-intro">
         <div class="hero-intro-inner">
             <a href="sofonyas2.php" class="logo-wrap" aria-label="<?php echo safe($siteName); ?>">
+                <span class="logo-circle-rim" aria-hidden="true"></span>
                 <img src="sofi fikr.jpg" alt="<?php echo safe($siteName); ?>" class="logo-img zoomable-img">
+                <svg class="logo-ring-text" viewBox="0 0 220 220" aria-hidden="true">
+                    <defs>
+                        <path id="logoTopArc" d="M 30 110 A 80 80 0 0 1 190 110" />
+                        <path id="logoBottomArc" d="M 30 110 A 80 80 0 0 0 190 110" />
+                    </defs>
+                    <text class="top-text">
+                        <textPath href="#logoTopArc" startOffset="50%" text-anchor="middle" dominant-baseline="middle">ተዋሕዶ</textPath>
+                    </text>
+                    <text class="bottom-text">
+                        <textPath href="#logoBottomArc" startOffset="50%" text-anchor="middle" dominant-baseline="middle">ዲ/ን ሶፎንያስ ደመቀ</textPath>
+                    </text>
+                </svg>
             </a>
             <div class="intro-copy">
                 <div class="welcome-marquee" aria-label="Welcome message">
@@ -501,6 +664,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
                     <span># እንኳን ወደ ዲ/ን ሶፎንያስ ደመቀ ቤተ ገብርኤል ዌብሳይት በደህና መጡ!</span>
                 </div>
             </div>
+            <span class="header-cloud cloud-1" aria-hidden="true"></span>
+            <span class="header-cloud cloud-2" aria-hidden="true"></span>
+            <span class="header-particle particle-1" aria-hidden="true"></span>
+            <span class="header-particle particle-2" aria-hidden="true"></span>
+            <span class="header-particle particle-3" aria-hidden="true"></span>
+            <span class="header-particle particle-4" aria-hidden="true"></span>
+            <img src="https://tse3.mm.bing.net/th/id/OIP.Nj3szR2BWazatQZf6LE5CwAAAA?r=0&pid=ImgDet&w=178&h=178&c=7&dpr=1.5&o=7&rm=3" alt="Holy Spirit dove illustration" class="holy-dove" aria-hidden="true">
         </div>
     </section>
     <nav>

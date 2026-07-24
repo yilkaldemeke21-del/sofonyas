@@ -134,8 +134,8 @@ function safe($value): string {
             <div class="grid">
                 <?php foreach ($videos as $video): ?>
                     <div class="card">
-                        <div class="play-overlay" data-video="<?php echo safe($video['file_path']); ?>" data-title="<?php echo safe($video['title']); ?>">
-                            <video muted preload="metadata" src="<?php echo safe($video['file_path']); ?>"></video>
+                        <div class="play-overlay" data-video="<?php echo safe(publicMediaUrl($video['file_path'])); ?>" data-title="<?php echo safe($video['title']); ?>">
+                            <video muted preload="metadata" src="<?php echo safe(publicMediaUrl($video['file_path'])); ?>"></video>
                         </div>
                         <div class="card-body">
                             <h3><?php echo safe($video['title'] ?: 'Untitled Video'); ?></h3>
