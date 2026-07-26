@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message'], $_PO
     $status = isset($_POST['status']) ? trim((string)$_POST['status']) : 'replied';
 
     if ($chatId > 0 && $reply !== '') {
-        $stmt = $pdo->prepare('UPDATE site_chat_messages SET reply_message = :reply_message, reply_admin_id = :reply_admin_id, reply_updated_at = NULL, status = :status, updated_at = NOW() WHERE id = :id AND (reply_admin_id IS NULL OR reply_admin_id = :reply_admin_id)');
+        $stmt = $pdo->prepare('UPDATE site_chat_messages SET reply_message = :reply_message, reply_admin_id = :reply_admin_id, reply_updated_at = NULL, reply_deleted = 0, status = :status, updated_at = NOW() WHERE id = :id AND (reply_admin_id IS NULL OR reply_admin_id = :reply_admin_id)');
         $stmt->execute([
             ':reply_message' => $reply,
             ':reply_admin_id' => (int)$_SESSION['admin_id'],
@@ -68,9 +68,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message'], $_PO
 
 if (isset($_GET['delete'])) {
     $chatId = (int)$_GET['delete'];
-    $stmt = $pdo->prepare('DELETE FROM site_chat_messages WHERE id = :id');
-    $stmt->execute([':id' => $chatId]);
-    $message = 'የቻት መልእክት ተሰርዟል።';
+    $checkStmt = $pdo->prepare('SELECT reply_admin_id FROM site_chat_messages WHERE id = :id LIMIT 1');
+    $checkStmt->execute([':id' => $chatId]);
+    $ownerRow = $checkStmt->fetch(PDO::FETCH_ASSOC);
+    $ownerId = (int)($ownerRow['reply_admin_id'] ?? 0);
+    if ($ownerId === 0 || $ownerId === (int)$_SESSION['admin_id']) {
+        $stmt = $pdo->prepare('UPDATE site_chat_messages SET reply_message = NULL, reply_admin_id = NULL, reply_updated_at = NULL, reply_deleted = 1, status = :status, updated_at = NOW() WHERE id = :id');
+        $stmt->execute([
+            ':status' => 'pending',
+            ':id' => $chatId,
+        ]);
+        $message = 'የመልስ መልእክት ተሰርዟል።';
+    } else {
+        $error = 'ይህ መልስ ለእርስዎ አይደለም።';
+    }
 }
 
 try {
@@ -94,14 +105,14 @@ $perPage = 10;
 $printMode = isset($_GET['print']) && $_GET['print'] == '1';
 $totalMessages = 0;
 if ($error === '') {
-    $totalMessages = (int)$pdo->query('SELECT COUNT(*) FROM site_chat_messages')->fetchColumn();
+    $totalMessages = (int)$pdo->query('SELECT COUNT(*) FROM site_chat_messages WHERE (reply_deleted IS NULL OR reply_deleted = 0)')->fetchColumn();
 }
 $totalPages = max(1, (int)ceil($totalMessages / $perPage));
 $page = min($page, $totalPages);
 $offset = ($page - 1) * $perPage;
 
 if ($error === '') {
-    $stmt = $pdo->prepare('SELECT * FROM site_chat_messages ORDER BY id DESC LIMIT :limit OFFSET :offset');
+    $stmt = $pdo->prepare('SELECT * FROM site_chat_messages WHERE (reply_deleted IS NULL OR reply_deleted = 0) ORDER BY id DESC LIMIT :limit OFFSET :offset');
     $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
     $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
     $stmt->execute();
@@ -163,7 +174,7 @@ if ($error === '') {
       <p style="color:#64748b;">ምንም የቻት መልእክት የለም።</p>
     <?php else: ?>
       <?php foreach ($messages as $item): ?>
-        <div class="chat-item">
+        <div class="chat-item" data-chat-id="<?php echo (int)$item['id']; ?>">
           <div class="chat-meta">
             <div>
               <strong><?php echo safe($item['sender_name']); ?></strong>
@@ -186,10 +197,10 @@ if ($error === '') {
               <div style="background:#f5f3ff; padding:10px 12px; border-left:3px solid #8b5cf6; border-radius:8px; color:#5b21b6;">
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
                   <div>
-                    <strong>Admin reply:</strong> <?php echo safe($item['reply_message']); ?>
+                    <strong>Admin reply:</strong> <span class="reply-content"><?php echo safe($item['reply_message']); ?></span>
                     <?php if (!empty($item['reply_updated_at'])): ?><span style="margin-left:8px; font-size:12px; color:#7c3aed;">(Edited)</span><?php endif; ?>
                   </div>
-                  <?php if ((int)($item['reply_admin_id'] ?? 0) === (int)$_SESSION['admin_id']): ?>
+                  <?php if (!empty($item['reply_message'])): ?>
                     <div style="display:flex; gap:8px; flex-wrap:wrap;">
                       <button type="button" class="btn btn-primary reply-edit-btn" data-reply-id="<?php echo (int)$item['id']; ?>" data-reply-text="<?php echo safe($item['reply_message']); ?>">✏️ Edit</button>
                       <button type="button" class="btn btn-danger reply-delete-btn" data-reply-id="<?php echo (int)$item['id']; ?>">🗑 Delete</button>
@@ -233,6 +244,21 @@ if ($error === '') {
   </div>
 </div>
 <script>
+  function showFlash(message, type) {
+    const card = document.querySelector('.card');
+    if (!card) {
+      return;
+    }
+    const existing = card.querySelector('.message.flash');
+    if (existing) {
+      existing.remove();
+    }
+    const box = document.createElement('div');
+    box.className = 'message ' + (type === 'error' ? 'error' : 'success') + ' flash';
+    box.textContent = message;
+    card.insertBefore(box, card.firstChild);
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.reply-edit-btn').forEach(function (button) {
       button.addEventListener('click', function () {
@@ -273,14 +299,13 @@ if ($error === '') {
           .then(function (response) { return response.json(); })
           .then(function (data) {
             if (data && data.success) {
-              const replyText = document.querySelector('.reply-edit-form[data-reply-id="' + replyId + '"] textarea');
               const replyBlock = document.querySelector('.reply-edit-form[data-reply-id="' + replyId + '"]');
               if (replyBlock) {
                 const parent = replyBlock.closest('div[style*="background:#f5f3ff"]');
                 if (parent) {
-                  const replyLabel = parent.querySelector('strong');
-                  if (replyLabel) {
-                    replyLabel.nextSibling.textContent = ' ' + message;
+                  const replyContent = parent.querySelector('.reply-content');
+                  if (replyContent) {
+                    replyContent.textContent = message;
                   }
                   const editedBadge = parent.querySelector('span[style*="color:#7c3aed"]');
                   if (!editedBadge) {
@@ -289,11 +314,17 @@ if ($error === '') {
                     badge.style.fontSize = '12px';
                     badge.style.color = '#7c3aed';
                     badge.textContent = '(Edited)';
-                    replyLabel.parentNode.appendChild(badge);
+                    parent.querySelector('div').appendChild(badge);
                   }
                 }
                 replyBlock.style.display = 'none';
               }
+              showFlash(data.message || 'Reply updated successfully', 'success');
+              setTimeout(function () {
+                window.location.reload();
+              }, 400);
+            } else {
+              showFlash((data && data.message) || 'Unable to update reply.', 'error');
             }
           })
           .catch(function () {
@@ -319,19 +350,12 @@ if ($error === '') {
           .then(function (response) { return response.json(); })
           .then(function (data) {
             if (data && data.success) {
-              const btn = document.querySelector('.reply-delete-btn[data-reply-id="' + replyId + '"]');
-              const container = btn ? btn.closest('.chat-item') : null;
-              if (container) {
-                const replyBlock = container.querySelector('div[style*="background:#f5f3ff"]');
-                if (replyBlock) {
-                  replyBlock.remove();
-                  const form = document.createElement('form');
-                  form.className = 'reply-form';
-                  form.method = 'post';
-                  form.innerHTML = '<input type="hidden" name="chat_id" value="' + container.querySelector('input[name="chat_id"]')?.value + '"><textarea name="reply_message" placeholder="መልስ ይጻፉ..."></textarea><div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-top:8px;"><select name="status" style="padding:8px 10px; border-radius:8px; border:1px solid #cbd5e1;"><option value="replied">replied</option><option value="pending">pending</option></select><div style="display:flex; gap:8px;"><button class="btn btn-primary" type="submit">📤 ላክ</button><a class="btn btn-danger" href="admin_chat_management.php?delete=' + replyId + '" onclick="return confirm(\'ይህን መልእክት ሰርዝ?\');">🗑️ ሰርዝ</a></div></div>';
-                  container.appendChild(form);
-                }
-              }
+              showFlash(data.message || 'Reply deleted successfully', 'success');
+              setTimeout(function () {
+                window.location.reload();
+              }, 400);
+            } else {
+              showFlash((data && data.message) || 'Unable to delete reply.', 'error');
             }
           })
           .catch(function () {

@@ -75,11 +75,6 @@ try {
         exit;
     }
 
-    if ((int)($row['reply_admin_id'] ?? 0) !== (int)$_SESSION['admin_id']) {
-        echo json_encode(['success' => false, 'message' => 'Only your own replies can be edited or deleted']);
-        exit;
-    }
-
     if ($action === 'edit_reply') {
         $replyMessage = trim((string)($_POST['reply_message'] ?? ''));
         if ($replyMessage === '') {
@@ -87,7 +82,7 @@ try {
             exit;
         }
 
-        $stmt = $pdo->prepare('UPDATE site_chat_messages SET reply_message = :reply_message, reply_updated_at = NOW(), status = :status, updated_at = NOW() WHERE id = :id');
+        $stmt = $pdo->prepare('UPDATE site_chat_messages SET reply_message = :reply_message, reply_updated_at = NOW(), reply_deleted = 0, status = :status, updated_at = NOW() WHERE id = :id');
         $stmt->execute([
             ':reply_message' => $replyMessage,
             ':status' => 'replied',
