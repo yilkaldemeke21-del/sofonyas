@@ -181,6 +181,8 @@ $student_photo = safeCertificatePhotoPath((string)($certificate['student_photo']
 $seal_image_url = '';
 if (!empty($certificate['seal_image'])) {
     $seal_image_url = htmlspecialchars(publicMediaUrl($certificate['seal_image']), ENT_QUOTES, 'UTF-8');
+} else {
+    $seal_image_url = htmlspecialchars(publicMediaUrl('mahtem zesofi.png'), ENT_QUOTES, 'UTF-8');
 }
 $photoVersion = time();
 $instructor_photo_url = $instructor_photo !== '' ? htmlspecialchars(publicMediaUrl($instructor_photo), ENT_QUOTES, 'UTF-8') : htmlspecialchars(publicMediaUrl('sofi fikr.jpg'), ENT_QUOTES, 'UTF-8');
@@ -265,8 +267,11 @@ if ($seal_image_url !== '') {
         <text fill="#7a1f1f" font-size="17" font-weight="700" font-family="Georgia, serif" letter-spacing="0.6">
             <textPath href="#sealBottomPath" startOffset="50%" text-anchor="middle">' . $seal_bottom . '</textPath>
         </text>
-        <image href="' . $seal_image_url . '" x="64" y="64" width="112" height="112" preserveAspectRatio="xMidYMid meet" opacity="0.30" />
-        <g transform="translate(120 120)">
+        <circle cx="120" cy="120" r="44" fill="#fffdf7" stroke="#c5962e" stroke-width="2.4" />
+        <circle cx="120" cy="120" r="46" fill="none" stroke="#7a1f1f" stroke-width="1.1" opacity="0.28" />
+        <circle cx="120" cy="120" r="38" fill="none" stroke="#d9b24b" stroke-width="1.2" opacity="0.5" />
+        <image href="' . $seal_image_url . '" x="80" y="80" width="80" height="80" preserveAspectRatio="xMidYMid meet" />
+        <g transform="translate(120 120)" opacity="0.12">
             <circle cx="0" cy="0" r="42" fill="rgba(122,31,31,0.08)" stroke="#8b1f1f" stroke-width="1.7" opacity="0.65" />
             <path d="M -10 -60 L 10 -60 L 10 -16 L 32 -16 L 32 16 L 10 16 L 10 60 L -10 60 L -10 16 L -32 16 L -32 -16 L -10 -16 Z" fill="#c5962e" stroke="#8a2e2e" stroke-width="2" />
             <path d="M -46 -8 L 46 -8 M -20 -24 L 20 -24 M -12 -50 L 12 -50" stroke="#8a2e2e" stroke-width="2.2" stroke-linecap="round" opacity="0.55" />
@@ -629,16 +634,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 
                 <div class="signature-row">
                     <div class="signature-column">
-                        <div class="signature-authority"><?php echo safe($signer_name ?: ''); ?></div>
-                        <div class="signature-line">ተቋም</div>
+                        <div class="signature-authority">ቤተ ገብርኤል ዌብሳይት</div>
+                        <div class="signature-line">የተቋሙ ስም</div>
                     </div>
                     <?php echo $seal_html; ?>
-                    <div class="signature-line"><?php echo safe($signer_position ?: 'ወልደ ጊዮርጊስ'); ?></div>
+                    <div class="signature-column">
+                        <div class="signature-authority">ቤተ ገብርኤል</div>
+                        <div class="signature-line"><?php echo safe($signer_position ?: 'ቤተ ገብርኤል'); ?></div>
+                    </div>
                 </div>
                 <div class="signature-row" style="margin-top: 10px;">
                     <div class="signature-column">
-                        <div class="signature-authority"><?php echo safe($signer_name ?: 'ዲ/ን ሶፎንያስ ደመቀ'); ?></div>
-                        <div class="signature-line">ልዩ ፊርማ</div>
+                        <div class="signature-authority">ዲ/ን ሶፎንያስ ደመቀ</div>
+                        <div class="signature-line">የባለስልጣኑ ስምና ፊርማ</div>
                     </div>
                     <?php if ($signature_data !== ''): ?>
                         <div class="signature-image"><img src="<?php echo safe($signature_data); ?>" alt="Saved signature" /></div>
