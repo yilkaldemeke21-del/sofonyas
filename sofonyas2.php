@@ -443,8 +443,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
             right: 18px;
             top: 50%;
             transform: translateY(-50%);
-            width: clamp(92px, 10vw, 142px);
-            height: clamp(92px, 10vw, 142px);
+            width: clamp(180px, 10vw, 142px);
+            height: clamp(180px, 10vw, 142px);
             pointer-events: none;
             border-radius: 50%;
             object-fit: contain;
@@ -729,7 +729,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
             <span class="header-particle particle-2" aria-hidden="true"></span>
             <span class="header-particle particle-3" aria-hidden="true"></span>
             <span class="header-particle particle-4" aria-hidden="true"></span>
-            <img src="ergib sofi.webp" alt="Holy Spirit dove illustration" class="holy-dove" aria-hidden="true">
+            <img src="sofi tewahdo.png" alt="Holy Spirit dove illustration" class="holy-dove" aria-hidden="true">
         </div>
     </section>
     <nav>
