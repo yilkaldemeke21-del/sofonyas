@@ -2,15 +2,172 @@
 session_start();
 require_once __DIR__ . '/db.php';
 
-function generate_certificate_pdf_file($certificate)
+function resolveStudentDocumentDownload(PDO $pdo, int $recordId, ?string $studentId = null): ?array
 {
-    $tmp_html = tempnam(sys_get_temp_dir(), 'cert_html_');
-    $tmp_pdf  = tempnam(sys_get_temp_dir(), 'cert_pdf_');
+    $projectRoot = realpath(__DIR__);
+    if ($projectRoot === false) {
+        $projectRoot = __DIR__;
+    }
 
-    if ($tmp_html === false || $tmp_pdf === false) {
+    $candidates = [
+        [
+            'table' => 'student_documents',
+            'pathColumns' => ['file_path', 'document_path', 'file', 'path'],
+            'nameColumns' => ['file_name', 'document_name', 'name'],
+            'mimeColumns' => ['mime_type', 'content_type', 'document_type'],
+        ],
+        [
+            'table' => 'documents',
+            'pathColumns' => ['file_path', 'document_path', 'file', 'path'],
+            'nameColumns' => ['file_name', 'document_name', 'name'],
+            'mimeColumns' => ['mime_type', 'content_type', 'document_type'],
+        ],
+        [
+            'table' => 'students',
+            'pathColumns' => ['document_path', 'file_path', 'document_file', 'file'],
+            'nameColumns' => ['document_name', 'file_name', 'name'],
+            'mimeColumns' => ['document_type', 'mime_type', 'content_type'],
+        ],
+    ];
+
+    foreach ($candidates as $candidate) {
+        $table = $candidate['table'];
+        $tableExists = false;
+        try {
+            $tableCheck = $pdo->prepare("SELECT 1 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = :table LIMIT 1");
+            $tableCheck->execute([':table' => $table]);
+            $tableExists = (int)$tableCheck->fetchColumn() === 1;
+        } catch (Throwable $e) {
+            continue;
+        }
+
+        if (!$tableExists) {
+            continue;
+        }
+
+        $pathColumn = null;
+        foreach ($candidate['pathColumns'] as $columnName) {
+            if (columnExists($pdo, $table, $columnName)) {
+                $pathColumn = $columnName;
+                break;
+            }
+        }
+        if ($pathColumn === null) {
+            continue;
+        }
+
+        $nameColumn = null;
+        foreach ($candidate['nameColumns'] as $columnName) {
+            if (columnExists($pdo, $table, $columnName)) {
+                $nameColumn = $columnName;
+                break;
+            }
+        }
+
+        $mimeColumn = null;
+        foreach ($candidate['mimeColumns'] as $columnName) {
+            if (columnExists($pdo, $table, $columnName)) {
+                $mimeColumn = $columnName;
+                break;
+            }
+        }
+
+        $sql = "SELECT $pathColumn" . ($nameColumn ? ", $nameColumn" : '') . ($mimeColumn ? ", $mimeColumn" : '') . " FROM $table WHERE id = :id";
+        $params = [':id' => $recordId];
+
+        if ($studentId !== null && columnExists($pdo, $table, 'student_id')) {
+            $sql .= ' AND student_id = :student_id';
+            $params[':student_id'] = $studentId;
+        }
+
+        try {
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $row = $stmt->fetch();
+        } catch (Throwable $e) {
+            continue;
+        }
+
+        if (!$row) {
+            continue;
+        }
+
+        $storedPath = trim((string)($row[$pathColumn] ?? ''));
+        if ($storedPath === '') {
+            continue;
+        }
+
+        if (preg_match('~^(https?:)?//~i', $storedPath) === 1) {
+            continue;
+        }
+
+        $normalizedPath = str_replace('\\', '/', $storedPath);
+        if (preg_match('~\.(php|phtml|phar|php3|php4|php5|inc|cgi)$~i', $normalizedPath) === 1) {
+            continue;
+        }
+
+        $candidatePath = $normalizedPath;
+        if (strpos($candidatePath, '/') !== 0) {
+            $candidatePath = '/' . $candidatePath;
+        }
+
+        $absolutePath = $candidatePath[0] === '/' ? $projectRoot . $candidatePath : $candidatePath;
+        $realPath = realpath($absolutePath);
+        if ($realPath === false || !is_file($realPath)) {
+            continue;
+        }
+
+        $rootPrefix = rtrim($projectRoot, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+        if (strncmp($realPath, $rootPrefix, strlen($rootPrefix)) !== 0 && $realPath !== $projectRoot) {
+            continue;
+        }
+
+        return [
+            'path' => $realPath,
+            'name' => $nameColumn !== null ? trim((string)($row[$nameColumn] ?? '')) : basename($realPath),
+            'mime' => $mimeColumn !== null ? trim((string)($row[$mimeColumn] ?? '')) : null,
+        ];
+    }
+
+    return null;
+}
+
+function sendDownloadFile(string $filePath, string $downloadName, ?string $mimeType = null, bool $removeAfterSend = false): bool
+{
+    if (!is_file($filePath) || !is_readable($filePath)) {
         return false;
     }
 
+    $safeName = str_replace(['"', "'", "\\"], [''], basename($downloadName));
+    if ($safeName === '') {
+        $safeName = 'download';
+    }
+
+    $contentType = $mimeType;
+    if ($contentType === null || $contentType === '') {
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $contentType = $finfo !== false ? $finfo->file($filePath) : 'application/octet-stream';
+    }
+
+    if (!headers_sent()) {
+        header('Content-Type: ' . $contentType);
+        header('Content-Disposition: attachment; filename="' . str_replace('"', '"', $safeName) . '"');
+        header('Content-Length: ' . filesize($filePath));
+        header('Cache-Control: no-store, no-cache, must-revalidate');
+        header('Pragma: no-cache');
+        header('X-Content-Type-Options: nosniff');
+    }
+
+    $result = readfile($filePath);
+    if ($removeAfterSend && is_file($filePath)) {
+        @unlink($filePath);
+    }
+
+    return $result !== false;
+}
+
+function build_certificate_html($certificate): string
+{
     $name = htmlspecialchars((string)($certificate['student_name'] ?? 'Student'), ENT_QUOTES, 'UTF-8');
     $exam = htmlspecialchars((string)($certificate['exam_type'] ?? 'Certificate'), ENT_QUOTES, 'UTF-8');
     $title = htmlspecialchars((string)($certificate['certificate_title'] ?? 'የማጠናከር ሰርቲፊኬት'), ENT_QUOTES, 'UTF-8');
@@ -32,7 +189,7 @@ function generate_certificate_pdf_file($certificate)
         $signature_markup = '<div class="sig-placeholder">Digital Signature</div>';
     }
 
-    $html = <<<HTML
+    return <<<HTML
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -89,18 +246,44 @@ function generate_certificate_pdf_file($certificate)
 </body>
 </html>
 HTML;
+}
+
+function generate_certificate_pdf_file($certificate)
+{
+    $html = build_certificate_html($certificate);
+    $tmp_html = tempnam(sys_get_temp_dir(), 'cert_html_');
+    $tmp_pdf  = tempnam(sys_get_temp_dir(), 'cert_pdf_');
+
+    if ($tmp_html === false || $tmp_pdf === false) {
+        return false;
+    }
 
     file_put_contents($tmp_html, $html);
 
-    $browser = 'C:\Program Files\Google\Chrome\Application\chrome.exe';
-    if (!is_file($browser)) {
-        $browser = 'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe';
+    $cert_id = (int)($certificate['id'] ?? 0);
+    $browser = null;
+    foreach ([
+        'C:\Program Files\Google\Chrome\Application\chrome.exe',
+        'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
+        'C:\Program Files\Microsoft\Edge\Application\msedge.exe',
+        'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
+    ] as $candidate) {
+        if (is_file($candidate)) {
+            $browser = $candidate;
+            break;
+        }
     }
 
-    if (!is_file($browser)) {
+    if ($browser === null) {
+        $fallbackPath = sys_get_temp_dir() . '/certificate-' . $cert_id . '.html';
+        file_put_contents($fallbackPath, $html);
         @unlink($tmp_html);
         @unlink($tmp_pdf);
-        return false;
+        return [
+            'path' => $fallbackPath,
+            'mime' => 'text/html',
+            'filename' => 'certificate-' . $cert_id . '.html',
+        ];
     }
 
     $command = '"' . str_replace('"', '\"', $browser) . '" --headless --disable-gpu --no-sandbox --print-to-pdf="' . str_replace('"', '\"', $tmp_pdf) . '" "' . str_replace('"', '\"', $tmp_html) . '"';
@@ -109,11 +292,21 @@ HTML;
     @unlink($tmp_html);
 
     if ($code !== 0 || !is_file($tmp_pdf) || filesize($tmp_pdf) === 0) {
+        $fallbackPath = sys_get_temp_dir() . '/certificate-' . $cert_id . '.html';
+        file_put_contents($fallbackPath, $html);
         @unlink($tmp_pdf);
-        return false;
+        return [
+            'path' => $fallbackPath,
+            'mime' => 'text/html',
+            'filename' => 'certificate-' . $cert_id . '.html',
+        ];
     }
 
-    return $tmp_pdf;
+    return [
+        'path' => $tmp_pdf,
+        'mime' => 'application/pdf',
+        'filename' => 'certificate-' . $cert_id . '.pdf',
+    ];
 }
 
 $is_admin = isset($_SESSION['admin_id']);
@@ -178,7 +371,7 @@ if (isset($_GET['delete'])) {
     }
 }
 
-if (!$is_admin && !isset($_GET['download'])) {
+if (!$is_admin && !isset($_GET['download']) && !isset($_GET['download_document']) && !isset($_GET['document_id']) && !isset($_GET['doc_id'])) {
     header('Location: student_dashboard.php');
     exit;
 }
@@ -205,7 +398,19 @@ try {
     $certificates = [];
 }
 
-if (isset($_GET['download'])) {
+if (isset($_GET['download_document']) || isset($_GET['document_id']) || isset($_GET['doc_id'])) {
+    $documentId = (int)($_GET['download_document'] ?? $_GET['document_id'] ?? $_GET['doc_id'] ?? 0);
+    if ($documentId > 0) {
+        $studentIdForDocument = $is_student ? (string)($_SESSION['student_id'] ?? '') : null;
+        $documentRecord = resolveStudentDocumentDownload($pdo, $documentId, $studentIdForDocument);
+        if ($documentRecord !== null) {
+            if (sendDownloadFile($documentRecord['path'], $documentRecord['name'] !== '' ? $documentRecord['name'] : 'student-document', $documentRecord['mime'] ?? null, false)) {
+                exit;
+            }
+        }
+        $error = 'The requested student document could not be found or is no longer available.';
+    }
+} elseif (isset($_GET['download'])) {
     $cert_id = (int)$_GET['download'];
     try {
         if ($is_student) {
@@ -218,16 +423,13 @@ if (isset($_GET['download'])) {
         $certificate = $stmt->fetch();
 
         if ($certificate) {
-            $pdf_path = generate_certificate_pdf_file($certificate);
-            if ($pdf_path !== false) {
-                header('Content-Type: application/pdf');
-                header('Content-Disposition: attachment; filename="certificate-' . (int)$cert_id . '.pdf"');
-                header('Content-Length: ' . filesize($pdf_path));
-                readfile($pdf_path);
-                unlink($pdf_path);
-                exit;
+            $document = generate_certificate_pdf_file($certificate);
+            if ($document !== false && isset($document['path']) && is_file($document['path'])) {
+                if (sendDownloadFile($document['path'], $document['filename'] ?? 'certificate.pdf', $document['mime'] ?? 'application/octet-stream', true)) {
+                    exit;
+                }
             }
-            $error = 'PDF ማውረድ አልተቻለም። የብራውዘር እገዳ እና ቪዛውን ይመልከቱ።';
+            $error = 'The certificate could not be downloaded because the file is not available.';
         } else {
             $error = 'ይህ ሰርቲፊኬት አልተገኘም።';
         }

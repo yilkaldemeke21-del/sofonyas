@@ -141,8 +141,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['chat_message'])) {
     }
 }
 
-$stmt = $pdo->query('SELECT * FROM site_chat_messages ORDER BY created_at DESC LIMIT 8');
-$chatMessages = $stmt->fetchAll();
+$chatMessages = [];
+try {
+    $stmt = $pdo->prepare('SELECT * FROM site_chat_messages WHERE sender_type = :sender_type AND sender_name = :sender_name AND (reply_deleted IS NULL OR reply_deleted = 0) ORDER BY created_at DESC LIMIT 8');
+    $stmt->execute([
+        ':sender_type' => 'student',
+        ':sender_name' => $studentName,
+    ]);
+    $chatMessages = $stmt->fetchAll();
+} catch (Throwable $e) {
+    $chatMessages = [];
+}
 
 try {
     $pdo->exec('CREATE TABLE IF NOT EXISTS certificates (
@@ -1194,7 +1203,7 @@ if (empty($notifications)) {
                     <div class="mini-card" style="margin-bottom: 10px;">
                         <h3><?php echo safe($cert['exam_type']); ?></h3>
                         <p class="muted">ነጥብ: <?php echo (int)$cert['score']; ?> / <?php echo (int)$cert['total_questions']; ?></p>
-                        <a class="button" href="admin_certificate.php?download=<?php echo (int)$cert['id']; ?>">Download PDF</a>
+                        <a class="button" href="admin_certificate.php?download=<?php echo (int)$cert['id']; ?>">Download Certificate</a>
                     </div>
                 <?php endforeach; ?>
             <?php endif; ?>
@@ -1381,7 +1390,7 @@ if (empty($notifications)) {
             <textarea name="chat_message" rows="4" maxlength="1000" required placeholder="ስለ ኮርስዎ፣ እድገትዎ ወይም ማንኛውንም ጥያቄ ይጻፉ..." style="padding: 12px 14px; border: 1px solid #cbd5e1; border-radius: 12px; resize: vertical;"></textarea>
             <button class="button" type="submit">📤 መልእክት ላክ</button>
         </form>
-        <div style="margin-top: 16px; display:flex; flex-direction:column; gap:10px;">
+        <div id="studentChatThread" style="margin-top: 16px; display:flex; flex-direction:column; gap:10px;">
             <?php if (empty($chatMessages)): ?>
                 <div class="mini-card"><p class="muted">እስካሁን ምንም የቻት መልእክት የለም።</p></div>
             <?php else: ?>
@@ -1395,6 +1404,7 @@ if (empty($notifications)) {
                         <?php if (!empty($chatItem['reply_message'])): ?>
                             <div style="padding: 10px 12px; border-radius: 10px; background: #f5f3ff; color: #5b21b6; border-left: 3px solid #8b5cf6;">
                                 <strong>Admin reply:</strong> <?php echo safe($chatItem['reply_message']); ?>
+                                <?php if (!empty($chatItem['reply_updated_at'])): ?><span style="margin-left:6px; font-size:12px; color:#7c3aed;">(Edited)</span><?php endif; ?>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -1513,6 +1523,47 @@ if (empty($notifications)) {
             };
 
             initCourseTabs();
+        })();
+    </script>
+    <script>
+        (function () {
+            const thread = document.getElementById('studentChatThread');
+            if (!thread) {
+                return;
+            }
+
+            const renderMessages = (messages) => {
+                if (!messages || messages.length === 0) {
+                    thread.innerHTML = '<div class="mini-card"><p class="muted">እስካሁን ምንም የቻት መልእክት የለም።</p></div>';
+                    return;
+                }
+
+                thread.innerHTML = messages.map((item) => {
+                    const replyMarkup = item.reply_message ? `<div style="padding: 10px 12px; border-radius: 10px; background: #f5f3ff; color: #5b21b6; border-left: 3px solid #8b5cf6;"><strong>Admin reply:</strong> ${item.reply_message}${item.reply_updated_at ? ' <span style="margin-left:6px; font-size:12px; color:#7c3aed;">(Edited)</span>' : ''}</div>` : '';
+                    return `<div class="mini-card" style="border-left: 4px solid ${item.reply_message ? '#8b5cf6' : '#2563eb'};"><div style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:6px;"><strong>${item.sender_name}</strong><span class="pill ${item.status === 'replied' ? 'success' : 'info'}">${item.status}</span></div><p class="muted" style="margin:0 0 8px;">${item.message}</p>${replyMarkup}</div>`;
+                }).join('');
+            };
+
+            const refreshThread = () => {
+                fetch('chat_reply_actions.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: new URLSearchParams({ action: 'student_chat_feed' })
+                })
+                    .then(function (response) { return response.json(); })
+                    .then(function (data) {
+                        if (data && data.success && Array.isArray(data.messages)) {
+                            renderMessages(data.messages);
+                        }
+                    })
+                    .catch(function () {});
+            };
+
+            refreshThread();
+            setInterval(refreshThread, 5000);
         })();
     </script>
 </body>

@@ -9,6 +9,7 @@ $pdfItems = [];
 $audioItems = [];
 $videoItems = [];
 $assignmentItems = [];
+$certificateItems = [];
 
 foreach ($courses as $course) {
     if (!empty($course['pdf_file'])) {
@@ -23,6 +24,19 @@ foreach ($courses as $course) {
     if (!empty(trim((string)($course['assignment'] ?? '')))) {
         $assignmentItems[] = $course;
     }
+}
+
+try {
+    if (!empty($_SESSION['student_id'])) {
+        $stmt = $pdo->prepare('SELECT * FROM certificates WHERE student_id = :student_id ORDER BY issued_at DESC');
+        $stmt->execute([':student_id' => $_SESSION['student_id']]);
+        $certificateItems = $stmt->fetchAll();
+    } elseif (!empty($_SESSION['admin_id'])) {
+        $stmt = $pdo->query('SELECT * FROM certificates ORDER BY issued_at DESC');
+        $certificateItems = $stmt->fetchAll();
+    }
+} catch (Throwable $e) {
+    $certificateItems = [];
 }
 ?>
 <!DOCTYPE html>
@@ -118,6 +132,22 @@ foreach ($courses as $course) {
             </video>
           <?php endif; ?>
           <p style="margin-top:8px;"><a class="btn" href="<?php echo safe(publicMediaUrl($course['tutorial_video'])); ?>" target="_blank" rel="noopener">Open Video Link</a></p>
+        </div>
+      <?php endforeach; endif; ?>
+    </div>
+
+    <div class="card">
+      <h2>🏅 ሰርቲፊኬቶች</h2>
+      <p class="muted">የተሰጡትን ሰርቲፊኬቶች እዚህ ተመልከት እና በቀላሉ አውርድ።</p>
+      <?php if (empty($certificateItems)): ?>
+        <p class="muted">አሁን ሰርቲፊኬት የለም።</p>
+      <?php else: foreach ($certificateItems as $certificate): ?>
+        <div class="item">
+          <span class="pill">Certificate</span>
+          <h3><?php echo safe($certificate['exam_type'] ?? 'Certificate'); ?></h3>
+          <p class="muted" style="margin:4px 0 8px;">Issued: <?php echo safe(date('Y-m-d', strtotime((string)($certificate['issued_at'] ?? 'now')))); ?></p>
+          <p class="muted" style="margin:0 0 10px;">Score: <?php echo (int)($certificate['score'] ?? 0); ?> / <?php echo (int)($certificate['total_questions'] ?? 0); ?></p>
+          <a class="btn primary" href="admin_certificate.php?download=<?php echo (int)($certificate['id'] ?? 0); ?>">Download Certificate</a>
         </div>
       <?php endforeach; endif; ?>
     </div>

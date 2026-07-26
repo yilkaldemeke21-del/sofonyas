@@ -42,6 +42,29 @@ $course_breakdown = $pdo->query('SELECT course, COUNT(*) as total FROM registrat
 
 $recent_students = $pdo->query('SELECT * FROM students ORDER BY created_at DESC LIMIT 5')->fetchAll();
 $recent_courses = $pdo->query('SELECT * FROM courses ORDER BY created_at DESC LIMIT 5')->fetchAll();
+
+try {
+    $pdo->exec('CREATE TABLE IF NOT EXISTS site_chat_messages (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        sender_type VARCHAR(30) NOT NULL DEFAULT "guest",
+        sender_name VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        reply_message TEXT DEFAULT NULL,
+        reply_admin_id INT DEFAULT NULL,
+        reply_updated_at DATETIME DEFAULT NULL,
+        reply_deleted TINYINT(1) NOT NULL DEFAULT 0,
+        status VARCHAR(30) NOT NULL DEFAULT "new",
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_site_chat_created_at (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+} catch (PDOException $e) {}
+
+$chat_stats = $pdo->query('SELECT COUNT(*) AS total_messages, SUM(CASE WHEN status = "new" OR (reply_message IS NULL OR TRIM(reply_message) = "") THEN 1 ELSE 0 END) AS pending_messages, SUM(CASE WHEN reply_message IS NOT NULL AND TRIM(reply_message) <> "" THEN 1 ELSE 0 END) AS replied_messages FROM site_chat_messages')->fetch(PDO::FETCH_ASSOC);
+$chat_total_messages = (int)($chat_stats['total_messages'] ?? 0);
+$chat_pending_messages = (int)($chat_stats['pending_messages'] ?? 0);
+$chat_replied_messages = (int)($chat_stats['replied_messages'] ?? 0);
+
 $stmt = $pdo->query('SELECT name, email, country, city, latitude, longitude FROM students WHERE country IS NOT NULL OR city IS NOT NULL OR latitude IS NOT NULL OR longitude IS NOT NULL ORDER BY created_at DESC LIMIT 150');
 $student_locations = $stmt->fetchAll();
 
@@ -496,6 +519,7 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
         .report-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
         .report-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
         .report-card { border: 1px solid var(--border); border-radius: 10px; padding: 12px; background: var(--surface-muted); }
+        .report-card.chat-highlight { background: linear-gradient(135deg, #eff6ff 0%, #f5f3ff 100%); border-color: #c7d2fe; }
         .report-title { font-weight: 700; margin-bottom: 8px; }
         .report-actions { display: flex; flex-wrap: wrap; gap: 8px; }
         .report-action { display: inline-block; padding: 6px 10px; border: 1px solid var(--primary); border-radius: 999px; background: var(--surface); color: var(--primary); font-size: 12px; font-weight: 700; text-decoration: none; }
@@ -920,6 +944,22 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
                     <a href="admin_reports.php?type=contact_messages&print=1" class="report-action">Print</a>
                     <a href="admin_reports.php?type=contact_messages" class="report-action">Export PDF</a>
                     <a href="admin_reports.php?type=contact_messages" class="report-action">Export Excel</a>
+                </div>
+            </div>
+            <div class="report-card chat-highlight">
+                <div class="report-title">💬 የቻት አስተዳደር</div>
+                <div style="font-size: 0.93rem; color: var(--muted); line-height: 1.6; margin-bottom: 10px;">
+                    <div>ጠቅላላ መልእክቶች: <strong><?php echo (int)$chat_total_messages; ?></strong></div>
+                    <div>በመጠበቅ ላይ: <strong><?php echo (int)$chat_pending_messages; ?></strong></div>
+                    <div>መልስ የተሰጠ: <strong><?php echo (int)$chat_replied_messages; ?></strong></div>
+                </div>
+                <div class="report-actions">
+                    <a href="admin_chat_management.php" class="report-action">View</a>
+                    <a href="admin_chat_management.php" class="report-action">Edit</a>
+                    <a href="admin_chat_management.php" class="report-action secondary">Delete</a>
+                    <a href="admin_chat_management.php?print=1" class="report-action">Print</a>
+                    <a href="admin_chat_management.php" class="report-action">Reply</a>
+                    <a href="admin_chat_management.php" class="report-action">Open Center</a>
                 </div>
             </div>
             <div class="report-card">

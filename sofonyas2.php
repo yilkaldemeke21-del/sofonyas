@@ -1360,7 +1360,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         <div style="margin-top:26px; border-top:1px solid rgba(255,255,255,0.12); padding-top:18px; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:14px; color:#94a3b8; font-size:0.95rem;">
             <span data-am="© 2026 ሶፊ ፕሮጀክት. መብቶች የተጠበቁ" data-en="© 2026 Sofi Project. All rights reserved.">© 2026 Sofi Project. All rights reserved.</span>
             <div style="display:flex; flex-wrap:wrap; gap:12px;">
-                <a href="about.php" style="color:#94a3b8; text-decoration:none;" data-am="ስለ እኛ" data-en="About Us">About Us</a>
+                <a href="contact.html" style="color:#94a3b8; text-decoration:none;" data-am="ስለ እኛ" data-en="About Us">About Us</a>
                 <a href="tutorial.php" style="color:#94a3b8; text-decoration:none;" data-am="ኮርሶች" data-en="Courses">Courses</a>
                 <a href="certificate_verification.php" style="color:#94a3b8; text-decoration:none;" data-am="ሰርቲፊኬቶች" data-en="Certificates">Certificates</a>
                 <a href="privacy.php" style="color:#94a3b8; text-decoration:none;" data-am="የግላዊነት ፖሊሲ" data-en="Privacy Policy">Privacy Policy</a>
