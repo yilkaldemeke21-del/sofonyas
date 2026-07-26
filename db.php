@@ -1,10 +1,14 @@
 <?php
-$host = getenv('DB_HOST') ?: '127.0.0.1';
+$host = getenv('DB_HOST');
+if ($host === false || trim((string)$host) === '' || strtolower(trim((string)$host)) === 'localhost') {
+    $host = '127.0.0.1';
+}
 $port = getenv('DB_PORT') ?: '3306';
 $db   = getenv('DB_NAME') ?: 'sofonyas_db';
 $user = getenv('DB_USER') ?: 'root';
 $pass = getenv('DB_PASS') ?: '';
 $charset = 'utf8mb4';
+$socket = getenv('DB_SOCKET') ?: 'C:/xampp/mysql/mysql.sock';
 
 $options = [
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -20,20 +24,34 @@ $lastError = null;
 $hosts = array_values(array_unique(array_filter([
     $host,
     '127.0.0.1',
+    '::1',
     'localhost',
 ], static function ($value): bool {
     return $value !== null && $value !== '';
 })));
 
-foreach ($hosts as $candidateHost) {
-    $dsn = "mysql:host=$candidateHost;port=$port;dbname=$db;charset=$charset";
-
+$socketUsed = false;
+if (is_file($socket) || strpos($socket, 'mysql.sock') !== false) {
     try {
-        $pdo = new PDO($dsn, $user, $pass, $options);
-        break;
+        $pdo = new PDO("mysql:unix_socket=$socket;dbname=$db;charset=$charset", $user, $pass, $options);
+        $socketUsed = true;
     } catch (PDOException $e) {
         $lastError = $e;
-        error_log('DB connection attempt failed for host ' . $candidateHost . ': ' . $e->getMessage());
+        error_log('DB connection attempt failed over socket ' . $socket . ': ' . $e->getMessage());
+    }
+}
+
+if (!$pdo) {
+    foreach ($hosts as $candidateHost) {
+        $dsn = "mysql:host=$candidateHost;port=$port;dbname=$db;charset=$charset";
+
+        try {
+            $pdo = new PDO($dsn, $user, $pass, $options);
+            break;
+        } catch (PDOException $e) {
+            $lastError = $e;
+            error_log('DB connection attempt failed for host ' . $candidateHost . ': ' . $e->getMessage());
+        }
     }
 }
 
@@ -705,8 +723,12 @@ function ensureSiteSettingsTable(PDO $pdo): void
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 }
 
-function getSiteSettings(PDO $pdo): array
+function getSiteSettings(?PDO $pdo): array
 {
+    if (!$pdo instanceof PDO) {
+        return [];
+    }
+
     $stmt = $pdo->query('SELECT setting_key, setting_value FROM site_settings');
     $settings = [];
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
@@ -715,7 +737,7 @@ function getSiteSettings(PDO $pdo): array
     return $settings;
 }
 
-function getSiteSetting(PDO $pdo, string $key, string $default = ''): string
+function getSiteSetting(?PDO $pdo, string $key, string $default = ''): string
 {
     $settings = getSiteSettings($pdo);
     return isset($settings[$key]) ? (string)$settings[$key] : $default;

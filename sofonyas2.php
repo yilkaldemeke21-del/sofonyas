@@ -397,13 +397,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         .logo-ring-text text {
             font-family: Georgia, Times New Roman, serif;
             fill: #0a3d91;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.6px;
             font-weight: 800;
             text-rendering: geometricPrecision;
             text-shadow: 0 0 6px rgba(212,175,55,0.35);
         }
-        .logo-ring-text .top-text { font-size: 14px; }
-        .logo-ring-text .bottom-text { font-size: 10.5px; }
+        .logo-ring-text .top-text { font-size: 12px; }
+        .logo-ring-text .bottom-text { font-size: 10px; }
+        .logo-ornaments {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+        }
+        .logo-ornaments .sun-ray {
+            stroke: #f8dc7b;
+            stroke-width: 2;
+            stroke-linecap: round;
+            opacity: 0.95;
+            fill: none;
+        }
+        .logo-ornaments .wing {
+            fill: #fffdf4;
+            stroke: #d4af37;
+            stroke-width: 1.3;
+            stroke-linejoin: round;
+            filter: drop-shadow(0 2px 3px rgba(10,61,145,0.16));
+        }
+        .logo-ornaments .olive-branch {
+            stroke: #8b6b14;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+        }
+        .logo-ornaments .olive-leaf {
+            fill: #5e7b29;
+            stroke: #3e5b20;
+            stroke-width: 1;
+        }
         .holy-dove {
             position: absolute;
             right: 18px;
@@ -643,13 +677,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
             <a href="sofonyas2.php" class="logo-wrap" aria-label="<?php echo safe($siteName); ?>">
                 <span class="logo-circle-rim" aria-hidden="true"></span>
                 <img src="sofi fikr.jpg" alt="<?php echo safe($siteName); ?>" class="logo-img zoomable-img">
+                <svg class="logo-ornaments" viewBox="0 0 220 220" aria-hidden="true">
+                    <g transform="translate(110 110)">
+                        <circle r="88" fill="none" stroke="#d4af37" stroke-opacity="0.18" stroke-width="1.2" />
+                        <g opacity="0.95">
+                            <line x1="0" y1="-86" x2="0" y2="-62" class="sun-ray" />
+                            <line x1="0" y1="62" x2="0" y2="86" class="sun-ray" />
+                            <line x1="-60" y1="-60" x2="-44" y2="-44" class="sun-ray" />
+                            <line x1="60" y1="-60" x2="44" y2="-44" class="sun-ray" />
+                            <line x1="-74" y1="0" x2="-50" y2="0" class="sun-ray" />
+                            <line x1="50" y1="0" x2="74" y2="0" class="sun-ray" />
+                            <line x1="-60" y1="60" x2="-44" y2="44" class="sun-ray" />
+                            <line x1="60" y1="60" x2="44" y2="44" class="sun-ray" />
+                        </g>
+                        <path d="M -34 -18 C -54 -26 -66 -36 -76 -52 C -63 -48 -50 -38 -38 -23 C -36 -21 -35 -19 -34 -18 Z" class="wing" />
+                        <path d="M 34 -18 C 54 -26 66 -36 76 -52 C 63 -48 50 -38 38 -23 C 36 -21 35 -19 34 -18 Z" class="wing" />
+                        <path d="M -18 36 C -24 29 -30 22 -36 14 C -28 16 -20 23 -15 32" class="olive-branch" />
+                        <path d="M 18 36 C 24 29 30 22 36 14 C 28 16 20 23 15 32" class="olive-branch" />
+                        <path d="M -26 42 C -34 48 -40 56 -44 66" class="olive-branch" />
+                        <path d="M 26 42 C 34 48 40 56 44 66" class="olive-branch" />
+                        <path d="M -24 52 C -32 56 -36 62 -38 70" class="olive-branch" />
+                        <path d="M 24 52 C 32 56 36 62 38 70" class="olive-branch" />
+                        <path d="M -28 48 C -36 48 -42 52 -46 60" class="olive-leaf" />
+                        <path d="M 28 48 C 36 48 42 52 46 60" class="olive-leaf" />
+                    </g>
+                </svg>
                 <svg class="logo-ring-text" viewBox="0 0 220 220" aria-hidden="true">
                     <defs>
                         <path id="logoTopArc" d="M 30 110 A 80 80 0 0 1 190 110" />
                         <path id="logoBottomArc" d="M 30 110 A 80 80 0 0 0 190 110" />
                     </defs>
                     <text class="top-text">
-                        <textPath href="#logoTopArc" startOffset="50%" text-anchor="middle" dominant-baseline="middle">ተዋሕዶ</textPath>
+                        <textPath href="#logoTopArc" startOffset="50%" text-anchor="middle" dominant-baseline="middle">ቤተ ገብርኤል</textPath>
                     </text>
                     <text class="bottom-text">
                         <textPath href="#logoBottomArc" startOffset="50%" text-anchor="middle" dominant-baseline="middle">ዲ/ን ሶፎንያስ ደመቀ</textPath>
