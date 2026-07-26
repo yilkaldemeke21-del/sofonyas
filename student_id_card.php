@@ -34,113 +34,44 @@ $qrCodeSrc = 'https://api.qrserver.com/v1/create-qr-code/?size=210x210&data=' . 
 
 function generateIdCardPdfFile(array $student, array $registrations, string $verificationCode, string $verificationUrl)
 {
-    $tmpHtml = tempnam(sys_get_temp_dir(), 'idcard_html_');
-    $tmpPdf = tempnam(sys_get_temp_dir(), 'idcard_pdf_');
-    if ($tmpHtml === false || $tmpPdf === false) {
-        return false;
-    }
+    $name = (string)($student['name'] ?? $student['student_name'] ?? 'Student');
+    $email = (string)($student['email'] ?? '');
+    $studentId = (string)($student['student_id'] ?? '');
+    $country = (string)($student['country'] ?? 'Ethiopia');
+    $city = (string)($student['city'] ?? 'N/A');
 
-    $name = htmlspecialchars((string)($student['name'] ?? $student['student_name'] ?? 'ተማሪ'), ENT_QUOTES, 'UTF-8');
-    $email = htmlspecialchars((string)($student['email'] ?? ''), ENT_QUOTES, 'UTF-8');
-    $studentId = htmlspecialchars((string)($student['student_id'] ?? ''), ENT_QUOTES, 'UTF-8');
-    $country = htmlspecialchars((string)($student['country'] ?? 'ኢትዮጵያ'), ENT_QUOTES, 'UTF-8');
-    $city = htmlspecialchars((string)($student['city'] ?? 'N/A'), ENT_QUOTES, 'UTF-8');
-    $verificationCodeEscaped = htmlspecialchars($verificationCode, ENT_QUOTES, 'UTF-8');
-    $verificationUrlEscaped = htmlspecialchars($verificationUrl, ENT_QUOTES, 'UTF-8');
+    $lines = [
+        'Name: ' . $name,
+        'Student ID: ' . $studentId,
+        'Email: ' . $email,
+        'Location: ' . $city . ', ' . $country,
+        'Verification Code: ' . $verificationCode,
+        'Verification URL: ' . $verificationUrl,
+    ];
 
-    $registeredCourses = [];
+    $courses = [];
     foreach ($registrations as $row) {
-        $course = htmlspecialchars((string)($row['course'] ?? 'Unknown course'), ENT_QUOTES, 'UTF-8');
-        $status = htmlspecialchars((string)($row['payment_status'] ?? 'unpaid'), ENT_QUOTES, 'UTF-8');
-        $registeredCourses[] = '<li>' . $course . ' • ' . ucfirst($status) . '</li>';
-    }
-    $coursesHtml = !empty($registeredCourses) ? implode("\n", $registeredCourses) : '<li>አልተመዘገበም</li>';
-
-    $html = '<!DOCTYPE html>' .
-        '<html lang="am">' .
-        '<head>' .
-        '<meta charset="UTF-8" />' .
-        '<title>የተማሪ ID Card</title>' .
-        '<style>' .
-        'body { margin: 0; font-family: Arial, sans-serif; background: #f3f4f6; color: #111827; }' .
-        '.page { width: 900px; min-height: 1200px; margin: 0 auto; padding: 32px; background: #ffffff; border-radius: 24px; box-shadow: 0 20px 60px rgba(15,23,42,0.12); }' .
-        '.header { display: flex; gap: 16px; align-items: center; justify-content: space-between; }' .
-        '.brand { font-size: 22px; color: #4f46e5; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }' .
-        '.subtitle { font-size: 14px; color: #6b7280; margin-top: 8px; }' .
-        '.card { border: 1px solid #e5e7eb; border-radius: 20px; padding: 24px; margin-top: 28px; }' .
-        '.row { display: flex; gap: 24px; flex-wrap: wrap; }' .
-        '.info { flex: 1 1 360px; }' .
-        '.info h1 { margin: 0; font-size: 36px; color: #111827; }' .
-        '.info p { margin: 10px 0; font-size: 16px; color: #334155; }' .
-        '.label { display: block; font-size: 13px; color: #6b7280; margin-top: 14px; }' .
-        '.value { font-size: 18px; color: #111827; font-weight: 700; margin-top: 4px; }' .
-        '.qr-box { width: 240px; min-width: 240px; background: #eef2ff; border-radius: 18px; display: grid; place-items: center; padding: 18px; }' .
-        '.verified { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 999px; background: #ecfdf5; color: #166534; font-weight: 700; margin-top: 18px; }' .
-        '.section { margin-top: 28px; }' .
-        '.section h2 { margin: 0 0 12px; font-size: 20px; color: #4338ca; }' .
-        '.course-list { margin: 0; padding-left: 20px; color: #0f172a; }' .
-        '.footer { margin-top: 40px; padding: 18px; border-radius: 16px; background: #f8fafc; color: #475569; font-size: 14px; }' .
-        '.footer strong { color: #111827; }' .
-        '.link { color: #2563eb; text-decoration: none; }' .
-        '</style>' .
-        '</head>' .
-        '<body>' .
-        '<div class="page">' .
-        '<div class="header">' .
-        '<div>' .
-        '<div class="brand">Sofyias ID Card</div>' .
-        '<div class="subtitle">የዲጂታል መታወቂያ ካርድ ለተማሪዎች የሚያስደርስ</div>' .
-        '</div>' .
-        '<div class="verified">Verified • Digital ID</div>' .
-        '</div>' .
-        '<div class="card">' .
-        '<div class="row">' .
-        '<div class="info">' .
-        '<h1>' . $name . '</h1>' .
-        '<p class="label">Student ID</p>' .
-        '<p class="value">' . $studentId . '</p>' .
-        '<p class="label">Email</p>' .
-        '<p class="value">' . $email . '</p>' .
-        '<p class="label">Location</p>' .
-        '<p class="value">' . $city . ', ' . $country . '</p>' .
-        '<p class="label">Verification Code</p>' .
-        '<p class="value">' . $verificationCodeEscaped . '</p>' .
-        '</div>' .
-        '<div class="qr-box">' .
-        '<img src="https://api.qrserver.com/v1/create-qr-code/?size=210x210&data=' . urlencode($verificationUrlEscaped) . '" alt="QR Code" style="display:block; width:210px; height:210px;" />' .
-        '</div>' .
-        '</div>' .
-        '<div class="section">' .
-        '<h2>Registered Courses</h2>' .
-        '<ul class="course-list">' . $coursesHtml . '</ul>' .
-        '</div>' .
-        '<div class="footer">' .
-        '<p><strong>Verification URL:</strong> ' . $verificationUrlEscaped . '</p>' .
-        '<p>በዚህ ቪኪፊኬሽን የሚሆነውን የተማሪ መረጃ በማረጋገጥ ይረዱ. ይህ ካርድ ከSofyias ጋር የተያያዘ ነው።</p>' .
-        '</div>' .
-        '</div>' .
-        '</div>' .
-        '</body>' .
-        '</html>';
-
-    file_put_contents($tmpHtml, $html);
-
-    $browser = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
-    if (!is_file($browser)) {
-        $browser = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
+        $course = (string)($row['course'] ?? 'Unknown course');
+        $status = ucfirst((string)($row['payment_status'] ?? 'unpaid'));
+        $courses[] = 'Course: ' . $course . ' (' . $status . ')';
     }
 
-    if (!is_file($browser)) {
-        @unlink($tmpHtml);
-        @unlink($tmpPdf);
+    if (!empty($courses)) {
+        $lines[] = 'Registered Courses:';
+        foreach ($courses as $courseLine) {
+            $lines[] = ' - ' . $courseLine;
+        }
+    } else {
+        $lines[] = 'Registered Courses: None';
+    }
+
+    $pdfContent = build_simple_pdf_bytes('Student ID Card', $lines, 'Sofyias Educational Platform');
+    $tmpPdf = tempnam(sys_get_temp_dir(), 'idcard_pdf_');
+    if ($tmpPdf === false) {
         return false;
     }
 
-    $command = '"' . str_replace('"', '\\"', $browser) . '" --headless --disable-gpu --no-sandbox --print-to-pdf="' . str_replace('"', '\\"', $tmpPdf) . '" "' . str_replace('"', '\\"', $tmpHtml) . '"';
-    exec($command, $output, $code);
-    @unlink($tmpHtml);
-
-    if ($code !== 0 || !is_file($tmpPdf) || filesize($tmpPdf) === 0) {
+    if (file_put_contents($tmpPdf, $pdfContent) === false) {
         @unlink($tmpPdf);
         return false;
     }

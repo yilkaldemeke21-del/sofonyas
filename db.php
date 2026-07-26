@@ -167,6 +167,59 @@ function columnExists(PDO $pdo, string $tableName, string $columnName): bool
     return (int)$stmt->fetchColumn() > 0;
 }
 
+if (!function_exists('escape_pdf_text')) {
+    function escape_pdf_text(string $value): string
+    {
+        $text = preg_replace('/[^\x20-\x7E\r\n]/u', '', (string)$value);
+        $text = str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], $text);
+        return $text;
+    }
+}
+
+if (!function_exists('build_simple_pdf_bytes')) {
+    function build_simple_pdf_bytes(string $title, array $lines, string $subtitle = ''): string
+    {
+        $stream = "BT\n/F1 20 Tf\n50 740 Td\n(" . escape_pdf_text($title) . ") Tj\nET\n";
+
+        if ($subtitle !== '') {
+            $stream .= "BT\n/F1 12 Tf\n50 710 Td\n(" . escape_pdf_text($subtitle) . ") Tj\nET\n";
+        }
+
+        $y = $subtitle !== '' ? 688 : 710;
+        foreach ($lines as $line) {
+            $text = escape_pdf_text((string)$line);
+            $stream .= "BT\n/F1 12 Tf\n50 {$y} Td\n(" . $text . ") Tj\nET\n";
+            $y -= 18;
+        }
+
+        $objects = [];
+        $objects[] = "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n";
+        $objects[] = "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n";
+        $objects[] = "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>\nendobj\n";
+        $objects[] = "4 0 obj\n<< /Length " . strlen($stream) . " >>\nstream\n" . $stream . "\nendstream\nendobj\n";
+        $objects[] = "5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n";
+
+        $pdf = "%PDF-1.4\n";
+        $offsets = [0];
+        foreach ($objects as $object) {
+            $offsets[] = strlen($pdf);
+            $pdf .= $object;
+        }
+
+        $xrefStart = strlen($pdf);
+        $pdf .= "xref\n0 " . (count($objects) + 1) . "\n";
+        $pdf .= "0000000000 65535 f \n";
+        for ($i = 1; $i <= count($objects); $i++) {
+            $pdf .= str_pad((string)$offsets[$i], 10, '0', STR_PAD_LEFT) . " 00000 n \n";
+        }
+
+        $pdf .= "trailer\n<< /Size " . (count($objects) + 1) . " /Root 1 0 R >>\n";
+        $pdf .= "startxref\n" . $xrefStart . "\n%%EOF\n";
+
+        return $pdf;
+    }
+}
+
 function ensureStudentLocationColumns(PDO $pdo): void
 {
     $definitions = [

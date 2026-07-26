@@ -250,56 +250,33 @@ HTML;
 
 function generate_certificate_pdf_file($certificate)
 {
-    $html = build_certificate_html($certificate);
-    $tmp_html = tempnam(sys_get_temp_dir(), 'cert_html_');
-    $tmp_pdf  = tempnam(sys_get_temp_dir(), 'cert_pdf_');
+    $cert_id = (int)($certificate['id'] ?? 0);
+    $name = (string)($certificate['student_name'] ?? 'Student');
+    $exam = (string)($certificate['exam_type'] ?? 'Certificate');
+    $score = (int)($certificate['score'] ?? 0);
+    $total = (int)($certificate['total_questions'] ?? 0);
+    $issued = date('Y-m-d', strtotime((string)($certificate['issued_at'] ?? 'now')));
+    $verify = 'VC-' . str_pad((string)($certificate['id'] ?? 0), 6, '0', STR_PAD_LEFT);
+    $signer = (string)($certificate['signer_name'] ?? 'Authorized Signatory');
 
-    if ($tmp_html === false || $tmp_pdf === false) {
+    $lines = [
+        'This certificate is awarded to ' . $name,
+        'for successful completion of ' . $exam,
+        'Score: ' . $score . ' / ' . $total,
+        'Issued on: ' . $issued,
+        'Verification: ' . $verify,
+        'Signed by: ' . $signer,
+    ];
+
+    $pdfContent = build_simple_pdf_bytes('Certificate of Completion', $lines, 'Sofyias Educational Platform');
+    $tmp_pdf = tempnam(sys_get_temp_dir(), 'cert_pdf_');
+    if ($tmp_pdf === false) {
         return false;
     }
 
-    file_put_contents($tmp_html, $html);
-
-    $cert_id = (int)($certificate['id'] ?? 0);
-    $browser = null;
-    foreach ([
-        'C:\Program Files\Google\Chrome\Application\chrome.exe',
-        'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
-        'C:\Program Files\Microsoft\Edge\Application\msedge.exe',
-        'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
-    ] as $candidate) {
-        if (is_file($candidate)) {
-            $browser = $candidate;
-            break;
-        }
-    }
-
-    if ($browser === null) {
-        $fallbackPath = sys_get_temp_dir() . '/certificate-' . $cert_id . '.html';
-        file_put_contents($fallbackPath, $html);
-        @unlink($tmp_html);
+    if (file_put_contents($tmp_pdf, $pdfContent) === false) {
         @unlink($tmp_pdf);
-        return [
-            'path' => $fallbackPath,
-            'mime' => 'text/html',
-            'filename' => 'certificate-' . $cert_id . '.html',
-        ];
-    }
-
-    $command = '"' . str_replace('"', '\"', $browser) . '" --headless --disable-gpu --no-sandbox --print-to-pdf="' . str_replace('"', '\"', $tmp_pdf) . '" "' . str_replace('"', '\"', $tmp_html) . '"';
-    exec($command, $output, $code);
-
-    @unlink($tmp_html);
-
-    if ($code !== 0 || !is_file($tmp_pdf) || filesize($tmp_pdf) === 0) {
-        $fallbackPath = sys_get_temp_dir() . '/certificate-' . $cert_id . '.html';
-        file_put_contents($fallbackPath, $html);
-        @unlink($tmp_pdf);
-        return [
-            'path' => $fallbackPath,
-            'mime' => 'text/html',
-            'filename' => 'certificate-' . $cert_id . '.html',
-        ];
+        return false;
     }
 
     return [
