@@ -2,6 +2,16 @@
 session_start();
 require_once __DIR__ . '/db.php';
 
+if (!isset($pdo) || !$pdo instanceof PDO) {
+    $dbErr = defined('DB_CONNECTION_ERROR') && DB_CONNECTION_ERROR !== '' ? DB_CONNECTION_ERROR : 'የዳታቤዝ ግንኙነት አልተፈጸመም። እባክዎ MySQL አገልግሎት እንደተጀመረ ያረጋግጡ።';
+    http_response_code(500);
+    echo '<!doctype html><html><head><meta charset="utf-8"><title>DB Error</title></head><body style="font-family:Arial,sans-serif;padding:24px">';
+    echo '<h2 style="color:#991b1b">አስቸኳይ: የዳታቤዝ ግንኙነት ተደርጎ አልተፈጸምም</h2>';
+    echo '<p>' . htmlspecialchars($dbErr) . '</p>';
+    echo '</body></html>';
+    exit;
+}
+
 try {
     ensureSiteSettingsTable($pdo);
 } catch (Throwable $e) {
