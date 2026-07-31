@@ -1,12 +1,17 @@
 <?php
 
-require_once __DIR__ . '/vendor/phpmailer/PHPMailer.php';
-require_once __DIR__ . '/vendor/phpmailer/SMTP.php';
-require_once __DIR__ . '/vendor/phpmailer/Exception.php';
-
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
+
+$phpMailerLoaded = false;
+$phpMailerBasePath = __DIR__ . '/vendor/phpmailer';
+if (is_file($phpMailerBasePath . '/PHPMailer.php') && is_file($phpMailerBasePath . '/SMTP.php') && is_file($phpMailerBasePath . '/Exception.php')) {
+    require_once $phpMailerBasePath . '/PHPMailer.php';
+    require_once $phpMailerBasePath . '/SMTP.php';
+    require_once $phpMailerBasePath . '/Exception.php';
+    $phpMailerLoaded = true;
+}
 
 if (!function_exists('loadDotEnvFile')) {
     function loadDotEnvFile(string $path): void
@@ -84,6 +89,11 @@ if (!function_exists('sendAppEmail')) {
 
         if ($host === '' && ($username === '' || $password === '')) {
             error_log('sendAppEmail: no SMTP settings found for ' . $to . '. Set SMTP_HOST, SMTP_USERNAME, and SMTP_PASSWORD or add them to .env.');
+            return false;
+        }
+
+        if (!$phpMailerLoaded || !class_exists('PHPMailer\\PHPMailer\\PHPMailer')) {
+            error_log('sendAppEmail: PHPMailer dependency is unavailable; email sending is disabled for ' . $to . '.');
             return false;
         }
 

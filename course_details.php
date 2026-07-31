@@ -10,11 +10,20 @@ if (!isset($_SESSION['student_id'])) {
 $message = '';
 $messageType = '';
 
-$studentStmt = $pdo->prepare('SELECT name, email FROM students WHERE student_id = :student_id LIMIT 1');
-$studentStmt->execute([':student_id' => $_SESSION['student_id']]);
-$studentRecord = $studentStmt->fetch();
-$studentName = trim((string)($studentRecord['name'] ?? $_SESSION['student_name'] ?? 'Student'));
-$studentEmail = trim((string)($studentRecord['email'] ?? $_SESSION['student_email'] ?? ''));
+$studentRecord = [];
+$studentName = trim((string)($_SESSION['student_name'] ?? 'Student'));
+$studentEmail = trim((string)($_SESSION['student_email'] ?? ''));
+
+try {
+    $studentStmt = $pdo->prepare('SELECT name, email FROM students WHERE student_id = :student_id LIMIT 1');
+    $studentStmt->execute([':student_id' => $_SESSION['student_id']]);
+    $studentRecord = $studentStmt->fetch(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+    $studentRecord = [];
+}
+
+$studentName = trim((string)($studentRecord['name'] ?? $studentName ?? 'Student'));
+$studentEmail = trim((string)($studentRecord['email'] ?? $studentEmail ?? 'student@example.com'));
 $studentName = $studentName === '' ? 'Student' : $studentName;
 $studentEmail = $studentEmail === '' ? 'student@example.com' : $studentEmail;
 
@@ -51,9 +60,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['enroll_course_id']))
 }
 
 $courseId = (int)($_GET['id'] ?? 0);
-$stmt = $pdo->prepare('SELECT * FROM courses WHERE id = :id LIMIT 1');
-$stmt->execute([':id' => $courseId]);
-$course = $stmt->fetch();
+$course = null;
+
+try {
+    $stmt = $pdo->prepare('SELECT * FROM courses WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $courseId]);
+    $course = $stmt->fetch(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+    error_log('Course details lookup failed: ' . $e->getMessage());
+    $course = null;
+}
 
 $courseOverviewContent = trim((string)($course['description'] ?? ''));
 if ($courseOverviewContent === '') {
@@ -76,8 +92,13 @@ if ($courseSummaryCopy === '') {
 $isEnrolled = false;
 $registrationRecord = null;
 if (!empty($_SESSION['student_id']) && $course) {
-    $isEnrolled = isStudentEnrolled($pdo, (string)$_SESSION['student_id'], $courseId);
-    $registrationRecord = $isEnrolled ? getStudentRegistration($pdo, (string)$_SESSION['student_id'], $courseId) : null;
+    try {
+        $isEnrolled = isStudentEnrolled($pdo, (string)$_SESSION['student_id'], $courseId);
+        $registrationRecord = $isEnrolled ? getStudentRegistration($pdo, (string)$_SESSION['student_id'], $courseId) : null;
+    } catch (Throwable $e) {
+        $isEnrolled = false;
+        $registrationRecord = null;
+    }
 }
 
 if (!$course) {
@@ -85,13 +106,24 @@ if (!$course) {
     exit;
 }
 
-$lessonStmt = $pdo->prepare('SELECT * FROM course_lessons WHERE course_id = :course_id ORDER BY sort_order ASC, id ASC');
-$lessonStmt->execute([':course_id' => $courseId]);
-$lessons = $lessonStmt->fetchAll();
+$lessons = [];
+$notes = [];
 
-$noteStmt = $pdo->prepare('SELECT * FROM admin_notes ORDER BY created_at DESC LIMIT 6');
-$noteStmt->execute();
-$notes = $noteStmt->fetchAll();
+try {
+    $lessonStmt = $pdo->prepare('SELECT * FROM course_lessons WHERE course_id = :course_id ORDER BY sort_order ASC, id ASC');
+    $lessonStmt->execute([':course_id' => $courseId]);
+    $lessons = $lessonStmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+    $lessons = [];
+}
+
+try {
+    $noteStmt = $pdo->prepare('SELECT * FROM admin_notes ORDER BY created_at DESC LIMIT 6');
+    $noteStmt->execute();
+    $notes = $noteStmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+    $notes = [];
+}
 ?>
 <!DOCTYPE html>
 <html lang="am">

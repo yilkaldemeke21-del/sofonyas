@@ -6,67 +6,223 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
 }
 
 require_once 'db.php';
-require_once 'admin_lang.php';
+
+if (!($pdo instanceof PDO)) {
+    die('Database connection is unavailable.');
+}
+
+function e($value): string
+{
+    return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+}
+
+function ensureColumn(PDO $pdo, string $table, string $column, string $definition): void
+{
+    $stmt = $pdo->prepare("SHOW COLUMNS FROM `{$table}` LIKE :column");
+    $stmt->execute([':column' => $column]);
+    if ($stmt->fetch()) {
+        return;
+    }
+    $pdo->exec($definition);
+}
+
+function ensureAnnouncementTable(PDO $pdo): void
+{
+    $pdo->exec("CREATE TABLE IF NOT EXISTS site_announcements (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        description TEXT NOT NULL,
+        created_at DATETIME NOT NULL,
+        admin_id INT UNSIGNED NOT NULL DEFAULT 0,
+        is_deleted TINYINT(1) NOT NULL DEFAULT 0,
+        deleted_at DATETIME NULL DEFAULT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    ensureColumn($pdo, 'site_announcements', 'admin_id', "ALTER TABLE site_announcements ADD COLUMN admin_id INT UNSIGNED NOT NULL DEFAULT 0");
+    ensureColumn($pdo, 'site_announcements', 'is_deleted', "ALTER TABLE site_announcements ADD COLUMN is_deleted TINYINT(1) NOT NULL DEFAULT 0");
+    ensureColumn($pdo, 'site_announcements', 'deleted_at', "ALTER TABLE site_announcements ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL");
+}
+
+ensureAnnouncementTable($pdo);
 
 $message = '';
+$messageType = '';
+$page = max(1, (int) ($_GET['page'] ?? 1));
+$perPage = 10;
+$offset = ($page - 1) * $perPage;
+$editingId = isset($_GET['edit']) ? (int) $_GET['edit'] : 0;
+$editingItem = null;
+
+if ($editingId > 0) {
+    $stmt = $pdo->prepare('SELECT * FROM site_announcements WHERE id = ? AND is_deleted = 0 LIMIT 1');
+    $stmt->execute([$editingId]);
+    $editingItem = $stmt->fetch();
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $title = trim($_POST['title'] ?? '');
-    $content = trim($_POST['content'] ?? '');
-    $link = trim($_POST['link'] ?? '');
-    $created_at = date('Y-m-d H:i:s');
+    $action = $_POST['action'] ?? 'create';
 
-    if ($title !== '' && $content !== '') {
-        try {
-            $pdo->exec('CREATE TABLE IF NOT EXISTS event_announcements (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                event_title VARCHAR(255) NOT NULL,
-                event_description TEXT NOT NULL,
-                event_date DATETIME NOT NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
-        } catch (PDOException $e) {}
+    if ($action === 'delete' && isset($_POST['id'])) {
+        $id = (int) $_POST['id'];
+        $stmt = $pdo->prepare('UPDATE site_announcements SET is_deleted = 1, deleted_at = NOW() WHERE id = ?');
+        $stmt->execute([$id]);
+        $message = 'Announcement moved to archive safely.';
+        $messageType = 'success';
+    } elseif ($action === 'update' && isset($_POST['id'])) {
+        $id = (int) $_POST['id'];
+        $title = trim((string) ($_POST['title'] ?? ''));
+        $description = trim((string) ($_POST['description'] ?? ''));
 
-        $description = $content . ($link !== '' ? "\n\nሊንክ: $link" : '');
-        $stmt = $pdo->prepare('INSERT INTO event_announcements (event_title, event_description, event_date) VALUES (?, ?, ?)');
-        $stmt->execute([$title, $description, $created_at]);
-        header('Location: admin_dashboard.php?success=1&section=announcement');
-        exit;
+        if ($title === '' || $description === '') {
+            $message = 'Title and description are required.';
+            $messageType = 'danger';
+        } else {
+            $stmt = $pdo->prepare('UPDATE site_announcements SET title = ?, description = ? WHERE id = ? AND is_deleted = 0');
+            $stmt->execute([$title, $description, $id]);
+            $message = 'Announcement updated successfully.';
+            $messageType = 'success';
+        }
     } else {
-        $message = admin_text('required_message');
+        $title = trim((string) ($_POST['title'] ?? ''));
+        $description = trim((string) ($_POST['description'] ?? ''));
+
+        if ($title === '' || $description === '') {
+            $message = 'Title and description are required.';
+            $messageType = 'danger';
+        } else {
+            $stmt = $pdo->prepare('INSERT INTO site_announcements (title, description, created_at, admin_id) VALUES (?, ?, ?, ?)');
+            $stmt->execute([$title, $description, date('Y-m-d H:i:s'), (int) ($_SESSION['admin_id'] ?? 0)]);
+            $message = 'Announcement saved successfully.';
+            $messageType = 'success';
+        }
     }
 }
+
+$totalStmt = $pdo->query('SELECT COUNT(*) AS total FROM site_announcements WHERE is_deleted = 0');
+$totalRows = (int) $totalStmt->fetchColumn();
+$totalPages = max(1, (int) ceil($totalRows / $perPage));
+
+$recordsStmt = $pdo->prepare('SELECT * FROM site_announcements WHERE is_deleted = 0 ORDER BY created_at DESC LIMIT ? OFFSET ?');
+$recordsStmt->bindValue(1, $perPage, PDO::PARAM_INT);
+$recordsStmt->bindValue(2, $offset, PDO::PARAM_INT);
+$recordsStmt->execute();
+$records = $recordsStmt->fetchAll();
 ?>
 <!DOCTYPE html>
-<html lang="am">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?php echo admin_text('add_announcement'); ?></title>
-    <style>
-        body{font-family:Arial,sans-serif;background:linear-gradient(135deg,#fef2f2,#fff7ed);margin:0;padding:0;color:#0f172a}.
-        .wrap{max-width:780px;margin:40px auto;padding:28px;background:#fff;border-radius:18px;box-shadow:0 14px 36px rgba(15,23,42,.12)}
-        h1{margin-top:0;color:#dc2626;font-size:28px}label{display:block;margin-top:16px;font-weight:700;color:#334155}input, textarea{width:100%;padding:12px 14px;border:1px solid #cbd5e1;border-radius:10px;margin-top:8px;font-size:15px;box-sizing:border-box}input:focus, textarea:focus{outline:none;border-color:#dc2626;box-shadow:0 0 0 3px rgba(220,38,38,.15)}textarea{min-height:160px;resize:vertical}.hint{font-size:13px;color:#64748b;margin-top:6px}.actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:16px}button{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:0;padding:12px 18px;border-radius:999px;cursor:pointer;font-weight:700;box-shadow:0 8px 18px rgba(220,38,38,.22)}button:hover{transform:translateY(-1px)}a{display:inline-block;margin-top:16px;color:#dc2626;text-decoration:none;font-weight:600}.msg{margin-top:12px;padding:12px 14px;border-radius:10px;background:#ecfdf3;color:#047857;border:1px solid #a7f3d0}
-    </style>
+    <title>Announcements CRUD</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>
-<div class="wrap">
-    <h1>📢 <?php echo admin_text('add_announcement'); ?></h1>
-    <?php if ($message): ?><div class="msg"><?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?></div><?php endif; ?>
-    <form method="post">
-        <label><?php echo admin_text('title_label'); ?></label>
-        <input type="text" name="title" placeholder="ለማስታወቂያ ርዕስ ያስገቡ" required>
-        <div class="hint">በግልጽ እና የሚያስፈልግ የማስታወቂያ ርዕስ ይምረጡ።</div>
-        <label><?php echo admin_text('content_label'); ?></label>
-        <textarea name="content" placeholder="የማስታወቂያ ይዘት እዚህ ይጻፉ..." required></textarea>
-        <label><?php echo admin_text('link_label'); ?></label>
-        <input type="text" name="link" placeholder="https://example.com ወይም ተጨማሪ ሊንክ">
-        <div class="hint">ሊንክ ካለ የሚመለከትበት ቦታ ነው።</div>
-        <div class="actions">
-            <button type="submit"><?php echo admin_text('save_announcement'); ?></button>
-            <a href="admin_dashboard.php">← <?php echo admin_text('back'); ?></a>
+<body class="bg-light">
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">📢 Announcements</h2>
+            <p class="text-muted mb-0">Manage public announcements securely.</p>
         </div>
-    </form>
-    <a href="admin_lang.php?lang=<?php echo ($_SESSION['admin_lang'] ?? 'am') === 'am' ? 'en' : 'am'; ?>&redirect=admin_add_announcement.php" style="margin-left:0;">🌐 <?php echo admin_text('language_switch'); ?></a>
+        <a href="admin_dashboard.php" class="btn btn-outline-secondary">Back to Dashboard</a>
+    </div>
+
+    <?php if ($message !== ''): ?>
+        <div class="alert alert-<?php echo e($messageType ?: 'info'); ?>" role="alert"><?php echo e($message); ?></div>
+    <?php endif; ?>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h5 class="card-title"><?php echo $editingItem ? 'Edit Announcement' : 'Add Announcement'; ?></h5>
+                    <form method="post" class="row g-3">
+                        <input type="hidden" name="action" value="<?php echo $editingItem ? 'update' : 'create'; ?>">
+                        <?php if ($editingItem): ?>
+                            <input type="hidden" name="id" value="<?php echo (int) $editingItem['id']; ?>">
+                        <?php endif; ?>
+                        <div class="col-12">
+                            <label class="form-label">Title</label>
+                            <input type="text" name="title" class="form-control" value="<?php echo e($editingItem['title'] ?? ''); ?>" required maxlength="255">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Description</label>
+                            <textarea name="description" class="form-control" rows="6" required><?php echo e($editingItem['description'] ?? ''); ?></textarea>
+                        </div>
+                        <div class="col-12 d-flex gap-2">
+                            <button type="submit" class="btn btn-danger"><?php echo $editingItem ? 'Update' : 'Save'; ?></button>
+                            <?php if ($editingItem): ?>
+                                <a href="admin_add_announcement.php" class="btn btn-outline-secondary">Cancel</a>
+                            <?php endif; ?>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0">Saved Announcements</h5>
+                        <span class="badge bg-danger"><?php echo $totalRows; ?> items</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Description</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if ($records): ?>
+                                    <?php foreach ($records as $row): ?>
+                                        <tr>
+                                            <td><?php echo e($row['title']); ?></td>
+                                            <td><?php echo e(mb_substr($row['description'], 0, 90)); ?><?php echo mb_strlen($row['description']) > 90 ? '…' : ''; ?></td>
+                                            <td><?php echo e($row['created_at']); ?></td>
+                                            <td>
+                                                <div class="d-flex gap-2">
+                                                    <a href="admin_add_announcement.php?edit=<?php echo (int) $row['id']; ?>" class="btn btn-sm btn-outline-primary">Edit</a>
+                                                    <form method="post" class="d-inline" onsubmit="return confirm('Archive this announcement?');">
+                                                        <input type="hidden" name="action" value="delete">
+                                                        <input type="hidden" name="id" value="<?php echo (int) $row['id']; ?>">
+                                                        <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr><td colspan="4" class="text-muted text-center py-4">No announcements yet.</td></tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <?php if ($totalPages > 1): ?>
+                        <nav class="mt-3">
+                            <ul class="pagination pagination-sm justify-content-center">
+                                <li class="page-item <?php echo $page <= 1 ? 'disabled' : ''; ?>">
+                                    <a class="page-link" href="admin_add_announcement.php?page=<?php echo max(1, $page - 1); ?>">Previous</a>
+                                </li>
+                                <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                                    <li class="page-item <?php echo $i === $page ? 'active' : ''; ?>">
+                                        <a class="page-link" href="admin_add_announcement.php?page=<?php echo $i; ?>"><?php echo $i; ?></a>
+                                    </li>
+                                <?php endfor; ?>
+                                <li class="page-item <?php echo $page >= $totalPages ? 'disabled' : ''; ?>">
+                                    <a class="page-link" href="admin_add_announcement.php?page=<?php echo min($totalPages, $page + 1); ?>">Next</a>
+                                </li>
+                            </ul>
+                        </nav>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 </body>
 </html>

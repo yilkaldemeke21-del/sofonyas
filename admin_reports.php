@@ -12,6 +12,7 @@ $allowedTypes = [
     'quiz_results',
     'certificates',
     'contact_messages',
+    'newsletter_subscribers',
     'announcements',
     'blog_posts',
     'enrollment_reports',
@@ -27,6 +28,7 @@ $reportTitle = [
     'quiz_results' => 'Quiz Results Report',
     'certificates' => 'Certificate Report',
     'contact_messages' => 'Contact Messages Report',
+    'newsletter_subscribers' => 'Newsletter Subscribers Report',
     'announcements' => 'Announcements Report',
     'blog_posts' => 'Blog Posts Report',
     'enrollment_reports' => 'Enrollment Report',
@@ -76,6 +78,10 @@ switch ($type) {
         $stmt = $pdo->query('SELECT id, name, email, phone, subject, status, admin_reply, replied_at, replied_by, created_at FROM contact_messages ORDER BY created_at DESC');
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         break;
+    case 'newsletter_subscribers':
+        $stmt = $pdo->query('SELECT id, name, email, source, status, created_at, updated_at FROM newsletter_subscribers ORDER BY created_at DESC');
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        break;
     case 'announcements':
         $stmt = $pdo->query('SELECT event_title, event_description, event_date, created_at FROM event_announcements ORDER BY event_date DESC');
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -106,6 +112,9 @@ switch ($type) {
         break;
     case 'contact_messages':
         $columns = [['label' => 'Name', 'key' => 'name'], ['label' => 'Email', 'key' => 'email'], ['label' => 'Phone', 'key' => 'phone'], ['label' => 'Subject', 'key' => 'subject'], ['label' => 'Status', 'key' => 'status'], ['label' => 'Admin Reply', 'key' => 'admin_reply'], ['label' => 'Replied By', 'key' => 'replied_by'], ['label' => 'Created At', 'key' => 'created_at']];
+        break;
+    case 'newsletter_subscribers':
+        $columns = [['label' => 'Name', 'key' => 'name'], ['label' => 'Email', 'key' => 'email'], ['label' => 'Source', 'key' => 'source'], ['label' => 'Status', 'key' => 'status'], ['label' => 'Added At', 'key' => 'created_at'], ['label' => 'Updated At', 'key' => 'updated_at']];
         break;
     case 'announcements':
     case 'blog_posts':

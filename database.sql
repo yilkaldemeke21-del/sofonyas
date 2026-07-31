@@ -1,5 +1,5 @@
-CREATE DATABASE IF NOT EXISTS `sofonyas_db` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE `sofonyas_db`;
+/* Create the database manually in your hosting panel first.
+Then import this file into that existing database. */
 
 CREATE TABLE IF NOT EXISTS `admin_users` (
   `id` INT AUTO_INCREMENT PRIMARY KEY,

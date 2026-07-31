@@ -328,7 +328,13 @@
 
                 try {
                     const resp = await fetch(contactForm.action, { method: 'POST', body: fd });
-                    const json = await resp.json();
+                    const text = await resp.text();
+                    let json = null;
+                    try {
+                        json = text ? JSON.parse(text) : null;
+                    } catch (parseErr) {
+                        json = { success: false, message: text || 'Server returned an unexpected response.' };
+                    }
                     if (contactFeedback) contactFeedback.textContent += '\n\nServer: ' + (json.message || JSON.stringify(json));
                     if (json.success) contactForm.reset();
                 } catch (err) {

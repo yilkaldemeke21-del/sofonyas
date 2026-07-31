@@ -3,6 +3,9 @@ session_start();
 require_once __DIR__ . '/db.php';
 
 header('Content-Type: application/json');
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode(['success' => false, 'message' => 'Invalid request']);
@@ -82,9 +85,10 @@ try {
             exit;
         }
 
-        $stmt = $pdo->prepare('UPDATE site_chat_messages SET reply_message = :reply_message, reply_updated_at = NOW(), reply_deleted = 0, status = :status, updated_at = NOW() WHERE id = :id');
+        $stmt = $pdo->prepare('UPDATE site_chat_messages SET reply_message = :reply_message, reply_admin_id = :reply_admin_id, reply_updated_at = NOW(), reply_deleted = 0, status = :status, updated_at = NOW() WHERE id = :id');
         $stmt->execute([
             ':reply_message' => $replyMessage,
+            ':reply_admin_id' => (int)$_SESSION['admin_id'],
             ':status' => 'replied',
             ':id' => $replyId,
         ]);
@@ -94,11 +98,9 @@ try {
     }
 
     if ($action === 'delete_reply') {
-        $stmt = $pdo->prepare('UPDATE site_chat_messages SET reply_message = NULL, reply_admin_id = NULL, reply_updated_at = NULL, reply_deleted = 1, status = :status, updated_at = NOW() WHERE id = :id');
-        $stmt->execute([
-            ':status' => 'pending',
-            ':id' => $replyId,
-        ]);
+        // Delete the deleted reply/message row entirely so students no longer see stale pending data
+        $stmt = $pdo->prepare('DELETE FROM site_chat_messages WHERE id = :id');
+        $stmt->execute([':id' => $replyId]);
 
         echo json_encode(['success' => true, 'message' => 'Reply deleted']);
         exit;

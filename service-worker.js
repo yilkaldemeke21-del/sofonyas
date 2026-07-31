@@ -1,7 +1,5 @@
 const CACHE_NAME = 'sofonyas-v1';
 const APP_SHELL = [
-  './',
-  './sofonyas2.php',
   './sofonyas (1).css',
   './manifest.json',
   './icon.svg'
@@ -21,6 +19,23 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  const requestUrl = new URL(event.request.url);
+  const isDynamicPhp = requestUrl.pathname.endsWith('.php');
+
+  if (isDynamicPhp) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (!response || response.status !== 200) {
+            return caches.match(event.request) || caches.match('./offline.html');
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request) || caches.match('./offline.html'))
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) {

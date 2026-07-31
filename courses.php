@@ -49,21 +49,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['enroll_course_id']))
     }
 }
 
-$stmt = $pdo->query('SELECT * FROM courses ORDER BY created_at DESC');
-$courses = $stmt->fetchAll();
-$noteStmt = $pdo->query('SELECT COUNT(*) AS total FROM admin_notes');
-$noteCount = (int)($noteStmt->fetch()['total'] ?? 0);
-
+$courses = [];
+$noteCount = 0;
 $enrolledCourseKeys = [];
-$enrolledStmt = $pdo->prepare('SELECT course_id, course FROM registrations WHERE student_id = :student_id');
-$enrolledStmt->execute([':student_id' => $studentId]);
-foreach ($enrolledStmt->fetchAll() as $entry) {
-    if (!empty($entry['course_id'])) {
-        $enrolledCourseKeys[(int)$entry['course_id']] = true;
+
+try {
+    $stmt = $pdo->query('SELECT * FROM courses ORDER BY created_at DESC');
+    $courses = $stmt->fetchAll();
+} catch (Throwable $e) {
+    error_log('Courses page query failed: ' . $e->getMessage());
+    $courses = [];
+}
+
+try {
+    $noteStmt = $pdo->query('SELECT COUNT(*) AS total FROM admin_notes');
+    $noteCount = (int)($noteStmt->fetch()['total'] ?? 0);
+} catch (Throwable $e) {
+    $noteCount = 0;
+}
+
+try {
+    $enrolledStmt = $pdo->prepare('SELECT course_id, course FROM registrations WHERE student_id = :student_id');
+    $enrolledStmt->execute([':student_id' => $studentId]);
+    foreach ($enrolledStmt->fetchAll() as $entry) {
+        if (!empty($entry['course_id'])) {
+            $enrolledCourseKeys[(int)$entry['course_id']] = true;
+        }
+        if (!empty($entry['course'])) {
+            $enrolledCourseKeys['name:' . $entry['course']] = true;
+        }
     }
-    if (!empty($entry['course'])) {
-        $enrolledCourseKeys['name:' . $entry['course']] = true;
-    }
+} catch (Throwable $e) {
+    $enrolledCourseKeys = [];
 }
 ?>
 <!DOCTYPE html>

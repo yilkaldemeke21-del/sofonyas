@@ -1,5 +1,8 @@
 <?php
 session_start();
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
 require_once __DIR__ . '/db.php';
 
 if (!isset($pdo) || !$pdo instanceof PDO) {
@@ -61,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['set_lang'])) {
 
 $chatMessages = [];
 try {
-    $stmt = $pdo->prepare('SELECT id, sender_type, sender_name, message, reply_message, status, created_at, updated_at FROM site_chat_messages ORDER BY id DESC LIMIT 18');
+    $stmt = $pdo->prepare('SELECT id, sender_type, sender_name, message, reply_message, reply_updated_at, status, created_at, updated_at FROM site_chat_messages WHERE (reply_deleted IS NULL OR reply_deleted = 0) ORDER BY id DESC LIMIT 18');
     $stmt->execute();
     $chatMessages = array_reverse($stmt->fetchAll());
 } catch (Throwable $e) {
@@ -134,16 +137,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
     <link rel="stylesheet" href="sofonyas (1).css">
     <link rel="sitemap" type="application/xml" href="sitemap.xml">
     <style>
-        :root { color-scheme: light; scroll-behavior: smooth; }
+        :root { color-scheme: light; scroll-behavior: smooth; --announcement-height: 56px; }
         html { min-height: 100%; scroll-behavior: smooth; }
-        body { min-height: 100%; background: radial-gradient(circle at top left, rgba(124,58,237,0.18), transparent 22%), radial-gradient(circle at bottom right, rgba(59,130,246,0.12), transparent 18%), linear-gradient(135deg, #f8fbff 0%, #eef2ff 100%); color: #0f172a; }
+        body { min-height: 100%; padding-top: var(--announcement-height); background: radial-gradient(circle at top left, rgba(124,58,237,0.18), transparent 22%), radial-gradient(circle at bottom right, rgba(59,130,246,0.12), transparent 18%), linear-gradient(135deg, #f8fbff 0%, #eef2ff 100%); color: #0f172a; }
         body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(circle at 25% 20%, rgba(99,102,241,0.12), transparent 16%), radial-gradient(circle at 80% 10%, rgba(236,72,153,0.1), transparent 14%), radial-gradient(circle at 50% 90%, rgba(14,165,233,0.08), transparent 16%); pointer-events: none; z-index: 0; }
-        nav { position: sticky; top: 40px; z-index: 20; background: linear-gradient(135deg, #0f3d91 0%, #1d4ed8 60%, #2563eb 100%); backdrop-filter: blur(18px); border-bottom: 1px solid rgba(255,255,255,0.16); height: 64px; overflow: visible; box-shadow: 0 8px 24px rgba(15,23,42,0.18); }
-        nav ul { display: flex; flex-wrap: nowrap; gap: 12px; align-items: center; justify-content: flex-start; margin: 0; padding: 0 18px; list-style: none; white-space: nowrap; height:100%; }
-        nav ul > li { flex: 0 0 auto; }
+        nav { position: sticky; top: var(--announcement-height); z-index: 1000; display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #0f3d91 0%, #1d4ed8 60%, #2563eb 100%); backdrop-filter: blur(18px); border-bottom: 1px solid rgba(255,255,255,0.16); min-height: 64px; overflow: visible; box-shadow: 0 8px 24px rgba(15,23,42,0.18); }
+        nav ul { display: flex; flex-wrap: nowrap; gap: 12px; align-items: center; justify-content: flex-start; margin: 0; padding: 0 18px; list-style: none; white-space: nowrap; height:100%; flex: 1 1 auto; position: relative; }
+        nav ul > li { flex: 0 0 auto; position: relative; }
         nav a { line-height: 1; }
-        nav a { color: #f8fafc; text-decoration: none; font-weight: 700; transition: color 0.18s ease, transform 0.18s ease, background 0.18s ease; padding: 8px 12px; border-radius: 999px; }
-        nav a:hover { color: #ffffff; background: rgba(255,255,255,0.16); transform: translateY(-1px); }
+        nav .nav-link { position: relative; z-index: 2; color: #f8fafc; text-decoration: none; font-weight: 700; transition: color 0.22s ease, transform 0.22s ease, background 0.22s ease, box-shadow 0.22s ease; padding: 8px 12px; border-radius: 999px; display: inline-flex; align-items: center; }
+        nav .nav-link:hover, nav .nav-link:focus-visible { color: #ffffff; background: rgba(255,255,255,0.16); transform: translateY(-1px); box-shadow: 0 10px 24px rgba(15,23,42,0.16); }
+        nav .nav-link.active { color: #ffffff; background: rgba(255,255,255,0.2); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.18), 0 8px 20px rgba(15,23,42,0.16); }
+        .nav-indicator { position: absolute; bottom: 8px; left: 0; height: 2px; border-radius: 999px; background: linear-gradient(90deg, rgba(255,255,255,0.95), rgba(255,255,255,0.45)); box-shadow: 0 0 16px rgba(255,255,255,0.24); opacity: 0; transform: translateX(0) scaleX(0.76); pointer-events: none; transition: transform 0.28s cubic-bezier(.2,.8,.2,1), width 0.28s cubic-bezier(.2,.8,.2,1), opacity 0.2s ease; z-index: 1; }
+        nav ul:hover .nav-indicator { opacity: 1; }
         .nav-lang { margin-left: auto; display: flex; align-items: center; }
         .lang-form { display: flex; align-items: center; }
         /* Custom dropdown that opens absolute so it won't push nav height */
@@ -157,17 +163,119 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         .lang-options button:hover { background: rgba(37,99,235,0.08); color: #1d4ed8; }
         .visually-hidden { position: absolute !important; height: 1px; width: 1px; overflow: hidden; clip: rect(1px, 1px, 1px, 1px); white-space: nowrap; }
 
+        .skip-link {
+            position: fixed;
+            top: 12px;
+            left: 12px;
+            z-index: 2147483647;
+            transform: translateY(-140%);
+            transition: transform 0.2s ease;
+            background: #0f172a;
+            color: #fff;
+            padding: 10px 14px;
+            border-radius: 999px;
+            text-decoration: none;
+            font-weight: 800;
+            box-shadow: 0 10px 24px rgba(15,23,42,0.18);
+        }
+        .skip-link:focus { transform: translateY(0); outline: 3px solid #f59e0b; outline-offset: 2px; }
+
+        .accessibility-toggle {
+            position: fixed;
+            left: 18px;
+            bottom: 18px;
+            z-index: 2147483646;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            border: 0;
+            border-radius: 999px;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #2563eb, #4f46e5);
+            color: #fff;
+            font-weight: 800;
+            box-shadow: 0 16px 36px rgba(37,99,235,0.25);
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .accessibility-toggle:hover, .accessibility-toggle:focus-visible { transform: translateY(-2px); box-shadow: 0 20px 40px rgba(37,99,235,0.32); outline: 3px solid #bfdbfe; outline-offset: 3px; }
+        .accessibility-icon { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.18); font-size: 1.1rem; }
+
+        .accessibility-panel {
+            position: fixed;
+            left: 18px;
+            bottom: 84px;
+            width: min(360px, calc(100vw - 24px));
+            max-height: min(70vh, 560px);
+            overflow: auto;
+            padding: 18px;
+            border-radius: 22px;
+            background: rgba(255,255,255,0.98);
+            backdrop-filter: blur(16px);
+            box-shadow: 0 20px 48px rgba(15,23,42,0.2);
+            border: 1px solid rgba(148,163,184,0.26);
+            transform: translateY(16px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            z-index: 2147483645;
+        }
+        .accessibility-panel.open { transform: translateY(0); opacity: 1; pointer-events: auto; }
+        .accessibility-panel h3 { margin: 0 0 8px; font-size: 1.08rem; color: #0f172a; }
+        .accessibility-panel p { margin: 0 0 14px; color: #475569; font-size: 0.95rem; }
+        .accessibility-section { margin-bottom: 12px; padding: 10px 12px; border-radius: 14px; background: rgba(248,250,252,0.95); border: 1px solid rgba(203,213,225,0.9); }
+        .accessibility-section-title { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 8px; font-weight: 800; color: #0f172a; }
+        .accessibility-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+        .accessibility-chip, .accessibility-link-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid #cbd5e1; border-radius: 999px; padding: 8px 10px; background: #fff; color: #0f172a; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease; }
+        .accessibility-chip:hover, .accessibility-chip:focus-visible, .accessibility-link-btn:hover, .accessibility-link-btn:focus-visible { transform: translateY(-1px); box-shadow: 0 8px 16px rgba(15,23,42,0.08); outline: 2px solid #93c5fd; outline-offset: 1px; }
+        .accessibility-chip.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+        .accessibility-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+        .accessibility-select { border: 1px solid #cbd5e1; border-radius: 10px; padding: 8px 10px; background: #fff; color: #0f172a; font-weight: 700; min-width: 130px; }
+        .accessibility-radio-group { display: flex; flex-wrap: wrap; gap: 8px; }
+        .accessibility-radio { display: inline-flex; align-items: center; gap: 8px; border: 1px solid #cbd5e1; border-radius: 999px; padding: 8px 10px; background: #fff; color: #0f172a; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
+        .accessibility-radio input { accent-color: #2563eb; }
+        .accessibility-radio.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+        .accessibility-footer { display: flex; justify-content: flex-end; margin-top: 10px; }
+        .accessibility-footer button { border: 0; border-radius: 999px; padding: 8px 12px; background: #0f172a; color: #fff; font-weight: 700; cursor: pointer; }
+        .accessibility-status { margin-top: 8px; font-size: 0.9rem; color: #0369a1; min-height: 1.15rem; }
+        .reading-guide-line { display: none; position: fixed; left: 0; right: 0; height: 38px; pointer-events: none; z-index: 2147483644; background: linear-gradient(90deg, rgba(250,204,21,0.22), rgba(251,191,36,0.34)); border-top: 2px solid #f59e0b; border-bottom: 2px solid #f59e0b; box-shadow: 0 0 0 1px rgba(245,158,11,0.18) inset; }
+        body[data-access-reading-guide="true"] .reading-guide-line { display: block; }
+        body[data-access-theme="dark"] { background: #07131f; color: #f8fafc; }
+        body[data-access-theme="dark"] .card, body[data-access-theme="dark"] .hero-actions, body[data-access-theme="dark"] .stat-card, body[data-access-theme="dark"] .course-card, body[data-access-theme="dark"] .testimonial-card, body[data-access-theme="dark"] .contact-form, body[data-access-theme="dark"] .accessibility-panel, body[data-access-theme="dark"] .accessibility-section, body[data-access-theme="dark"] .accessibility-chip, body[data-access-theme="dark"] .accessibility-select, body[data-access-theme="dark"] .accessibility-radio { background: #0f172a; color: #f8fafc; border-color: rgba(148,163,184,0.24); }
+        body[data-access-theme="dark"] a, body[data-access-theme="dark"] .button, body[data-access-theme="dark"] .nav-toggle, body[data-access-theme="dark"] .lang-btn { color: #f8fafc; }
+        body[data-access-high-contrast="true"] { background: #000; color: #fff; }
+        body[data-access-high-contrast="true"] a, body[data-access-high-contrast="true"] button, body[data-access-high-contrast="true"] .button, body[data-access-high-contrast="true"] .nav-toggle, body[data-access-high-contrast="true"] .lang-btn { text-decoration: underline; }
+        body[data-access-high-contrast="true"] .card, body[data-access-high-contrast="true"] .hero-actions, body[data-access-high-contrast="true"] .stat-card, body[data-access-high-contrast="true"] .course-card, body[data-access-high-contrast="true"] .testimonial-card, body[data-access-high-contrast="true"] .contact-form, body[data-access-high-contrast="true"] .accessibility-panel, body[data-access-high-contrast="true"] .accessibility-section { background: #111827; color: #fff; border-color: #fff; }
+        body[data-access-link-highlight="true"] a, body[data-access-link-highlight="true"] button, body[data-access-link-highlight="true"] .button, body[data-access-link-highlight="true"] .nav-toggle, body[data-access-link-highlight="true"] .lang-btn { outline: 3px solid #f59e0b; outline-offset: 2px; text-decoration: underline; }
+        body[data-access-text-spacing="true"] p, body[data-access-text-spacing="true"] li, body[data-access-text-spacing="true"] span, body[data-access-text-spacing="true"] h1, body[data-access-text-spacing="true"] h2, body[data-access-text-spacing="true"] h3, body[data-access-text-spacing="true"] h4, body[data-access-text-spacing="true"] h5, body[data-access-text-spacing="true"] h6 { line-height: 1.8; letter-spacing: 0.04em; word-spacing: 0.16em; }
+        body[data-access-cursor-size="large"] { cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="%230f172a" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="%23f59e0b"/></svg>'), auto; }
+        body[data-access-cursor-size="small"] { cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><circle cx="12" cy="12" r="6" fill="none" stroke="%230f172a" stroke-width="2"/></svg>'), auto; }
+        body[data-access-oversized-widget="true"] .accessibility-panel { width: min(420px, calc(100vw - 24px)); max-height: min(82vh, 680px); }
+        body[data-access-widget-position="right"] .accessibility-toggle, body[data-access-widget-position="right"] .accessibility-panel { left: auto; right: 18px; }
+        body[data-access-widget-position="hide"] .accessibility-toggle, body[data-access-widget-position="hide"] .accessibility-panel { display: none !important; }
+        body[data-access-reduced-motion="true"] *, body[data-access-reduced-motion="true"] *::before, body[data-access-reduced-motion="true"] *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+        body[data-access-hide-images="true"] img { display: none !important; }
+        body[data-access-saturation="true"] { filter: saturate(0.45); }
+        body[data-access-saturation="true"] .accessibility-panel, body[data-access-saturation="true"] .accessibility-toggle, body[data-access-saturation="true"] .reading-guide-line { filter: saturate(1); }
+        body[data-access-text-align="center"] { text-align: center; }
+        body[data-access-text-align="justify"] { text-align: justify; }
+        body { font-size: calc(1rem * var(--access-font-scale, 1)); line-height: var(--access-line-height, 1.6); }
+        body[data-access-dyslexia="true"] { font-family: "Verdana", "OpenDyslexic", "Arial", sans-serif; }
+        @media (max-width: 760px) { .accessibility-toggle { left: 12px; right: auto; bottom: 12px; } .accessibility-panel { left: 12px; right: auto; bottom: 76px; } body[data-access-widget-position="right"] .accessibility-toggle, body[data-access-widget-position="right"] .accessibility-panel { left: auto; right: 12px; } }
+
         /* Mobile hamburger */
-        .nav-toggle { display: none; background: transparent; border: none; width: 44px; height: 44px; align-items: center; justify-content: center; cursor: pointer; }
-        .nav-toggle .hamburger { position: relative; width: 22px; height: 2px; background: #fff; display: block; border-radius: 2px; }
-        .nav-toggle .hamburger::before, .nav-toggle .hamburger::after { content: ''; position: absolute; left: 0; right: 0; height: 2px; background: #fff; border-radius: 2px; }
+        .nav-toggle { display: none; background: #ffffff; color: #0f3d91; border: 1px solid rgba(15,23,42,0.1); width: auto; min-width: 48px; height: 44px; align-items: center; justify-content: center; cursor: pointer; margin-left: auto; flex-shrink: 0; padding: 0 12px; border-radius: 999px; box-shadow: 0 8px 18px rgba(15,23,42,0.16); z-index: 10002; }
+        .nav-toggle .hamburger { position: relative; width: 22px; height: 2px; background: #0f3d91; display: block; border-radius: 2px; }
+        .nav-toggle .hamburger::before, .nav-toggle .hamburger::after { content: ''; position: absolute; left: 0; right: 0; height: 2px; background: #0f3d91; border-radius: 2px; }
         .nav-toggle .hamburger::before { top: -7px; }
         .nav-toggle .hamburger::after { top: 7px; }
+        .nav-toggle-text { display: inline-block; margin-left: 8px; font-size: 0.95rem; font-weight: 800; color: #0f3d91; }
 
         @media (max-width: 900px) {
+            nav { position: sticky; top: 0; padding-right: 12px; }
             nav ul { display: none; }
-            .nav-toggle { display: inline-flex; }
-            nav.open ul { display: flex; flex-direction: column; gap: 12px; background: linear-gradient(135deg, #0f3d91 0%, #1d4ed8 100%); padding: 12px 18px; position: absolute; right: 14px; top: 56px; border-radius: 12px; box-shadow: 0 8px 36px rgba(15,23,42,0.12); z-index: 1200; }
+            .nav-toggle { display: inline-flex !important; }
+            nav.open ul { display: flex !important; flex-direction: column; gap: 12px; background: linear-gradient(135deg, #0f3d91 0%, #1d4ed8 100%); padding: 12px 18px; position: fixed; right: 12px; top: 70px; left: auto; width: min(280px, calc(100vw - 24px)); border-radius: 12px; box-shadow: 0 8px 36px rgba(15,23,42,0.12); z-index: 2147483647; }
             nav.open ul li { white-space: nowrap; }
             .nav-lang { margin-left: 0; }
         }
@@ -176,11 +284,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
             top: 0;
             left: 0;
             right: 0;
-            z-index: 45;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            min-height: var(--announcement-height);
+            height: var(--announcement-height);
             overflow: hidden;
             width: 100%;
             margin: 0;
-            padding: 10px 0;
+            padding: 0;
             border-radius: 0;
             border-bottom: 1px solid rgba(250, 204, 21, 0.45);
             background: linear-gradient(135deg, rgba(15,23,42,0.98), rgba(30,64,175,0.96), rgba(76,29,149,0.96));
@@ -585,21 +697,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         .hero-visual { position: relative; display: flex; align-items: center; justify-content: center; margin: 0 auto 32px; max-width: 660px; }
         /* Slider separation */
         .slider-section { margin-top: 24px; }
-        .hero-stats-section { background: linear-gradient(180deg, #09c522 0%, #eef2ff 100%); padding: 18px; border-radius: 16px; margin: 18px 0; }
-        .hero-stats-section h2 { margin-bottom: 12px; font-size: clamp(1.2rem, 2.2vw, 1.8rem); text-align: center; color: #0b1220; direction: ltr; }
+        .hero-stats-section { background: linear-gradient(135deg, rgba(15,23,42,0.96), rgba(37,99,235,0.95)); padding: 24px; border-radius: 24px; margin: 18px 0; box-shadow: 0 28px 60px rgba(15,23,42,0.18); }
+        .hero-stats-section h2 { margin-bottom: 16px; font-size: clamp(1.25rem, 2.2vw, 1.8rem); text-align: center; color: #f8fafc; direction: ltr; }
         .stats-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-top: 8px; }
-        .stat-card { background: linear-gradient(135deg, #93c208, #2c049b); border-radius: 12px; padding: 18px; box-shadow: 0 12px 30px rgba(11,18,32,0.06); text-align: center; transition: transform 250ms ease, box-shadow 250ms ease, background 250ms ease; cursor: default; }
-        .stat-card:hover { transform: translateY(-8px); box-shadow: 0 26px 60px rgba(11,18,32,0.12); background: linear-gradient(135deg, #a50d96, #eef2ff); }
-        .stat-card strong { display:block; font-size: 1.6rem; color: #0b1220; }
-        .stat-card span { display:block; margin-top:8px; color:#334155; font-weight:600; }
+        .stat-card { background: rgba(255,255,255,0.95); border: 1px solid rgba(255,255,255,0.24); border-radius: 18px; padding: 18px; box-shadow: 0 16px 30px rgba(2, 6, 23, 0.14); text-align: center; transition: transform 250ms ease, box-shadow 250ms ease, background 250ms ease; cursor: default; position: relative; overflow: hidden; }
+        .stat-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(37,99,235,0.08), rgba(16,185,129,0.08)); pointer-events: none; }
+        .stat-card:hover { transform: translateY(-8px); box-shadow: 0 26px 60px rgba(11,18,32,0.2); background: #fff; }
+        .stat-card strong { display:block; font-size: clamp(1.7rem, 2.4vw, 2.2rem); color: #0f172a; margin-bottom: 8px; font-variant-numeric: tabular-nums; }
+        .stat-card span { display:block; margin-top:8px; color:#475569; font-weight:700; }
+        .stat-card .stat-label { display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin-top: 8px; font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: #2563eb; font-weight: 800; }
         /* make stats friendly for Amharic RTL when page lang is am */
         html[lang="am"] .hero-stats-section, html[lang="am"] .stat-card { direction: rtl; text-align: center; }
         /* Card becomes container for stacked slides */
-        .hero-card { position: relative; background: rgba(255,255,255,0.78); border: 1px solid rgba(255,255,255,0.24); border-radius: 32px; padding: 24px; box-shadow: 0 40px 90px rgba(15,23,42,0.16); min-height: 540px; max-width: 660px; width: 100%; display: block; backdrop-filter: blur(20px); overflow: hidden; }
-        .hero-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(255,255,255,0.42), rgba(196,181,253,0.08)); pointer-events: none; }
-        .hero-card .hero-slide { position: absolute; inset: 0; opacity: 0; transition: opacity 0.9s ease; display: flex; align-items: center; justify-content: center; z-index: 1; }
+        .hero-card { position: relative; background: linear-gradient(135deg, rgba(255,255,255,0.96), rgba(239,246,255,0.82)); border: 1px solid rgba(191,219,254,0.45); border-radius: 32px; padding: 18px; box-shadow: 0 40px 90px rgba(15,23,42,0.16); min-height: clamp(420px, 62vh, 620px); max-width: 660px; width: 100%; display: block; backdrop-filter: blur(20px); overflow: hidden; }
+        .hero-card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(59,130,246,0.12), rgba(167,139,250,0.08), rgba(255,255,255,0)); pointer-events: none; }
+        .hero-card::after { content: ''; position: absolute; inset: 10px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.5); pointer-events: none; }
+        .hero-card .hero-slide { position: absolute; inset: 0; opacity: 0; transition: opacity 0.9s ease; display: flex; align-items: center; justify-content: center; z-index: 1; padding: clamp(10px, 2vw, 18px); box-sizing: border-box; overflow: hidden; }
         .hero-slide.active { opacity: 1; z-index: 2; }
-        .hero-slide img { width: 100%; height: 100%; object-fit: contain; border-radius: 18px; display: block; }
+        .hero-slide img { width: 100%; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; object-position: center; border-radius: 24px; display: block; box-shadow: 0 20px 44px rgba(15,23,42,0.16); background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%); margin: auto; }
         .hero-slider-dots { display: flex; gap: 8px; justify-content: center; margin-top: 16px; }
         .hero-slider-dots button { width: 10px; height: 10px; border-radius: 999px; border: none; background: #cbd5e1; cursor: pointer; }
         .hero-slider-dots button.active { background: #2563eb; transform: scale(1.2); }
@@ -639,8 +754,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         .contact-form .button { min-width: 140px; }
         .contact-form .small { font-size: 0.95rem; color: #475569; text-align: center; }
         .contact-form .button:hover { transform: translateY(-1px); }
-        @media (max-width: 980px) { .hero-content { grid-template-columns: 1fr; padding: 48px 24px; } .hero-visual { max-width: 100%; margin-bottom: 24px; } .hero-stats { flex-direction: column; } }
-        @media (max-width: 760px) { .contact-form { padding: 22px; } }
+        @media (max-width: 980px) { .hero-content { grid-template-columns: 1fr; padding: 48px 24px; } .hero-visual { max-width: 100%; margin-bottom: 24px; } .hero-stats { flex-direction: column; } .hero-card { min-height: clamp(360px, 56vh, 500px); } }
+        @media (max-width: 760px) { .contact-form { padding: 22px; } .hero-card { min-height: clamp(300px, 52vh, 420px); padding: 12px; } .hero-card .hero-slide { padding: 6px; } .hero-slide img { border-radius: 18px; } }
 
         .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.8s ease, transform 0.8s ease; }
         .reveal.visible { opacity: 1; transform: translateY(0); }
@@ -667,10 +782,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         .zoomable-img:hover { transform: scale(1.04); }
         @keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
         @keyframes floatUp { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-        @media (max-width: 900px) { .hero-content { grid-template-columns: 1fr; padding: 28px 20px; } .hero-section { min-height: 860px; } .hero-card { min-height: auto; width: 100%; transform: translateY(0); } .hero-slide { min-height: 360px; } .floating-card { position: relative; right:auto; bottom:auto; margin-top:12px; } }
+        @media (max-width: 900px) { .hero-content { grid-template-columns: 1fr; padding: 28px 20px; } .hero-section { min-height: 860px; } .hero-card { min-height: clamp(320px, 48vh, 460px); width: 100%; transform: translateY(0); } .hero-slide { min-height: 320px; } .hero-slide img { border-radius: 18px; } .floating-card { position: relative; right:auto; bottom:auto; margin-top:12px; } }
     </style>
 </head>
-<body>
+<body data-access-theme="light" data-access-high-contrast="false" data-access-dyslexia="false" data-access-reading-guide="false" data-access-link-highlight="false" data-access-text-spacing="false" data-access-cursor-size="medium" data-access-font-scale="1">
+    <a class="skip-link" href="#main-content">Skip to Main Content</a>
     <div class="page-loader" id="pageLoader" aria-hidden="true">
         <div class="loader-ring"></div>
     </div>
@@ -742,24 +858,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
             <img src="sofi tewahdo.png" alt="Holy Spirit dove illustration" class="holy-dove" aria-hidden="true">
         </div>
     </section>
-    <nav>
+    <nav aria-label="Main navigation">
+        <button class="nav-toggle" aria-expanded="false" aria-label="Toggle menu" id="navToggle">
+            <span class="hamburger" aria-hidden="true"></span>
+            <span class="nav-toggle-text">Menu</span>
+        </button>
         <ul>
-            <li><a href="#about" data-am="ስለ እኛ" data-en="About">ስለ እኛ</a></li>
-            <li><a href="student_login.php" data-am="የተማሪ ግባ" data-en="Student Access">የተማሪ ግባ</a></li>
-            <li><a href="#view" data-am="እይታ" data-en="View">እይታ</a></li>
-            <li><a href="contact.html" data-am="አገናኝ" data-en="Contact">አገናኝ</a></li>
-            <li><a href="dashboard.php" data-am="ዳሽቦርድ" data-en="Dashboard">ዳሽቦርድ</a></li>
-            <li><a href="exam20.php" data-am="የፈተና ጣቢያ" data-en="Exam Portal">የፈተና ጣቢያ</a></li>
-            <li><a href="tutorial.php" data-am="ኮርሶች" data-en="Courses">ኮርሶች</a></li>
-            <li><a href="discussion_forum.php" data-am="ፎረም" data-en="Forum">ፎረም</a></li>
-            <li><a href="library.php" data-am="ቤተ-መፅሃፍት" data-en="Library">ቤተ-መፅሃፍት</a></li>
-            <li><a href="admin_login.php" data-am="የአስተዳደሪ ግባ" data-en="Admin Login">የአስተዳደሪ ግባ</a></li>
-            <li><a href="student_register.php" data-am="ይመዝገቡ" data-en="Register">ይመዝገቡ</a></li>
-                    <li class="nav-toggle-wrap">
-                        <button class="nav-toggle" aria-expanded="false" aria-label="Toggle menu" id="navToggle">
-                            <span class="hamburger"></span>
-                        </button>
-                    </li>
+            <span class="nav-indicator" aria-hidden="true"></span>
+            <li><a class="nav-link" href="#about" data-am="ስለ እኛ" data-en="About">ስለ እኛ</a></li>
+            <li><a class="nav-link" href="student_login.php" data-am="የተማሪ ግባ" data-en="Student Access">የተማሪ ግባ</a></li>
+            <li><a class="nav-link" href="#view" data-am="እይታ" data-en="View">እይታ</a></li>
+            <li><a class="nav-link" href="contact.html" data-am="አገናኝ" data-en="Contact">አገናኝ</a></li>
+            <li><a class="nav-link" href="dashboard.php" data-am="ዳሽቦርድ" data-en="Dashboard">ዳሽቦርድ</a></li>
+            <li><a class="nav-link" href="exam20.php" data-am="የፈተና ጣቢያ" data-en="Exam Portal">የፈተና ጣቢያ</a></li>
+            <li><a class="nav-link" href="tutorial.php" data-am="ኮርሶች" data-en="Courses">ኮርሶች</a></li>
+            <li><a class="nav-link" href="discussion_forum.php" data-am="ፎረም" data-en="Forum">ፎረም</a></li>
+            <li><a class="nav-link" href="library.php" data-am="ቤተ-መፅሃፍት" data-en="Library">ቤተ-መፅሃፍት</a></li>
+            <li><a class="nav-link" href="admin_login.php" data-am="የአስተዳደሪ ግባ" data-en="Admin Login">የአስተዳደሪ ግባ</a></li>
+            <li><a class="nav-link" href="student_register.php" data-am="ይመዝገቡ" data-en="Register">ይመዝገቡ</a></li>
             <li class="nav-lang">
                 <div class="lang-dropdown" id="langDropdown">
                     <button class="lang-btn" id="langBtn" aria-haspopup="true" aria-expanded="false"><?php echo ($lang === 'am') ? 'አማርኛ' : (($lang === 'ti') ? 'ትግርኛ' : (($lang === 'om') ? 'Afaan Oromo' : 'English')); ?></button>
@@ -774,6 +890,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         </ul>
     </nav>
 
+    <main id="main-content" tabindex="-1" role="main">
     <header class="hero-section">
         <video class="hero-video" autoplay muted loop playsinline poster="10 .jpg">
             <source src="sofi website hero section video.mp4" type="video/mp4">
@@ -793,10 +910,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
     <section class="card reveal hero-stats-section" aria-label="LMS stats">
         <h2 data-am="የቤተ ገብርኤል አጠቃላይ ዕይታ" data-en="Professional LMS Features">Professional LMS Features</h2>
         <section class="stats-grid" aria-label="Detailed stats">
-            <article class="stat-card"><strong>500+</strong><span>የተመዘገቡ ተማሪዎች</span></article>
-            <article class="stat-card"><strong>25</strong><span>የተለያዩ ኮርሶች</span></article>
-            <article class="stat-card"><strong>12</strong><span>የተማሪ ዳሽቦርዶች</span></article>
-            <article class="stat-card"><strong>100%</strong><span>የእምነት እና የትምህርት ማዕከል</span></article>
+            <article class="stat-card" data-target="500" data-suffix="+"><strong data-counter>0</strong><span>የተመዘገቡ ተማሪዎች</span><span class="stat-label">Growing Community</span></article>
+            <article class="stat-card" data-target="25" data-suffix=""><strong data-counter>0</strong><span>የተለያዩ ኮርሶች</span><span class="stat-label">Modern Learning</span></article>
+            <article class="stat-card" data-target="12" data-suffix=""><strong data-counter>0</strong><span>የተማሪ ዳሽቦርዶች</span><span class="stat-label">Smart Access</span></article>
+            <article class="stat-card" data-target="100" data-suffix="%"><strong data-counter>0</strong><span>የእምነት እና የትምህርት ማዕከል</span><span class="stat-label">Trusted Experience</span></article>
         </section>
     </section>
 
@@ -1077,7 +1194,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
                 </div>
             </div>
 
-            <form id="supportContactForm" class="contact-form" action="contact_submit.php" method="post" enctype="multipart/form-data">
+            <div style="grid-column:1 / -1; display:grid; gap:18px;">
+                <section class="card reveal" style="padding:22px; border:1px solid #dbeafe; background:linear-gradient(135deg,#ffffff 0%,#eff6ff 100%);">
+                    <div style="display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+                        <div style="max-width:720px;">
+                            <h3 style="margin-top:0; color:#0f3d91;" data-am="አዲስ የኢሜይል ማስታወቂያ እባክዎን ይቀላቀሉ" data-en="Join our newsletter">አዲስ የኢሜይል ማስታወቂያ እባክዎን ይቀላቀሉ</h3>
+                            <p style="margin:0; color:#475569; line-height:1.7;" data-am="እኛ ከሚገኘዎት ጋር ኮርስ ማስታወቂያዎች፣ አዲስ ዜና እና በልዩ ክንውኖች ላይ የተለያዩ ማሳወቂያዎችን እንልክ።" data-en="Get course news, updates, and exclusive learning alerts directly to your inbox.">እኛ ከሚገኘዎት ጋር ኮርስ ማስታወቂያዎች፣ አዲስ ዜና እና በልዩ ክንውኖች ላይ የተለያዩ ማሳወቂያዎችን እንልክ።</p>
+                        </div>
+                        <div style="min-width:240px; display:flex; align-items:center; justify-content:center;">
+                            <span style="display:inline-flex; padding:10px 16px; border-radius:999px; background:#dbeafe; color:#1d4ed8; font-weight:700;">Newsletter</span>
+                        </div>
+                    </div>
+                    <form id="newsletterForm" action="newsletter_subscribe.php" method="post" style="margin-top:18px; display:grid; gap:14px;">
+                        <input type="hidden" name="source" value="homepage">
+                        <div style="display:grid; gap:12px; grid-template-columns:1fr 1fr;">
+                            <label style="display:flex; flex-direction:column; gap:6px; color:#334155;"><span data-am="ስም (አስፈላጊ አይደለም)" data-en="Name (optional)">ስም (አስፈላጊ አይደለም)</span><input type="text" name="name" placeholder="ስምዎን ያስገቡ" style="padding:12px 14px; border:1px solid #cbd5e1; border-radius:12px; width:100%;"></label>
+                            <label style="display:flex; flex-direction:column; gap:6px; color:#334155;"><span data-am="ኢሜይል" data-en="Email">ኢሜይል</span><input type="email" name="email" required placeholder="example@mail.com" style="padding:12px 14px; border:1px solid #cbd5e1; border-radius:12px; width:100%;"></label>
+                        </div>
+                        <button type="submit" class="button" style="max-width:220px;">እንደገና ይገቡ</button>
+                    </form>
+                </section>
+            </div>
+
+            <form id="siteContactForm" class="contact-form" action="contact_submit.php" method="post" enctype="multipart/form-data">
                 <h3 style="margin-top:0;" data-am="ማስታወቂያዎን ይላኩ" data-en="Send us a message">ማስታወቂያዎን ይላኩ</h3>
                 <div class="form-field">
                     <label for="support_name" data-am="ስም" data-en="Name">ስም</label>
@@ -1379,9 +1518,191 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         </div>
     </footer>
 
+    <div class="reading-guide-line" aria-hidden="true"></div>
+    <button class="accessibility-toggle" id="accessibilityToggle" type="button" aria-haspopup="dialog" aria-controls="accessibilityPanel" aria-expanded="false">
+        <span class="accessibility-icon" aria-hidden="true">♿</span>
+        <span>ሶፊ</span>
+    </button>
+    <div class="accessibility-panel" id="accessibilityPanel" role="dialog" aria-modal="false" aria-label="Accessibility preferences" aria-hidden="true">
+        <div class="accessibility-section-title">
+            <h3>Accessibility Center</h3>
+            <button class="accessibility-link-btn" id="closeAccessibilityPanel" type="button" aria-label="Close accessibility panel">✕</button>
+        </div>
+        <p>Adjust reading comfort and visibility without changing the site layout.</p>
+        <div class="accessibility-section">
+            <div class="accessibility-section-title">
+                <span>Text size</span>
+            </div>
+            <div class="accessibility-actions">
+                <button class="accessibility-chip" id="fontDecreaseBtn" type="button" aria-label="Decrease font size">−A</button>
+                <button class="accessibility-chip" id="fontResetBtn" type="button" aria-label="Reset font size">Default</button>
+                <button class="accessibility-chip" id="fontIncreaseBtn" type="button" aria-label="Increase font size">+A</button>
+                <button class="accessibility-chip" id="biggerTextToggle" type="button" aria-pressed="false">Bigger Text</button>
+            </div>
+        </div>
+        <div class="accessibility-section">
+            <div class="accessibility-section-title">
+                <span>Display</span>
+            </div>
+            <div class="accessibility-controls">
+                <button class="accessibility-chip" id="contrastToggle" type="button" aria-pressed="false">Contrast +</button>
+                <button class="accessibility-chip" id="themeToggle" type="button" aria-pressed="false">Dark / Light</button>
+                <button class="accessibility-chip" id="dyslexiaToggle" type="button" aria-pressed="false">Dyslexia Friendly</button>
+                <button class="accessibility-chip" id="saturationToggle" type="button" aria-pressed="false">Saturation</button>
+            </div>
+        </div>
+        <div class="accessibility-section">
+            <div class="accessibility-section-title">
+                <span>Reading support</span>
+            </div>
+            <div class="accessibility-controls">
+                <button class="accessibility-chip" id="guideToggle" type="button" aria-pressed="false">Reading Guide</button>
+                <button class="accessibility-chip" id="linkHighlightToggle" type="button" aria-pressed="false">Highlight Links</button>
+                <button class="accessibility-chip" id="spacingToggle" type="button" aria-pressed="false">Text Spacing</button>
+                <button class="accessibility-chip" id="pauseAnimationsToggle" type="button" aria-pressed="false">Pause Animations</button>
+                <button class="accessibility-chip" id="hideImagesToggle" type="button" aria-pressed="false">Hide Images</button>
+                <button class="accessibility-chip" id="tooltipsToggle" type="button" aria-pressed="false">Tooltips</button>
+            </div>
+            <div class="accessibility-controls" style="margin-top: 8px;">
+                <label class="visually-hidden" for="lineHeightSelect">Line height</label>
+                <select class="accessibility-select" id="lineHeightSelect" aria-label="Line height">
+                    <option value="1.4">Line Height 1.4</option>
+                    <option value="1.6" selected>Line Height 1.6</option>
+                    <option value="1.8">Line Height 1.8</option>
+                    <option value="2">Line Height 2.0</option>
+                </select>
+                <label class="visually-hidden" for="textAlignSelect">Text align</label>
+                <select class="accessibility-select" id="textAlignSelect" aria-label="Text align">
+                    <option value="left" selected>Text Align Left</option>
+                    <option value="center">Text Align Center</option>
+                    <option value="justify">Text Align Justify</option>
+                </select>
+                <label class="visually-hidden" for="cursorSizeSelect">Cursor size</label>
+                <select class="accessibility-select" id="cursorSizeSelect" aria-label="Cursor size">
+                    <option value="small">Small cursor</option>
+                    <option value="medium" selected>Medium cursor</option>
+                    <option value="large">Large cursor</option>
+                </select>
+            </div>
+        </div>
+        <div class="accessibility-section">
+            <div class="accessibility-section-title">
+                <span>Widget placement</span>
+            </div>
+            <div class="accessibility-controls">
+                <label class="accessibility-radio" for="widgetLeftRadio">
+                    <input type="radio" id="widgetLeftRadio" name="widgetPlacement" value="left">
+                    <span>Left</span>
+                </label>
+                <label class="accessibility-radio" for="widgetRightRadio">
+                    <input type="radio" id="widgetRightRadio" name="widgetPlacement" value="right">
+                    <span>Right</span>
+                </label>
+                <label class="accessibility-radio" for="widgetHideRadio">
+                    <input type="radio" id="widgetHideRadio" name="widgetPlacement" value="hide">
+                    <span>Hide</span>
+                </label>
+            </div>
+        </div>
+        <div class="accessibility-section">
+            <div class="accessibility-section-title">
+                <span>Widget size</span>
+            </div>
+            <div class="accessibility-controls">
+                <button class="accessibility-chip" id="oversizedWidgetToggle" type="button" aria-pressed="false">Oversized Widget</button>
+            </div>
+        </div>
+        <div class="accessibility-footer">
+            <button id="resetAccessibilityBtn" type="button">Reset All Accessibility Settings</button>
+        </div>
+        <div class="accessibility-status" id="accessibilityStatus" aria-live="polite"></div>
+    </div>
+
     <script>
         const langButtons = document.querySelectorAll('.lang-btn');
         const welcomeToast = document.getElementById('welcomeToast');
+        const navLinks = Array.from(document.querySelectorAll('nav .nav-link'));
+        const navList = document.querySelector('nav ul');
+        const navIndicator = document.querySelector('.nav-indicator');
+        let activeNavLink = null;
+
+        function positionNavIndicator(target) {
+            if (!navIndicator || !navList || !target) return;
+            const targetRect = target.getBoundingClientRect();
+            const listRect = navList.getBoundingClientRect();
+            const left = targetRect.left - listRect.left + 6;
+            const width = Math.max(targetRect.width - 12, 18);
+            navIndicator.style.transform = `translateX(${left}px)`;
+            navIndicator.style.width = `${width}px`;
+            navIndicator.style.opacity = '1';
+        }
+
+        function setActiveNavLink(link) {
+            activeNavLink = link;
+            navLinks.forEach((item) => item.classList.toggle('active', item === link));
+            if (link) {
+                positionNavIndicator(link);
+            }
+        }
+
+        function syncActiveNavLink() {
+            const currentPath = window.location.pathname.split('/').pop() || 'sofonyas2.php';
+            const currentHash = window.location.hash;
+            let matchedLink = null;
+
+            navLinks.forEach((link) => {
+                const href = (link.getAttribute('href') || '').split('#')[0].split('?')[0];
+                const hrefPath = href.split('/').pop() || '';
+                const isHomePage = currentPath === '' || currentPath === 'sofonyas2.php' || currentPath === 'index.php';
+
+                if (!href || href.startsWith('#')) {
+                    return;
+                }
+
+                if (hrefPath && hrefPath === currentPath) {
+                    matchedLink = link;
+                } else if (isHomePage && (hrefPath === 'sofonyas2.php' || hrefPath === 'index.php')) {
+                    matchedLink = link;
+                }
+            });
+
+            if (matchedLink) {
+                setActiveNavLink(matchedLink);
+            } else if (navLinks.length) {
+                setActiveNavLink(navLinks[0]);
+            }
+
+            if (currentHash && navLinks.length) {
+                const hashLink = navLinks.find((link) => link.getAttribute('href') === currentHash);
+                if (hashLink) {
+                    setActiveNavLink(hashLink);
+                }
+            }
+        }
+
+        if (navList && navIndicator) {
+            navLinks.forEach((link) => {
+                link.addEventListener('mouseenter', () => positionNavIndicator(link));
+                link.addEventListener('focus', () => positionNavIndicator(link));
+                link.addEventListener('click', () => setActiveNavLink(link));
+            });
+
+            navList.addEventListener('mouseleave', () => {
+                if (activeNavLink) {
+                    positionNavIndicator(activeNavLink);
+                } else {
+                    navIndicator.style.opacity = '0';
+                }
+            });
+        }
+
+        window.addEventListener('resize', () => {
+            if (activeNavLink) {
+                positionNavIndicator(activeNavLink);
+            }
+        });
+
+        syncActiveNavLink();
 
         function showToast(message, type = 'info', timeout = 4200) {
             const toast = document.createElement('div');
@@ -1589,6 +1910,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
             }, 6000);
         }
 
+        function animateCounters() {
+            document.querySelectorAll('.stat-card[data-target]').forEach((card) => {
+                const counter = card.querySelector('[data-counter]');
+                if (!counter) return;
+
+                const target = Number(card.getAttribute('data-target') || 0);
+                const suffix = card.getAttribute('data-suffix') || '';
+                const duration = 1400;
+                const startTime = performance.now();
+
+                const tick = (currentTime) => {
+                    const progress = Math.min((currentTime - startTime) / duration, 1);
+                    const eased = 1 - Math.pow(1 - progress, 3);
+                    const value = Math.round(target * eased);
+                    counter.textContent = `${value}${suffix}`;
+
+                    if (progress < 1) {
+                        requestAnimationFrame(tick);
+                    } else {
+                        counter.textContent = `${target}${suffix}`;
+                    }
+                };
+
+                requestAnimationFrame(tick);
+            });
+        }
+
         function revealOnScroll() {
             document.querySelectorAll('.reveal').forEach((element) => {
                 const rect = element.getBoundingClientRect();
@@ -1729,10 +2077,421 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
             startHeroSlider();
             startTestimonialSlider();
             revealOnScroll();
+            animateCounters();
         });
 
         window.addEventListener('scroll', revealOnScroll);
         window.addEventListener('resize', revealOnScroll);
+    </script>
+    <script>
+        (function () {
+            const storageKey = 'sofiAccessibilityPrefs';
+            const toggleButton = document.getElementById('accessibilityToggle');
+            const panel = document.getElementById('accessibilityPanel');
+            const closeButton = document.getElementById('closeAccessibilityPanel');
+            const status = document.getElementById('accessibilityStatus');
+            const readingGuide = document.querySelector('.reading-guide-line');
+            const state = {
+                fontScale: 1,
+                highContrast: false,
+                darkMode: false,
+                dyslexiaFont: false,
+                readingGuide: false,
+                linkHighlight: false,
+                textSpacing: false,
+                cursorSize: 'medium',
+                biggerText: false,
+                oversizedWidget: false,
+                pauseAnimations: false,
+                hideImages: false,
+                tooltips: false,
+                lineHeight: '1.6',
+                textAlign: 'left',
+                widgetPosition: 'left',
+                saturation: false
+            };
+
+            const controls = {
+                fontDecrease: document.getElementById('fontDecreaseBtn'),
+                fontReset: document.getElementById('fontResetBtn'),
+                fontIncrease: document.getElementById('fontIncreaseBtn'),
+                biggerText: document.getElementById('biggerTextToggle'),
+                contrast: document.getElementById('contrastToggle'),
+                theme: document.getElementById('themeToggle'),
+                dyslexia: document.getElementById('dyslexiaToggle'),
+                saturation: document.getElementById('saturationToggle'),
+                guide: document.getElementById('guideToggle'),
+                linkHighlight: document.getElementById('linkHighlightToggle'),
+                spacing: document.getElementById('spacingToggle'),
+                pauseAnimations: document.getElementById('pauseAnimationsToggle'),
+                hideImages: document.getElementById('hideImagesToggle'),
+                tooltips: document.getElementById('tooltipsToggle'),
+                cursor: document.getElementById('cursorSizeSelect'),
+                lineHeight: document.getElementById('lineHeightSelect'),
+                textAlign: document.getElementById('textAlignSelect'),
+                widgetPlacement: Array.from(document.querySelectorAll('input[name="widgetPlacement"]')),
+                oversizedWidget: document.getElementById('oversizedWidgetToggle'),
+                reset: document.getElementById('resetAccessibilityBtn')
+            };
+
+            function setStatus(message) {
+                if (status) {
+                    status.textContent = message;
+                }
+            }
+
+            function savePrefs() {
+                try {
+                    localStorage.setItem(storageKey, JSON.stringify(state));
+                } catch (error) {
+                    console.warn('Accessibility preferences could not be saved.', error);
+                }
+            }
+
+            function readPrefs() {
+                try {
+                    const raw = localStorage.getItem(storageKey);
+                    if (!raw) return;
+                    Object.assign(state, JSON.parse(raw));
+                } catch (error) {
+                    console.warn('Accessibility preferences could not be loaded.', error);
+                }
+            }
+
+            function applyTooltips() {
+                const interactive = Array.from(document.querySelectorAll('.accessibility-toggle, .accessibility-chip, .accessibility-link-btn, .accessibility-select, .accessibility-radio, .accessibility-footer button'));
+                interactive.forEach((element) => {
+                    const tooltipText = element.getAttribute('aria-label') || element.textContent.trim();
+                    if (!tooltipText) return;
+                    if (state.tooltips) {
+                        element.setAttribute('title', tooltipText);
+                    } else {
+                        element.removeAttribute('title');
+                    }
+                });
+            }
+
+            function updateUI() {
+                document.body.style.setProperty('--access-font-scale', String(state.fontScale));
+                document.body.style.setProperty('--access-line-height', state.lineHeight || '1.6');
+                document.body.setAttribute('data-access-theme', state.darkMode ? 'dark' : 'light');
+                document.body.setAttribute('data-access-high-contrast', state.highContrast ? 'true' : 'false');
+                document.body.setAttribute('data-access-dyslexia', state.dyslexiaFont ? 'true' : 'false');
+                document.body.setAttribute('data-access-reading-guide', state.readingGuide ? 'true' : 'false');
+                document.body.setAttribute('data-access-link-highlight', state.linkHighlight ? 'true' : 'false');
+                document.body.setAttribute('data-access-text-spacing', state.textSpacing ? 'true' : 'false');
+                document.body.setAttribute('data-access-cursor-size', state.cursorSize || 'medium');
+                document.body.setAttribute('data-access-oversized-widget', state.oversizedWidget ? 'true' : 'false');
+                document.body.setAttribute('data-access-reduced-motion', state.pauseAnimations ? 'true' : 'false');
+                document.body.setAttribute('data-access-hide-images', state.hideImages ? 'true' : 'false');
+                document.body.setAttribute('data-access-tooltips', state.tooltips ? 'true' : 'false');
+                document.body.setAttribute('data-access-line-height', state.lineHeight || '1.6');
+                document.body.setAttribute('data-access-text-align', state.textAlign || 'left');
+                document.body.setAttribute('data-access-saturation', state.saturation ? 'true' : 'false');
+                document.body.setAttribute('data-access-widget-position', state.widgetPosition || 'left');
+
+                if (controls.contrast) {
+                    controls.contrast.classList.toggle('active', state.highContrast);
+                    controls.contrast.setAttribute('aria-pressed', state.highContrast ? 'true' : 'false');
+                    controls.contrast.textContent = state.highContrast ? 'Contrast + On' : 'Contrast +';
+                }
+                if (controls.theme) {
+                    controls.theme.classList.toggle('active', state.darkMode);
+                    controls.theme.setAttribute('aria-pressed', state.darkMode ? 'true' : 'false');
+                    controls.theme.textContent = state.darkMode ? 'Light Mode' : 'Dark / Light';
+                }
+                if (controls.dyslexia) {
+                    controls.dyslexia.classList.toggle('active', state.dyslexiaFont);
+                    controls.dyslexia.setAttribute('aria-pressed', state.dyslexiaFont ? 'true' : 'false');
+                }
+                if (controls.guide) {
+                    controls.guide.classList.toggle('active', state.readingGuide);
+                    controls.guide.setAttribute('aria-pressed', state.readingGuide ? 'true' : 'false');
+                }
+                if (controls.linkHighlight) {
+                    controls.linkHighlight.classList.toggle('active', state.linkHighlight);
+                    controls.linkHighlight.setAttribute('aria-pressed', state.linkHighlight ? 'true' : 'false');
+                }
+                if (controls.spacing) {
+                    controls.spacing.classList.toggle('active', state.textSpacing);
+                    controls.spacing.setAttribute('aria-pressed', state.textSpacing ? 'true' : 'false');
+                }
+                if (controls.biggerText) {
+                    controls.biggerText.classList.toggle('active', state.biggerText);
+                    controls.biggerText.setAttribute('aria-pressed', state.biggerText ? 'true' : 'false');
+                }
+                if (controls.pauseAnimations) {
+                    controls.pauseAnimations.classList.toggle('active', state.pauseAnimations);
+                    controls.pauseAnimations.setAttribute('aria-pressed', state.pauseAnimations ? 'true' : 'false');
+                }
+                if (controls.hideImages) {
+                    controls.hideImages.classList.toggle('active', state.hideImages);
+                    controls.hideImages.setAttribute('aria-pressed', state.hideImages ? 'true' : 'false');
+                }
+                if (controls.tooltips) {
+                    controls.tooltips.classList.toggle('active', state.tooltips);
+                    controls.tooltips.setAttribute('aria-pressed', state.tooltips ? 'true' : 'false');
+                }
+                if (controls.saturation) {
+                    controls.saturation.classList.toggle('active', state.saturation);
+                    controls.saturation.setAttribute('aria-pressed', state.saturation ? 'true' : 'false');
+                }
+                if (controls.oversizedWidget) {
+                    controls.oversizedWidget.classList.toggle('active', state.oversizedWidget);
+                    controls.oversizedWidget.setAttribute('aria-pressed', state.oversizedWidget ? 'true' : 'false');
+                }
+                if (controls.cursor) controls.cursor.value = state.cursorSize || 'medium';
+                if (controls.lineHeight) controls.lineHeight.value = state.lineHeight || '1.6';
+                if (controls.textAlign) controls.textAlign.value = state.textAlign || 'left';
+                if (controls.widgetPlacement && controls.widgetPlacement.length) {
+                    controls.widgetPlacement.forEach((radio) => {
+                        radio.checked = radio.value === state.widgetPosition;
+                        radio.parentElement.classList.toggle('active', radio.checked);
+                    });
+                }
+                applyTooltips();
+            }
+
+            function applyFontChange(delta) {
+                state.fontScale = Math.max(0.9, Math.min(1.3, Number((state.fontScale + delta).toFixed(2))));
+                state.biggerText = false;
+                updateUI();
+                savePrefs();
+                setStatus(`Font size set to ${state.fontScale.toFixed(2)}x.`);
+            }
+
+            function togglePanel(forceClose) {
+                if (!panel || !toggleButton) return;
+                const shouldOpen = typeof forceClose === 'boolean' ? !forceClose : panel.classList.contains('open') === false;
+                panel.classList.toggle('open', shouldOpen);
+                toggleButton.setAttribute('aria-expanded', shouldOpen ? 'true' : 'false');
+                panel.setAttribute('aria-hidden', shouldOpen ? 'false' : 'true');
+            }
+
+            function resetPrefs() {
+                Object.assign(state, {
+                    fontScale: 1,
+                    highContrast: false,
+                    darkMode: false,
+                    dyslexiaFont: false,
+                    readingGuide: false,
+                    linkHighlight: false,
+                    textSpacing: false,
+                    cursorSize: 'medium',
+                    biggerText: false,
+                    oversizedWidget: false,
+                    pauseAnimations: false,
+                    hideImages: false,
+                    tooltips: false,
+                    lineHeight: '1.6',
+                    textAlign: 'left',
+                    widgetPosition: 'left',
+                    saturation: false
+                });
+                updateUI();
+                savePrefs();
+                setStatus('All accessibility settings reset.');
+            }
+
+            function attachKeyboardSupport() {
+                const focusable = panel ? Array.from(panel.querySelectorAll('button, select, a, input')) : [];
+                if (!panel || focusable.length === 0) return;
+                panel.addEventListener('keydown', (event) => {
+                    const currentIndex = focusable.indexOf(document.activeElement);
+                    if (event.key === 'Escape') {
+                        event.preventDefault();
+                        togglePanel(true);
+                        toggleButton.focus();
+                    } else if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+                        event.preventDefault();
+                        const nextIndex = (currentIndex + 1) % focusable.length;
+                        focusable[nextIndex].focus();
+                    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+                        event.preventDefault();
+                        const previousIndex = (currentIndex - 1 + focusable.length) % focusable.length;
+                        focusable[previousIndex].focus();
+                    }
+                });
+            }
+
+            readPrefs();
+            updateUI();
+            attachKeyboardSupport();
+
+            if (toggleButton) {
+                toggleButton.addEventListener('click', () => togglePanel());
+                toggleButton.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        togglePanel();
+                    }
+                });
+            }
+            if (closeButton) closeButton.addEventListener('click', () => togglePanel(true));
+            if (controls.fontDecrease) controls.fontDecrease.addEventListener('click', () => applyFontChange(-0.05));
+            if (controls.fontIncrease) controls.fontIncrease.addEventListener('click', () => applyFontChange(0.05));
+            if (controls.fontReset) {
+                controls.fontReset.addEventListener('click', () => {
+                    state.fontScale = 1;
+                    state.biggerText = false;
+                    updateUI();
+                    savePrefs();
+                    setStatus('Font size restored to default.');
+                });
+            }
+            if (controls.biggerText) {
+                controls.biggerText.addEventListener('click', () => {
+                    state.biggerText = !state.biggerText;
+                    state.fontScale = state.biggerText ? 1.15 : 1;
+                    updateUI();
+                    savePrefs();
+                    setStatus(state.biggerText ? 'Bigger text enabled.' : 'Bigger text disabled.');
+                });
+            }
+            if (controls.contrast) {
+                controls.contrast.addEventListener('click', () => {
+                    state.highContrast = !state.highContrast;
+                    updateUI();
+                    savePrefs();
+                    setStatus(state.highContrast ? 'High contrast enabled.' : 'High contrast disabled.');
+                });
+            }
+            if (controls.theme) {
+                controls.theme.addEventListener('click', () => {
+                    state.darkMode = !state.darkMode;
+                    updateUI();
+                    savePrefs();
+                    setStatus(state.darkMode ? 'Dark mode enabled.' : 'Light mode enabled.');
+                });
+            }
+            if (controls.dyslexia) {
+                controls.dyslexia.addEventListener('click', () => {
+                    state.dyslexiaFont = !state.dyslexiaFont;
+                    updateUI();
+                    savePrefs();
+                    setStatus(state.dyslexiaFont ? 'Dyslexia-friendly font enabled.' : 'Dyslexia-friendly font disabled.');
+                });
+            }
+            if (controls.saturation) {
+                controls.saturation.addEventListener('click', () => {
+                    state.saturation = !state.saturation;
+                    updateUI();
+                    savePrefs();
+                    setStatus(state.saturation ? 'Saturation reduced for better clarity.' : 'Saturation restored.');
+                });
+            }
+            if (controls.guide) {
+                controls.guide.addEventListener('click', () => {
+                    state.readingGuide = !state.readingGuide;
+                    updateUI();
+                    savePrefs();
+                    setStatus(state.readingGuide ? 'Reading guide enabled.' : 'Reading guide disabled.');
+                });
+            }
+            if (controls.linkHighlight) {
+                controls.linkHighlight.addEventListener('click', () => {
+                    state.linkHighlight = !state.linkHighlight;
+                    updateUI();
+                    savePrefs();
+                    setStatus(state.linkHighlight ? 'Link highlighting enabled.' : 'Link highlighting disabled.');
+                });
+            }
+            if (controls.spacing) {
+                controls.spacing.addEventListener('click', () => {
+                    state.textSpacing = !state.textSpacing;
+                    updateUI();
+                    savePrefs();
+                    setStatus(state.textSpacing ? 'Text spacing increased.' : 'Text spacing returned to default.');
+                });
+            }
+            if (controls.pauseAnimations) {
+                controls.pauseAnimations.addEventListener('click', () => {
+                    state.pauseAnimations = !state.pauseAnimations;
+                    updateUI();
+                    savePrefs();
+                    setStatus(state.pauseAnimations ? 'Animations paused.' : 'Animations resumed.');
+                });
+            }
+            if (controls.hideImages) {
+                controls.hideImages.addEventListener('click', () => {
+                    state.hideImages = !state.hideImages;
+                    updateUI();
+                    savePrefs();
+                    setStatus(state.hideImages ? 'Images hidden.' : 'Images shown.');
+                });
+            }
+            if (controls.tooltips) {
+                controls.tooltips.addEventListener('click', () => {
+                    state.tooltips = !state.tooltips;
+                    updateUI();
+                    savePrefs();
+                    setStatus(state.tooltips ? 'Tooltips enabled.' : 'Tooltips disabled.');
+                });
+            }
+            if (controls.cursor) {
+                controls.cursor.addEventListener('change', () => {
+                    state.cursorSize = controls.cursor.value;
+                    updateUI();
+                    savePrefs();
+                    setStatus(`Cursor size changed to ${state.cursorSize}.`);
+                });
+            }
+            if (controls.lineHeight) {
+                controls.lineHeight.addEventListener('change', () => {
+                    state.lineHeight = controls.lineHeight.value;
+                    updateUI();
+                    savePrefs();
+                    setStatus(`Line height set to ${state.lineHeight}.`);
+                });
+            }
+            if (controls.textAlign) {
+                controls.textAlign.addEventListener('change', () => {
+                    state.textAlign = controls.textAlign.value;
+                    updateUI();
+                    savePrefs();
+                    setStatus(`Text alignment changed to ${state.textAlign}.`);
+                });
+            }
+            if (controls.widgetPlacement && controls.widgetPlacement.length) {
+                controls.widgetPlacement.forEach((radio) => {
+                    radio.addEventListener('change', () => {
+                        state.widgetPosition = radio.value;
+                        updateUI();
+                        savePrefs();
+                        setStatus(`Accessibility widget moved to ${state.widgetPosition}.`);
+                    });
+                });
+            }
+            if (controls.oversizedWidget) {
+                controls.oversizedWidget.addEventListener('click', () => {
+                    state.oversizedWidget = !state.oversizedWidget;
+                    updateUI();
+                    savePrefs();
+                    setStatus(state.oversizedWidget ? 'Oversized widget enabled.' : 'Oversized widget disabled.');
+                });
+            }
+            if (controls.reset) controls.reset.addEventListener('click', resetPrefs);
+
+            document.addEventListener('click', (event) => {
+                if (!panel) return;
+                if (panel.classList.contains('open') && !panel.contains(event.target) && !toggleButton.contains(event.target)) {
+                    togglePanel(true);
+                }
+            });
+
+            if (readingGuide) {
+                window.addEventListener('mousemove', (event) => {
+                    if (!state.readingGuide) return;
+                    const guideTop = Math.max(0, event.clientY - 18);
+                    readingGuide.style.top = `${guideTop}px`;
+                });
+                window.addEventListener('scroll', () => {
+                    if (!state.readingGuide) return;
+                    const guideTop = window.scrollY + 120;
+                    readingGuide.style.top = `${guideTop}px`;
+                });
+            }
+        })();
     </script>
     <script>
     (function(){
@@ -1757,7 +2516,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
             const btn = form.querySelector('button[type="submit"]');
             if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
             try {
-                const resp = await fetch(form.action, { method: 'POST', body: fd });
+                const resp = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    },
+                    body: fd
+                });
                 const json = await resp.json();
                 if (feedback) feedback.textContent += '\n\nServer: ' + (json.message || JSON.stringify(json));
                 if (json.success) form.reset();
@@ -1769,5 +2535,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         });
     })();
     </script>
+    </main>
 </body>
 </html>

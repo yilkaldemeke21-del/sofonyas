@@ -14,7 +14,11 @@ html {
             padding: 12px 16px;
             position: sticky;
             top: 0;
-            z-index: 10;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
         }
         nav ul {
             list-style: none;
@@ -24,7 +28,45 @@ html {
             gap: 12px;
             margin: 0;
             padding: 0;
+            flex: 1;
         }
+        .nav-toggle {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            width: auto;
+            min-width: 48px;
+            height: 44px;
+            border: none;
+            border-radius: 999px;
+            background: #fff;
+            color: #bb087f;
+            cursor: pointer;
+            margin-left: auto;
+            padding: 0 12px;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
+            z-index: 10002;
+        }
+        .nav-toggle .hamburger {
+            position: relative;
+            width: 22px;
+            height: 2px;
+            background: #bb087f;
+            display: block;
+            border-radius: 2px;
+        }
+        .nav-toggle .hamburger::before,
+        .nav-toggle .hamburger::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #bb087f;
+            border-radius: 2px;
+        }
+        .nav-toggle .hamburger::before { top: -7px; }
+        .nav-toggle .hamburger::after { top: 7px; }
         nav a {
             color: #fff;
             text-decoration: none;
@@ -40,6 +82,37 @@ html {
             transform: translateY(-1px);
             box-shadow: 0 6px 16px rgba(11, 75, 211, 0.25);
         }
+        @media (max-width: 900px) {
+            nav {
+                padding: 12px 14px;
+            }
+            nav ul {
+                display: none;
+                flex-direction: column;
+                align-items: flex-start;
+                position: absolute;
+                right: 14px;
+                top: 56px;
+                width: min(280px, calc(100vw - 28px));
+                background: #bb087f;
+                padding: 12px 14px;
+                border-radius: 12px;
+                box-shadow: 0 10px 24px rgba(15, 23, 42, 0.16);
+            }
+            nav.open ul {
+                display: flex !important;
+                position: fixed;
+                top: 70px;
+                right: 12px;
+                left: auto;
+                width: min(280px, calc(100vw - 24px));
+                z-index: 2147483647;
+            }
+            .nav-toggle {
+                display: inline-flex !important;
+            }
+        }
+
         .lang-switch {
             display: flex;
             justify-content: center;

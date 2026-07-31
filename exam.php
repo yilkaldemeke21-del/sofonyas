@@ -109,40 +109,46 @@ function formatExamDuration(int $minutes): string
     return sprintf('%02d:%02d:00', $hours, $remainingMinutes);
 }
 
-if ($accessCode !== '') {
-    $stmt = $pdo->prepare('SELECT * FROM quiz_link_generators WHERE REPLACE(LOWER(exam_type), \' \' , \'_\') = :exam_type AND access_code = :access_code LIMIT 1');
-    $stmt->execute([
-        ':exam_type' => $examType,
-        ':access_code' => $accessCode,
-    ]);
-    $quizLink = $stmt->fetch(PDO::FETCH_ASSOC);
-} else {
-    $stmt = $pdo->prepare('SELECT * FROM quiz_link_generators WHERE REPLACE(LOWER(exam_type), \' \' , \'_\') = :exam_type ORDER BY created_at DESC LIMIT 1');
-    $stmt->execute([':exam_type' => $examType]);
-    $latestLink = $stmt->fetch(PDO::FETCH_ASSOC);
-    if ($latestLink) {
-        $redirectUrl = buildExamRedirectUrl($latestLink);
-        if ($redirectUrl !== '') {
-            header('Location: ' . $redirectUrl);
-            exit;
+try {
+    if ($accessCode !== '') {
+        $stmt = $pdo->prepare('SELECT * FROM quiz_link_generators WHERE REPLACE(LOWER(exam_type), \' \' , \'_\') = :exam_type AND access_code = :access_code LIMIT 1');
+        $stmt->execute([
+            ':exam_type' => $examType,
+            ':access_code' => $accessCode,
+        ]);
+        $quizLink = $stmt->fetch(PDO::FETCH_ASSOC);
+    } else {
+        $stmt = $pdo->prepare('SELECT * FROM quiz_link_generators WHERE REPLACE(LOWER(exam_type), \' \' , \'_\') = :exam_type ORDER BY created_at DESC LIMIT 1');
+        $stmt->execute([':exam_type' => $examType]);
+        $latestLink = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($latestLink) {
+            $redirectUrl = buildExamRedirectUrl($latestLink);
+            if ($redirectUrl !== '') {
+                header('Location: ' . $redirectUrl);
+                exit;
+            }
         }
     }
-}
 
-if (!$quizLink) {
-    $stmt = $pdo->prepare('SELECT * FROM exam_access_codes WHERE exam_type = :exam_type AND is_active = 1 LIMIT 1');
-    $stmt->execute([':exam_type' => $examType]);
-    $activeCode = $stmt->fetch(PDO::FETCH_ASSOC);
-    if ($activeCode && ($accessCode === '' || strtoupper(trim((string)$activeCode['access_code'])) === $accessCode)) {
-        $quizLink = [
-            'access_code' => $activeCode['access_code'],
-            'created_at' => $activeCode['created_at'] ?? date('Y-m-d H:i:s'),
-            'expiry_minutes' => 99999,
-            'timer_minutes' => 210,
-            'one_attempt' => 1,
-        ];
-        $_GET['access_code'] = $activeCode['access_code'];
+    if (!$quizLink) {
+        $stmt = $pdo->prepare('SELECT * FROM exam_access_codes WHERE exam_type = :exam_type AND is_active = 1 LIMIT 1');
+        $stmt->execute([':exam_type' => $examType]);
+        $activeCode = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($activeCode && ($accessCode === '' || strtoupper(trim((string)$activeCode['access_code'])) === $accessCode)) {
+            $quizLink = [
+                'access_code' => $activeCode['access_code'],
+                'created_at' => $activeCode['created_at'] ?? date('Y-m-d H:i:s'),
+                'expiry_minutes' => 99999,
+                'timer_minutes' => 210,
+                'one_attempt' => 1,
+            ];
+            $_GET['access_code'] = $activeCode['access_code'];
+        }
     }
+} catch (Throwable $e) {
+    error_log('Exam access lookup failed: ' . $e->getMessage());
+    $quizLink = null;
+    $accessError = 'ይቅርታ፣ የፈተና መግቢያ አገልግሎት በጊዜው አይሰራም። እባክዎ ከጥቂት ደቂቃዎች በኋላ እንደገና ይሞክሩ።';
 }
 
 if (!$quizLink) {

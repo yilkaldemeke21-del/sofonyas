@@ -1,14 +1,91 @@
 <?php
-$host = getenv('DB_HOST');
-if ($host === false || trim((string)$host) === '' || strtolower(trim((string)$host)) === 'localhost') {
-    $host = '127.0.0.1';
+function loadEnvFileFromDirectory(string $startDir): void
+{
+    $dirs = [];
+    $currentDir = realpath($startDir);
+
+    while ($currentDir !== false && $currentDir !== dirname($currentDir)) {
+        $dirs[] = $currentDir;
+        $currentDir = dirname($currentDir);
+    }
+
+    if (!empty($dirs)) {
+        $dirs[] = dirname($dirs[0]);
+    }
+
+    $dirs = array_values(array_unique($dirs));
+
+    foreach ($dirs as $dir) {
+        $envPath = rtrim($dir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . '.env';
+        if (!is_file($envPath)) {
+            continue;
+        }
+
+        $envLines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if ($envLines === false) {
+            continue;
+        }
+
+        foreach ($envLines as $line) {
+            $trimmed = trim($line);
+            if ($trimmed === '' || strpos($trimmed, '#') === 0) {
+                continue;
+            }
+
+            $parts = explode('=', $line, 2);
+            if (count($parts) !== 2) {
+                continue;
+            }
+
+            $key = trim($parts[0]);
+            $value = trim($parts[1]);
+            if ($key === '') {
+                continue;
+            }
+
+            $existingValue = getenv($key);
+            if ($existingValue === false || $existingValue === '') {
+                putenv("{$key}={$value}");
+                $_ENV[$key] = $value;
+            }
+        }
+
+        break;
+    }
 }
+
+loadEnvFileFromDirectory(__DIR__);
+
+$host = getenv('DB_HOST');
+$db = getenv('DB_NAME');
+$user = getenv('DB_USER');
+$pass = getenv('DB_PASS');
+
+$hostHeader = $_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? '');
+$hostHeader = is_string($hostHeader) ? preg_replace('/:.*$/', '', trim($hostHeader)) : '';
+$useHostedDefaults = is_string($hostHeader) && preg_match('/(infinityfreeapp\.com|epizy\.com)$/i', $hostHeader) === 1;
+$isLocalRequest = $hostHeader === '' || in_array(strtolower($hostHeader), ['localhost', '127.0.0.1', '::1'], true);
+
+if ($isLocalRequest) {
+    $host = '127.0.0.1';
+    $db = 'sofonyas_db';
+    $user = 'root';
+    $pass = '';
+} elseif (($host === false || trim((string)$host) === '' || strtolower(trim((string)$host)) === 'localhost' || strtolower(trim((string)$host)) === '127.0.0.1') && $useHostedDefaults) {
+    $host = 'sql311.infinityfree.com';
+    $db = $db ?: 'if0_42532820_sofonyas_db';
+    $user = $user ?: 'if0_42532820';
+    $pass = $pass ?: 'sofonyas2127';
+} elseif ($host === false || trim((string)$host) === '' || strtolower(trim((string)$host)) === 'localhost') {
+    $host = '127.0.0.1';
+    $db = $db ?: 'sofonyas_db';
+    $user = $user ?: 'root';
+    $pass = $pass ?: '';
+}
+
 $port = getenv('DB_PORT') ?: '3306';
-$db   = getenv('DB_NAME') ?: 'sofonyas_db';
-$user = getenv('DB_USER') ?: 'root';
-$pass = getenv('DB_PASS') ?: '';
 $charset = 'utf8mb4';
-$socket = getenv('DB_SOCKET') ?: 'C:/xampp/mysql/mysql.sock';
+$socket = getenv('DB_SOCKET') ?: '';
 
 $options = [
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -31,7 +108,7 @@ $hosts = array_values(array_unique(array_filter([
 })));
 
 $socketUsed = false;
-if (is_file($socket) || strpos($socket, 'mysql.sock') !== false) {
+if ($socket !== '' && (is_file($socket) || strpos($socket, 'mysql.sock') !== false)) {
     try {
         $pdo = new PDO("mysql:unix_socket=$socket;dbname=$db;charset=$charset", $user, $pass, $options);
         $socketUsed = true;
@@ -42,15 +119,37 @@ if (is_file($socket) || strpos($socket, 'mysql.sock') !== false) {
 }
 
 if (!$pdo) {
-    foreach ($hosts as $candidateHost) {
-        $dsn = "mysql:host=$candidateHost;port=$port;dbname=$db;charset=$charset";
+    $databaseCandidates = array_values(array_unique(array_filter([
+        $db,
+        'if0_42532820_sofonyas_db',
+        'sofonyas_db',
+    ], static function ($value): bool {
+        return $value !== null && $value !== '';
+    })));
 
-        try {
-            $pdo = new PDO($dsn, $user, $pass, $options);
-            break;
-        } catch (PDOException $e) {
-            $lastError = $e;
-            error_log('DB connection attempt failed for host ' . $candidateHost . ': ' . $e->getMessage());
+    $userCandidates = array_values(array_unique(array_filter([
+        $user,
+        'if0_42532820',
+        'root',
+    ], static function ($value): bool {
+        return $value !== null && $value !== '';
+    })));
+
+    foreach ($hosts as $candidateHost) {
+        foreach ($databaseCandidates as $candidateDb) {
+            foreach ($userCandidates as $candidateUser) {
+                $dsn = "mysql:host=$candidateHost;port=$port;dbname=$candidateDb;charset=$charset";
+
+                try {
+                    $pdo = new PDO($dsn, $candidateUser, $pass, $options);
+                    $db = $candidateDb;
+                    $user = $candidateUser;
+                    break 3;
+                } catch (PDOException $e) {
+                    $lastError = $e;
+                    error_log('DB connection attempt failed for host ' . $candidateHost . ' / db ' . $candidateDb . ' / user ' . $candidateUser . ': ' . $e->getMessage());
+                }
+            }
         }
     }
 }
@@ -67,6 +166,38 @@ if (!$pdo) {
 
 if (!defined('DB_CONNECTION_ERROR')) {
     define('DB_CONNECTION_ERROR', $dbConnectionError);
+}
+
+function ensureDemoStudentAccount(PDO $pdo): void
+{
+    $email = 'student@example.com';
+    $studentId = 'TEST-001';
+    $password = 'student123';
+    $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+
+    $stmt = $pdo->prepare('SELECT id, password_hash FROM students WHERE email = :email OR student_id = :student_id LIMIT 1');
+    $stmt->execute([':email' => $email, ':student_id' => $studentId]);
+    $student = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$student) {
+        $insertStmt = $pdo->prepare('INSERT INTO students (name, email, student_id, password_hash, role, created_at) VALUES (:name, :email, :student_id, :password_hash, :role, NOW())');
+        $insertStmt->execute([
+            ':name' => 'Test Student',
+            ':email' => $email,
+            ':student_id' => $studentId,
+            ':password_hash' => $passwordHash,
+            ':role' => 'Student',
+        ]);
+        return;
+    }
+
+    if (empty($student['password_hash'])) {
+        $updateStmt = $pdo->prepare('UPDATE students SET password_hash = :password_hash WHERE id = :id');
+        $updateStmt->execute([
+            ':password_hash' => $passwordHash,
+            ':id' => $student['id'],
+        ]);
+    }
 }
 
 if (!function_exists('ensureCourseColumns')) {
@@ -109,6 +240,7 @@ if (!function_exists('ensureCourseColumns')) {
 
 if ($pdo instanceof PDO) {
     try {
+        ensureDemoStudentAccount($pdo);
         ensureCourseColumns($pdo);
         ensureUtf8mb4CourseSchema($pdo);
         ensureUtf8mb4TextColumns($pdo, 'courses', ['description', 'short_description', 'tutorial_text', 'assignment', 'quiz', 'certificate_requirements']);
@@ -622,6 +754,21 @@ function ensurePushSubscriptionTable(PDO $pdo): void
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 }
 
+function ensureNewsletterSubscribersTable(PDO $pdo): void
+{
+    $pdo->exec('CREATE TABLE IF NOT EXISTS newsletter_subscribers (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) DEFAULT NULL,
+        email VARCHAR(255) NOT NULL,
+        source VARCHAR(100) NOT NULL DEFAULT "homepage",
+        status VARCHAR(30) NOT NULL DEFAULT "active",
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_newsletter_email (email),
+        INDEX idx_newsletter_status (status)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+}
+
 function ensureAiTables(PDO $pdo): void
 {
     $pdo->exec('CREATE TABLE IF NOT EXISTS student_ai_activity (
@@ -1023,6 +1170,12 @@ if ($pdo instanceof PDO) {
         ensurePushSubscriptionTable($pdo);
     } catch (Throwable $e) {
         error_log('Push subscription schema validation failed: ' . $e->getMessage());
+    }
+
+    try {
+        ensureNewsletterSubscribersTable($pdo);
+    } catch (Throwable $e) {
+        error_log('Newsletter subscriber schema validation failed: ' . $e->getMessage());
     }
 
     try {

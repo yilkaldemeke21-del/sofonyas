@@ -49,10 +49,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message'], $_PO
     $status = isset($_POST['status']) ? trim((string)$_POST['status']) : 'replied';
 
     if ($chatId > 0 && $reply !== '') {
-        $stmt = $pdo->prepare('UPDATE site_chat_messages SET reply_message = :reply_message, reply_admin_id = :reply_admin_id, reply_updated_at = NULL, reply_deleted = 0, status = :status, updated_at = NOW() WHERE id = :id AND (reply_admin_id IS NULL OR reply_admin_id = :reply_admin_id)');
+        // Update the reply text and metadata so student views always fetch the latest reply
+        $stmt = $pdo->prepare('UPDATE site_chat_messages SET reply_message = :reply_message, reply_admin_id = :reply_admin_id, reply_updated_at = NOW(), reply_deleted = 0, status = :status, updated_at = NOW() WHERE id = :id AND (reply_admin_id IS NULL OR reply_admin_id = :reply_admin_id_check)');
         $stmt->execute([
             ':reply_message' => $reply,
             ':reply_admin_id' => (int)$_SESSION['admin_id'],
+            ':reply_admin_id_check' => (int)$_SESSION['admin_id'],
             ':status' => $status,
             ':id' => $chatId,
         ]);
@@ -73,12 +75,10 @@ if (isset($_GET['delete'])) {
     $ownerRow = $checkStmt->fetch(PDO::FETCH_ASSOC);
     $ownerId = (int)($ownerRow['reply_admin_id'] ?? 0);
     if ($ownerId === 0 || $ownerId === (int)$_SESSION['admin_id']) {
-        $stmt = $pdo->prepare('UPDATE site_chat_messages SET reply_message = NULL, reply_admin_id = NULL, reply_updated_at = NULL, reply_deleted = 1, status = :status, updated_at = NOW() WHERE id = :id');
-        $stmt->execute([
-            ':status' => 'pending',
-            ':id' => $chatId,
-        ]);
-        $message = 'የመልስ መልእክት ተሰርዟል።';
+        // Delete the entire chat row so deleted messages do not appear on student or homepage views
+        $stmt = $pdo->prepare('DELETE FROM site_chat_messages WHERE id = :id');
+        $stmt->execute([':id' => $chatId]);
+        $message = 'መልእክት ተሰርዟል።';
     } else {
         $error = 'ይህ መልስ ለእርስዎ አይደለም።';
     }

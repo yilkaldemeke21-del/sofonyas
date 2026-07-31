@@ -1,5 +1,8 @@
 <?php
 session_start();
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
 require_once __DIR__ . '/db.php';
 requireRole(['student'], $pdo);
 
@@ -95,6 +98,31 @@ function getInitialLetter($value): string
     }
 
     return strtoupper($text[0]);
+}
+
+function dashboardQueryAll(PDO $pdo, string $sql, array $params = []): array
+{
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Throwable $e) {
+        error_log('Student dashboard query failed: ' . $e->getMessage());
+        return [];
+    }
+}
+
+function dashboardQueryRow(PDO $pdo, string $sql, array $params = []): array
+{
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return is_array($row) ? $row : [];
+    } catch (Throwable $e) {
+        error_log('Student dashboard row query failed: ' . $e->getMessage());
+        return [];
+    }
 }
 
 $studentId = $_SESSION['student_id'];
@@ -358,16 +386,9 @@ try {
     // Preserve dashboard display even if gamification persistence fails.
 }
 
-$stmt = $pdo->prepare('SELECT * FROM notifications WHERE student_id = :student_id ORDER BY created_at DESC LIMIT 5');
-$stmt->execute([':student_id' => $studentId]);
-$notifications = $stmt->fetchAll();
-
-$stmt = $pdo->prepare('SELECT * FROM certificates WHERE student_id = :student_id ORDER BY issued_at DESC');
-$stmt->execute([':student_id' => $studentId]);
-$student_certificates = $stmt->fetchAll();
-
-$stmt = $pdo->query('SELECT * FROM courses ORDER BY created_at DESC LIMIT 6');
-$available_courses = $stmt->fetchAll();
+$notifications = dashboardQueryAll($pdo, 'SELECT * FROM notifications WHERE student_id = :student_id ORDER BY created_at DESC LIMIT 5', [':student_id' => $studentId]);
+$student_certificates = dashboardQueryAll($pdo, 'SELECT * FROM certificates WHERE student_id = :student_id ORDER BY issued_at DESC', [':student_id' => $studentId]);
+$available_courses = dashboardQueryAll($pdo, 'SELECT * FROM courses ORDER BY created_at DESC LIMIT 6');
 
 $completed_courses = count($student_certificates);
 $in_progress_courses = max(0, $enrolled_courses - $completed_courses);
@@ -415,28 +436,12 @@ try {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 } catch (PDOException $e) {}
 
-$stmt = $pdo->prepare('SELECT * FROM assignments WHERE student_id = :student_id ORDER BY due_date ASC LIMIT 5');
-$stmt->execute([':student_id' => $studentId]);
-$assignments = $stmt->fetchAll();
-
-$stmt = $pdo->prepare('SELECT * FROM quiz_results WHERE student_id = :student_id ORDER BY created_at DESC LIMIT 5');
-$stmt->execute([':student_id' => $studentId]);
-$quiz_results = $stmt->fetchAll();
-
-$stmt = $pdo->prepare('SELECT * FROM student_notes WHERE student_id = :student_id ORDER BY created_at DESC LIMIT 5');
-$stmt->execute([':student_id' => $studentId]);
-$student_notes = $stmt->fetchAll();
-
-$stmt = $pdo->prepare('SELECT * FROM saved_courses WHERE student_id = :student_id ORDER BY created_at DESC LIMIT 6');
-$stmt->execute([':student_id' => $studentId]);
-$saved_courses = $stmt->fetchAll();
-
-$stmt = $pdo->prepare('SELECT lb.*, c.course_name, c.instructor FROM lesson_bookmarks lb JOIN courses c ON c.id = lb.course_id WHERE lb.student_id = :student_id ORDER BY lb.created_at DESC LIMIT 8');
-$stmt->execute([':student_id' => $studentId]);
-$saved_lessons = $stmt->fetchAll();
-
-$stmt = $pdo->query('SELECT qs.id, qs.title, qs.instruction, COUNT(q.id) AS question_count FROM question_sections qs LEFT JOIN questions q ON q.section_id = qs.id GROUP BY qs.id ORDER BY qs.created_at ASC');
-$exam_sections = $stmt->fetchAll();
+$assignments = dashboardQueryAll($pdo, 'SELECT * FROM assignments WHERE student_id = :student_id ORDER BY due_date ASC LIMIT 5', [':student_id' => $studentId]);
+$quiz_results = dashboardQueryAll($pdo, 'SELECT * FROM quiz_results WHERE student_id = :student_id ORDER BY created_at DESC LIMIT 5', [':student_id' => $studentId]);
+$student_notes = dashboardQueryAll($pdo, 'SELECT * FROM student_notes WHERE student_id = :student_id ORDER BY created_at DESC LIMIT 5', [':student_id' => $studentId]);
+$saved_courses = dashboardQueryAll($pdo, 'SELECT * FROM saved_courses WHERE student_id = :student_id ORDER BY created_at DESC LIMIT 6', [':student_id' => $studentId]);
+$saved_lessons = dashboardQueryAll($pdo, 'SELECT lb.*, c.course_name, c.instructor FROM lesson_bookmarks lb JOIN courses c ON c.id = lb.course_id WHERE lb.student_id = :student_id ORDER BY lb.created_at DESC LIMIT 8', [':student_id' => $studentId]);
+$exam_sections = dashboardQueryAll($pdo, 'SELECT qs.id, qs.title, qs.instruction, COUNT(q.id) AS question_count FROM question_sections qs LEFT JOIN questions q ON q.section_id = qs.id GROUP BY qs.id ORDER BY qs.created_at ASC');
 
 $activeExamLinks = [];
 function normalizeExamType(string $examType): string
@@ -453,11 +458,9 @@ function normalizeExamType(string $examType): string
 }
 
 foreach (['mid_exam', 'final_exam'] as $type) {
-    $stmt = $pdo->prepare('SELECT * FROM quiz_link_generators WHERE REPLACE(LOWER(exam_type), \' \' , \'_\') = :exam_type ORDER BY created_at DESC LIMIT 1');
-    $stmt->execute([':exam_type' => $type]);
-    $link = $stmt->fetch(PDO::FETCH_ASSOC);
+    $link = dashboardQueryRow($pdo, 'SELECT * FROM quiz_link_generators WHERE REPLACE(LOWER(exam_type), \' \' , \'_\') = :exam_type ORDER BY created_at DESC LIMIT 1', [':exam_type' => $type]);
     if ($link) {
-        $expiresAt = strtotime($link['created_at'] ?? '0') + max(1, (int)$link['expiry_minutes']) * 60;
+        $expiresAt = strtotime((string)($link['created_at'] ?? '0')) + max(1, (int)($link['expiry_minutes'] ?? 0)) * 60;
         if (time() <= $expiresAt) {
             $activeExamLinks[$type] = $link;
         }
@@ -541,19 +544,10 @@ try {
 
 // Get student-specific notifications
 $studentEmail = $student['email'] ?? '';
-$stmt = $pdo->prepare('SELECT * FROM email_notifications WHERE recipient_email = :email ORDER BY sent_at DESC LIMIT 5');
-$stmt->execute([':email' => $studentEmail]);
-$student_email_notifications = $stmt->fetchAll();
-
-$stmt = $pdo->query('SELECT cu.*, c.course_name FROM course_updates cu JOIN courses c ON cu.course_id = c.id ORDER BY cu.created_at DESC LIMIT 5');
-$student_course_updates = $stmt->fetchAll();
-
-$stmt = $pdo->prepare('SELECT * FROM exam_reminders WHERE student_id = :student_id OR student_id = "ALL" ORDER BY created_at DESC LIMIT 5');
-$stmt->execute([':student_id' => $studentId]);
-$student_exam_reminders = $stmt->fetchAll();
-
-$stmt = $pdo->query('SELECT * FROM event_announcements ORDER BY event_date DESC LIMIT 5');
-$student_events = $stmt->fetchAll();
+$student_email_notifications = dashboardQueryAll($pdo, 'SELECT * FROM email_notifications WHERE recipient_email = :email ORDER BY sent_at DESC LIMIT 5', [':email' => $studentEmail]);
+$student_course_updates = dashboardQueryAll($pdo, 'SELECT cu.*, c.course_name FROM course_updates cu JOIN courses c ON cu.course_id = c.id ORDER BY cu.created_at DESC LIMIT 5');
+$student_exam_reminders = dashboardQueryAll($pdo, 'SELECT * FROM exam_reminders WHERE student_id = :student_id OR student_id = "ALL" ORDER BY created_at DESC LIMIT 5', [':student_id' => $studentId]);
+$student_events = dashboardQueryAll($pdo, 'SELECT * FROM event_announcements ORDER BY event_date DESC LIMIT 5');
 
 // Create notifications tables if they don't exist
 try {
@@ -599,30 +593,13 @@ try {
 
 // Get student-specific notifications
 $studentEmail = $student['email'] ?? '';
-$stmt = $pdo->prepare('SELECT * FROM email_notifications WHERE recipient_email = :email ORDER BY sent_at DESC LIMIT 5');
-$stmt->execute([':email' => $studentEmail]);
-$student_email_notifications = $stmt->fetchAll();
-
-$stmt = $pdo->query('SELECT cu.*, c.course_name FROM course_updates cu JOIN courses c ON cu.course_id = c.id ORDER BY cu.created_at DESC LIMIT 5');
-$student_course_updates = $stmt->fetchAll();
-
-$stmt = $pdo->prepare('SELECT * FROM exam_reminders WHERE student_id = :student_id OR student_id = "ALL" ORDER BY created_at DESC LIMIT 5');
-$stmt->execute([':student_id' => $studentId]);
-$student_exam_reminders = $stmt->fetchAll();
-
-$stmt = $pdo->query('SELECT * FROM event_announcements ORDER BY event_date DESC LIMIT 5');
-$student_events = $stmt->fetchAll();
-
-$stmt = $pdo->query('SELECT * FROM live_class_sessions ORDER BY session_date ASC, id DESC LIMIT 4');
-$live_sessions = $stmt->fetchAll();
-
-$stmt = $pdo->prepare('SELECT * FROM content_posts WHERE status = :status AND post_type = :type ORDER BY is_featured DESC, created_at DESC LIMIT 4');
-$stmt->execute([':status' => 'published', ':type' => 'blog']);
-$studentBlogPosts = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-$stmt = $pdo->prepare('SELECT * FROM content_posts WHERE status = :status AND post_type = :type ORDER BY created_at DESC LIMIT 4');
-$stmt->execute([':status' => 'published', ':type' => 'poetry']);
-$studentPoetryPosts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$student_email_notifications = dashboardQueryAll($pdo, 'SELECT * FROM email_notifications WHERE recipient_email = :email ORDER BY sent_at DESC LIMIT 5', [':email' => $studentEmail]);
+$student_course_updates = dashboardQueryAll($pdo, 'SELECT cu.*, c.course_name FROM course_updates cu JOIN courses c ON cu.course_id = c.id ORDER BY cu.created_at DESC LIMIT 5');
+$student_exam_reminders = dashboardQueryAll($pdo, 'SELECT * FROM exam_reminders WHERE student_id = :student_id OR student_id = "ALL" ORDER BY created_at DESC LIMIT 5', [':student_id' => $studentId]);
+$student_events = dashboardQueryAll($pdo, 'SELECT * FROM event_announcements ORDER BY event_date DESC LIMIT 5');
+$live_sessions = dashboardQueryAll($pdo, 'SELECT * FROM live_class_sessions ORDER BY session_date ASC, id DESC LIMIT 4');
+$studentBlogPosts = dashboardQueryAll($pdo, 'SELECT * FROM content_posts WHERE status = :status AND post_type = :type ORDER BY is_featured DESC, created_at DESC LIMIT 4', [':status' => 'published', ':type' => 'blog']);
+$studentPoetryPosts = dashboardQueryAll($pdo, 'SELECT * FROM content_posts WHERE status = :status AND post_type = :type ORDER BY created_at DESC LIMIT 4', [':status' => 'published', ':type' => 'poetry']);
 
 if (empty($notifications)) {
     $notifications = [

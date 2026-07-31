@@ -60,7 +60,7 @@ try {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 } catch (PDOException $e) {}
 
-$chat_stats = $pdo->query('SELECT COUNT(*) AS total_messages, SUM(CASE WHEN status = "new" OR (reply_message IS NULL OR TRIM(reply_message) = "") THEN 1 ELSE 0 END) AS pending_messages, SUM(CASE WHEN reply_message IS NOT NULL AND TRIM(reply_message) <> "" THEN 1 ELSE 0 END) AS replied_messages FROM site_chat_messages')->fetch(PDO::FETCH_ASSOC);
+$chat_stats = $pdo->query('SELECT COUNT(*) AS total_messages, SUM(CASE WHEN status = "new" OR (reply_message IS NULL OR TRIM(reply_message) = "") THEN 1 ELSE 0 END) AS pending_messages, SUM(CASE WHEN reply_message IS NOT NULL AND TRIM(reply_message) <> "" THEN 1 ELSE 0 END) AS replied_messages FROM site_chat_messages WHERE (reply_deleted IS NULL OR reply_deleted = 0)')->fetch(PDO::FETCH_ASSOC);
 $chat_total_messages = (int)($chat_stats['total_messages'] ?? 0);
 $chat_pending_messages = (int)($chat_stats['pending_messages'] ?? 0);
 $chat_replied_messages = (int)($chat_stats['replied_messages'] ?? 0);
@@ -944,6 +944,17 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
                     <a href="admin_reports.php?type=contact_messages&print=1" class="report-action">Print</a>
                     <a href="admin_reports.php?type=contact_messages" class="report-action">Export PDF</a>
                     <a href="admin_reports.php?type=contact_messages" class="report-action">Export Excel</a>
+                </div>
+            </div>
+            <div class="report-card">
+                <div class="report-title">📬 የዜና ይዘት ደምዝግቦች</div>
+                <div class="report-actions">
+                    <a href="admin_reports.php?type=newsletter_subscribers" class="report-action">View</a>
+                    <a href="admin_reports.php?type=newsletter_subscribers" class="report-action">Edit</a>
+                    <a href="admin_reports.php?type=newsletter_subscribers" class="report-action secondary">Delete</a>
+                    <a href="admin_reports.php?type=newsletter_subscribers&print=1" class="report-action">Print</a>
+                    <a href="admin_reports.php?type=newsletter_subscribers" class="report-action">Export PDF</a>
+                    <a href="admin_reports.php?type=newsletter_subscribers" class="report-action">Export Excel</a>
                 </div>
             </div>
             <div class="report-card chat-highlight">
