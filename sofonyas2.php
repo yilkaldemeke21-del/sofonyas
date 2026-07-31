@@ -1193,29 +1193,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
                     </div>
                 </div>
             </div>
-
-            <div style="grid-column:1 / -1; display:grid; gap:18px;">
-                <section class="card reveal" style="padding:22px; border:1px solid #dbeafe; background:linear-gradient(135deg,#ffffff 0%,#eff6ff 100%);">
-                    <div style="display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap;">
-                        <div style="max-width:720px;">
-                            <h3 style="margin-top:0; color:#0f3d91;" data-am="አዲስ የኢሜይል ማስታወቂያ እባክዎን ይቀላቀሉ" data-en="Join our newsletter">አዲስ የኢሜይል ማስታወቂያ እባክዎን ይቀላቀሉ</h3>
-                            <p style="margin:0; color:#475569; line-height:1.7;" data-am="እኛ ከሚገኘዎት ጋር ኮርስ ማስታወቂያዎች፣ አዲስ ዜና እና በልዩ ክንውኖች ላይ የተለያዩ ማሳወቂያዎችን እንልክ።" data-en="Get course news, updates, and exclusive learning alerts directly to your inbox.">እኛ ከሚገኘዎት ጋር ኮርስ ማስታወቂያዎች፣ አዲስ ዜና እና በልዩ ክንውኖች ላይ የተለያዩ ማሳወቂያዎችን እንልክ።</p>
-                        </div>
-                        <div style="min-width:240px; display:flex; align-items:center; justify-content:center;">
-                            <span style="display:inline-flex; padding:10px 16px; border-radius:999px; background:#dbeafe; color:#1d4ed8; font-weight:700;">Newsletter</span>
-                        </div>
-                    </div>
-                    <form id="newsletterForm" action="newsletter_subscribe.php" method="post" style="margin-top:18px; display:grid; gap:14px;">
-                        <input type="hidden" name="source" value="homepage">
-                        <div style="display:grid; gap:12px; grid-template-columns:1fr 1fr;">
-                            <label style="display:flex; flex-direction:column; gap:6px; color:#334155;"><span data-am="ስም (አስፈላጊ አይደለም)" data-en="Name (optional)">ስም (አስፈላጊ አይደለም)</span><input type="text" name="name" placeholder="ስምዎን ያስገቡ" style="padding:12px 14px; border:1px solid #cbd5e1; border-radius:12px; width:100%;"></label>
-                            <label style="display:flex; flex-direction:column; gap:6px; color:#334155;"><span data-am="ኢሜይል" data-en="Email">ኢሜይል</span><input type="email" name="email" required placeholder="example@mail.com" style="padding:12px 14px; border:1px solid #cbd5e1; border-radius:12px; width:100%;"></label>
-                        </div>
-                        <button type="submit" class="button" style="max-width:220px;">እንደገና ይገቡ</button>
-                    </form>
-                </section>
-            </div>
-
             <form id="siteContactForm" class="contact-form" action="contact_submit.php" method="post" enctype="multipart/form-data">
                 <h3 style="margin-top:0;" data-am="ማስታወቂያዎን ይላኩ" data-en="Send us a message">ማስታወቂያዎን ይላኩ</h3>
                 <div class="form-field">
@@ -1245,6 +1222,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         </div>
     </section>
 
+
+            <div style="grid-column:1 / -1; display:grid; gap:18px;">
+                <section class="card reveal" style="padding:22px; border:1px solid #dbeafe; background:linear-gradient(135deg,#ffffff 0%,#eff6ff 100%);">
+                    <div style="display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+                        <div style="max-width:720px;">
+                            <h3 style="margin-top:0; color:#0f3d91;" data-am="አዲስ የኢሜይል ማስታወቂያ እባክዎን ይቀላቀሉ" data-en="Join our newsletter">አዲስ የኢሜይል ማስታወቂያ እባክዎን ይቀላቀሉ</h3>
+                            <p style="margin:0; color:#475569; line-height:1.7;" data-am="እኛ ከሚገኘዎት ጋር ኮርስ ማስታወቂያዎች፣ አዲስ ዜና እና በልዩ ክንውኖች ላይ የተለያዩ ማሳወቂያዎችን እንልክ።" data-en="Get course news, updates, and exclusive learning alerts directly to your inbox.">እኛ ከሚገኘዎት ጋር ኮርስ ማስታወቂያዎች፣ አዲስ ዜና እና በልዩ ክንውኖች ላይ የተለያዩ ማሳወቂያዎችን እንልክ።</p>
+                        </div>
+                        <div style="min-width:240px; display:flex; align-items:center; justify-content:center;">
+                            <span style="display:inline-flex; padding:10px 16px; border-radius:999px; background:#dbeafe; color:#1d4ed8; font-weight:700;">Newsletter</span>
+                        </div>
+                    </div>
+                    <form id="newsletterForm" action="newsletter_subscribe.php" method="post" style="margin-top:18px; display:grid; gap:14px;">
+                        <input type="hidden" name="source" value="homepage">
+                        <div style="display:grid; gap:12px; grid-template-columns:1fr 1fr;">
+                            <label style="display:flex; flex-direction:column; gap:6px; color:#334155;"><span data-am="ስም (አስፈላጊ አይደለም)" data-en="Name (optional)">ስም (አስፈላጊ አይደለም)</span><input type="text" name="name" placeholder="ስምዎን ያስገቡ" style="padding:12px 14px; border:1px solid #cbd5e1; border-radius:12px; width:100%;"></label>
+                            <label style="display:flex; flex-direction:column; gap:6px; color:#334155;"><span data-am="ኢሜይል" data-en="Email">ኢሜይል</span><input type="email" name="email" required placeholder="example@mail.com" style="padding:12px 14px; border:1px solid #cbd5e1; border-radius:12px; width:100%;"></label>
+                        </div>
+                        <button type="submit" class="button" style="max-width:220px;">እንደገና ይገቡ</button>
+                    </form>
+                </section>
+            </div>
+
+            
 
     <section class="card reveal" style="background:linear-gradient(135deg,#f8fbff 0%,#eef2ff 100%); border:1px solid #dbeafe;">
         <h2 data-am="የLMS ደረጃ ባህሪያት" data-en="Professional LMS Features">Professional LMS Features</h2>
