@@ -189,6 +189,16 @@ try {
         exam_type VARCHAR(50) NOT NULL,
         score INT NOT NULL DEFAULT 0,
         total_questions INT NOT NULL DEFAULT 0,
+        certificate_code VARCHAR(50) DEFAULT NULL,
+        verification_token VARCHAR(128) DEFAULT NULL,
+        verification_url VARCHAR(500) DEFAULT NULL,
+        qr_code_url VARCHAR(500) DEFAULT NULL,
+        certificate_status VARCHAR(20) NOT NULL DEFAULT "Valid",
+        course_name VARCHAR(255) DEFAULT NULL,
+        completion_date DATETIME DEFAULT NULL,
+        last_verified_at DATETIME DEFAULT NULL,
+        last_verified_ip VARCHAR(45) DEFAULT NULL,
+        last_verified_user_agent VARCHAR(500) DEFAULT NULL,
         issued_at DATETIME DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 } catch (PDOException $e) {

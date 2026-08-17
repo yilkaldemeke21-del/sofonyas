@@ -91,6 +91,43 @@ $stmt = $pdo->prepare('SELECT * FROM content_posts WHERE status = :status ORDER 
 $stmt->execute([':status' => 'published']);
 $latestContent = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Fetch recent blogs for student content section (limit 3)
+$stmt = $pdo->prepare('SELECT * FROM content_posts WHERE status = :status AND post_type = :post_type ORDER BY created_at DESC LIMIT 3');
+$stmt->execute([':status' => 'published', ':post_type' => 'blog']);
+$studentBlogs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Fetch recent poetry for student content section (limit 3)
+$stmt = $pdo->prepare('SELECT * FROM content_posts WHERE status = :status AND post_type = :post_type ORDER BY created_at DESC LIMIT 3');
+$stmt->execute([':status' => 'published', ':post_type' => 'poetry']);
+$studentPoetry = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$bibleSearch = trim((string)($_GET['bible_search'] ?? ''));
+$bibleQuery = 'SELECT * FROM church_resources WHERE category = :category AND is_active = 1';
+$bibleParams = [':category' => 'bible_passage'];
+if ($bibleSearch !== '') {
+    $bibleQuery .= ' AND (title LIKE :search OR reference LIKE :search OR description LIKE :search OR scripture_text LIKE :search)';
+    $bibleParams[':search'] = '%' . $bibleSearch . '%';
+}
+$bibleQuery .= ' ORDER BY created_at DESC LIMIT 4';
+$stmt = $pdo->prepare($bibleQuery);
+$stmt->execute($bibleParams);
+$biblePassages = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$stmt = $pdo->prepare('SELECT * FROM church_resources WHERE category = :category AND is_active = 1 ORDER BY created_at DESC LIMIT 4');
+$stmt->execute([':category' => 'saint']);
+$saintsLibrary = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$stmt = $pdo->prepare('SELECT * FROM church_resources WHERE category = :category AND is_active = 1 ORDER BY updated_at DESC LIMIT 1');
+$stmt->execute([':category' => 'daily_verse']);
+$dailyVerse = $stmt->fetch(PDO::FETCH_ASSOC);
+if (!$dailyVerse) {
+    $dailyVerse = [
+        'reference' => 'ማቴ 9:13',
+        'scripture_text' =>"ምሕረት እወዳለሁ መስዋእትን አይደለም ያለው ምን እንደሆነ ተማሩ",
+        'description' => 'የዕለቱ ትእዛዝ የምክር ቃል እና ዕርዳታ ነው።',
+    ];
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['chat_message']) && trim($_POST['chat_message']) !== '') {
     $senderName = trim((string)($_POST['chat_name'] ?? 'Guest'));
     $senderName = $senderName === '' ? 'Guest' : $senderName;
@@ -765,6 +802,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         .course-card img { width: 100%; height: 75%; object-fit: cover; transition: transform 0.35s ease; }
         .course-card:hover img { transform: scale(1.08); }
         .course-card .content { padding: 12px 14px; }
+        .church-grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-top: 14px; }
+        .church-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 20px; box-shadow: 0 12px 28px rgba(15,23,42,0.06); }
+        .church-card h3 { margin-top: 0; color: #1d4ed8; }
+        .church-card p { color: #475569; line-height: 1.75; }
+        .church-card .badge { display: inline-flex; gap: 8px; align-items: center; margin-top: 10px; padding: 10px 14px; border-radius: 999px; background: #eff6ff; color: #1d4ed8; font-weight: 700; font-size: 0.95rem; }
+        .church-card .feature-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+        .church-card .feature-actions a, .church-card .feature-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 14px; border-radius: 999px; border: none; background: #2563eb; color: #fff; text-decoration: none; font-weight: 700; cursor: pointer; transition: transform 0.2s ease; }
+        .church-card .feature-actions button { background: #7c3aed; }
+        .church-card .feature-actions a:hover, .church-card .feature-actions button:hover { transform: translateY(-1px); }
+        .bible-item { padding: 16px; border: 1px solid #dbeafe; border-radius: 16px; background: #f8fbff; }
+        .bible-item h4 { margin: 0 0 8px; color: #111827; }
+        .bible-item small { color: #475569; display: block; margin-bottom: 10px; }
+        .bible-item .bible-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+        .bible-item button { border: 1px solid #2563eb; background: transparent; color: #2563eb; padding: 8px 12px; border-radius: 999px; cursor: pointer; transition: background 0.2s ease, color 0.2s ease; }
+        .bible-item button.active { background: #2563eb; color: #fff; }
+        .bible-item button:hover { background: #2563eb; color: #fff; }
+        .highlighted { background: #fff7c2; border-color: #fde68a; }
+        .bookmarked { border-color: #a7f3d0; }
         .testimonial-slider { position: relative; overflow: hidden; margin-top: 16px; }
         .testimonial-track { display: flex; transition: transform 0.45s ease; }
         .testimonial-card { min-width: 100%; background: linear-gradient(135deg, #ffffff, #f8fafc); border-radius: 18px; border: 1px solid #e2e8f0; padding: 18px; box-shadow: 0 8px 18px rgba(15,23,42,0.05); }
@@ -1125,6 +1180,117 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
         <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
             <a class="button" href="content_manage.php?type=blog" data-am="ብሎግ ልጥፍ ፃፍ" data-en="Write a blog post">Write a blog post</a>
             <a class="button secondary" href="content_manage.php?type=poetry" data-am="ግጥም ፃፍ" data-en="Write poetry">Write poetry</a>
+        </div>
+    </section>
+
+    <section class="card reveal" aria-label="Student blogs and poetry">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
+            <div>
+                <h2 style="margin:0;" data-am="📖 የተማሪ ብሎግ እና ግጥም" data-en="📖 Student Blogs & Poetry">📖 Student Blogs & Poetry</h2>
+                <p class="muted" style="margin:6px 0 0;" data-am="ተማሪዎች ያካፍሉትን የቅርብ ጊዜ ይዘቶች ያንብቡ" data-en="Read recent content shared by students">Read recent content shared by students</p>
+            </div>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px; margin-top:12px;">
+            <!-- Student Blogs Section -->
+            <div>
+                <h3 style="margin:0 0 12px; color:#0f172a; font-size:1.1rem;" data-am="📝 ዋጋ ያላቸው ብሎግ ልጥፎች" data-en="📝 Blog Posts">📝 Blog Posts</h3>
+                <?php if (empty($studentBlogs)): ?>
+                    <p class="muted" data-am="ገና ምንም ብሎግ ለውጥ የለም" data-en="No blog posts yet">No blog posts yet</p>
+                <?php else: ?>
+                    <div style="display:grid; gap:12px;">
+                        <?php foreach ($studentBlogs as $blog): ?>
+                            <article style="border:1px solid #e2e8f0; border-radius:12px; padding:14px; background:#f8fafc; transition:all 0.3s ease;">
+                                <div style="font-size:0.75rem; color:#7c3aed; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;"><?php echo safe($blog['category_name'] ?: 'General'); ?></div>
+                                <h4 style="margin:0 0 8px; font-size:1rem; line-height:1.4; color:#0f172a;"><?php echo safe($blog['title']); ?></h4>
+                                <p style="margin:0 0 8px; color:#64748b; font-size:0.9rem; line-height:1.5;"><?php echo safe($blog['excerpt'] ?: substr(strip_tags((string)$blog['body']), 0, 110)); ?></p>
+                                <div style="font-size:0.8rem; color:#94a3b8;"><?php echo safe(date('M d, Y', strtotime($blog['created_at']))); ?> • by <?php echo safe($blog['author_name']); ?></div>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+                    <div style="margin-top:12px; text-align:center;">
+                        <a class="button secondary" href="content_manage.php?type=blog" style="display:inline-block;" data-am="ሁሉንም ብሎግ ይመልከቱ →" data-en="See all blogs →">See all blogs →</a>
+                    </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Student Poetry Section -->
+            <div>
+                <h3 style="margin:0 0 12px; color:#0f172a; font-size:1.1rem;" data-am="✍️ ታሪካዊ ግጥሞች" data-en="✍️ Poetry">✍️ Poetry</h3>
+                <?php if (empty($studentPoetry)): ?>
+                    <p class="muted" data-am="ገና ምንም ግጥም የለም" data-en="No poetry yet">No poetry yet</p>
+                <?php else: ?>
+                    <div style="display:grid; gap:12px;">
+                        <?php foreach ($studentPoetry as $poem): ?>
+                            <article style="border:1px solid #e2e8f0; border-radius:12px; padding:14px; background:#fff9f5; transition:all 0.3s ease;">
+                                <h4 style="margin:0 0 8px; font-size:1rem; line-height:1.4; color:#0f172a;">✨ <?php echo safe($poem['title']); ?></h4>
+                                <p style="margin:0 0 8px; color:#64748b; font-size:0.9rem; line-height:1.6; font-style:italic;"><?php echo safe($poem['excerpt'] ?: substr(strip_tags((string)$poem['body']), 0, 120)); ?></p>
+                                <div style="font-size:0.8rem; color:#94a3b8;"><?php echo safe(date('M d, Y', strtotime($poem['created_at']))); ?> • by <?php echo safe($poem['author_name']); ?></div>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+                    <div style="margin-top:12px; text-align:center;">
+                        <a class="button secondary" href="content_manage.php?type=poetry" style="display:inline-block;" data-am="ሁሉንም ግጥም ይመልከቱ →" data-en="See all poetry →">See all poetry →</a>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </section>
+    <section class="card reveal" aria-label="Church devotional resources">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+            <div>
+                <h2 style="margin:0;" data-am="📖 የሚከተሉ የቤተክርስቲያን ሃብቶች" data-en="📖 Church Devotional Resources">📖 Church Devotional Resources</h2>
+                <p class="muted" style="margin:6px 0 0;" data-am="የዕለቱ ትእዛዝ፣ የቅዱሳን ማኅበር እና የመጽሐፍ ቅዱስ ፍለጋ የሚያስችሉ ምክር ይህ ክፍል ይሰጣል።" data-en="This section provides a daily verse, saints library, and scripture search to support spiritual growth.">This section provides a daily verse, saints library, and scripture search to support spiritual growth.</p>
+            </div>
+            <form method="get" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                <input type="text" name="bible_search" value="<?php echo safe($bibleSearch); ?>" placeholder="<?php echo safe(translateText('መጽሐፍ ቅዱስ ይፈልጉ', 'Search scripture passages')); ?>" style="padding:10px 14px; border-radius:999px; border:1px solid #cbd5e1; min-width:220px;">
+                <button type="submit" class="button" style="padding:10px 14px;"><?php echo safe(translateText('ፈልግ', 'Search')); ?></button>
+            </form>
+        </div>
+        <div class="church-grid">
+            <article class="church-card highlighted">
+                <h3 data-am="የዕለቱ ትእዛዝ" data-en="Daily Verse">Daily Verse</h3>
+                <span class="badge" data-am="መጽሐፍ ቅዱስ" data-en="Scripture">Scripture</span>
+                <p style="margin:14px 0 0; line-height:1.75; color:#475569;"><?php echo safe($dailyVerse['description'] ?? translateText('Discover strength and encouragement from today’s devotional scripture.', 'Discover strength and encouragement from today’s devotional scripture.')); ?></p>
+                <div style="margin-top:16px; padding:18px; border-radius:18px; background:#eff6ff; border:1px solid #dbeafe;">
+                    <strong style="display:block; color:#1d4ed8; margin-bottom:8px;"><?php echo safe($dailyVerse['reference'] ?? 'ፓልም 23:1-4'); ?></strong>
+                    <p style="margin:0; color:#0f172a; line-height:1.75;"><?php echo nl2br(safe($dailyVerse['scripture_text'] ?? '')); ?></p>
+                </div>
+            </article>
+            <article class="church-card">
+                <h3 data-am="የቅዱሳን ላይብራሪ" data-en="Saints Library">Saints Library</h3>
+                <span class="badge" data-am="የማስታወሻ ዕቃ" data-en="Inspiration">Inspiration</span>
+                <div style="margin-top:16px; display:grid; gap:12px;">
+                    <?php if (empty($saintsLibrary)): ?>
+                        <p class="muted" style="margin:0;"><?php echo safe(translateText('No saints entries available yet.', 'No saints entries available yet.')); ?></p>
+                    <?php else: ?>
+                        <?php foreach ($saintsLibrary as $saint): ?>
+                            <div class="bible-item">
+                                <h4><?php echo safe($saint['title']); ?></h4>
+                                <small><?php echo safe($saint['reference'] ?? ''); ?></small>
+                                <p style="margin:8px 0 0; color:#475569; line-height:1.6;"><?php echo safe($saint['description'] ?: substr(strip_tags((string)$saint['scripture_text']), 0, 140)); ?></p>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </article>
+            <article class="church-card">
+                <h3 data-am="ቅዱሳን መጽሐፍ ቅዱስ ፍለጋ" data-en="Interactive Bible">Interactive Bible</h3>
+                <span class="badge" data-am="እንቅስቃሴ" data-en="Search">Search</span>
+                <p style="margin:14px 0 0; color:#475569; line-height:1.7;" data-am="መጽሐፍ ቅዱስ ዕቃዎችን በርካታ ቃላት ይፈልጉ።" data-en="Find passages by title, reference, or verse content.">Find passages by title, reference, or verse content.</p>
+                <div style="margin-top:16px; display:grid; gap:12px;">
+                    <?php if (empty($biblePassages)): ?>
+                        <p class="muted" style="margin:0;"><?php echo safe(translateText('No scripture passages found. Try another keyword.', 'No scripture passages found. Try another keyword.')); ?></p>
+                    <?php else: ?>
+                        <?php foreach ($biblePassages as $passage): ?>
+                            <div class="bible-item">
+                                <h4><?php echo safe($passage['title'] ?: $passage['reference'] ?: translateText('Bible passage', 'Bible passage')); ?></h4>
+                                <small><?php echo safe($passage['reference'] ?? ''); ?></small>
+                                <p style="margin:8px 0 0; color:#475569; line-height:1.6;"><?php echo safe(substr(strip_tags((string)$passage['scripture_text'] ?: $passage['description']), 0, 160)); ?></p>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </div>
+            </article>
         </div>
     </section>
 <section class="card reveal" aria-label="Quick Start">

@@ -13,38 +13,65 @@ if (!isset($pdo) || !$pdo instanceof PDO) {
   exit;
 }
 
-$certificateIdInput = trim($_GET['id'] ?? $_POST['certificate_id'] ?? '');
+$token = trim($_GET['token'] ?? $_POST['token'] ?? '');
+$query = trim($_GET['q'] ?? $_POST['q'] ?? '');
 $certificate = null;
+$verificationToken = '';
 $errors = [];
 
-if ($certificateIdInput !== '') {
-  $normalized = strtoupper(trim($certificateIdInput));
+if ($token !== '') {
+    $query = $token;
+    $verificationToken = $token;
+}
 
-  // Accept: VC-000123, VC 123, VC123, or plain numeric id e.g. 123
-  if (preg_match('/^VC[- ]?(\d{1,10})$/i', $normalized, $m)) {
-    $id = (int)$m[1];
-  } elseif (preg_match('/^\d{1,10}$/', $normalized)) {
-    $id = (int)$normalized;
-  } else {
-    $id = 0;
-  }
+if ($query !== '') {
+    $normalized = trim($query);
+    $tokenCandidate = preg_match('/^[a-f0-9]{32}$/i', $normalized) === 1;
+    $certificateCodeCandidate = preg_match('/^VC[- ]?\d{1,10}$/i', $normalized) === 1;
+    $numericCandidate = preg_match('/^\d{1,10}$/', $normalized) === 1;
 
-  if ($id > 0) {
-              if (!isset($pdo) || !$pdo instanceof PDO) {
-                  $dbErr = defined('DB_CONNECTION_ERROR') && DB_CONNECTION_ERROR !== '' ? DB_CONNECTION_ERROR : 'የዳታቤዝ ግንኙነት አልተፈጸመም። እባክዎ ከኮምፒውተሩ የMySQL/ MariaDB አገልግሎት እንደተነሳ ያረጋግጡ።';
-                  $errors[] = 'አስቸኳይ: ' . $dbErr;
-              } else {
-    $stmt = $pdo->prepare('SELECT * FROM certificates WHERE id = :id LIMIT 1');
-    $stmt->execute([':id' => $id]);
-    $certificate = $stmt->fetch();
+    if (!isset($pdo) || !$pdo instanceof PDO) {
+        $dbErr = defined('DB_CONNECTION_ERROR') && DB_CONNECTION_ERROR !== '' ? DB_CONNECTION_ERROR : 'የዳታቤዝ ግንኙነት አልተፈጸመም። እባክዎ ከኮምፒውተሩ የMySQL/ MariaDB አገልግሎት እንደተነሳ ያረጋግጡ።';
+        $errors[] = 'አስቸኳይ: ' . $dbErr;
+    } else {
+        if ($tokenCandidate) {
+            $stmt = $pdo->prepare('SELECT * FROM certificates WHERE verification_token = :query LIMIT 1');
+            $stmt->execute([':query' => $normalized]);
+            $certificate = $stmt->fetch();
+        }
 
-    if (!$certificate) {
-      $errors[] = 'ይህ ሰርቲፊኬት አልተገኘም። እባክዎ መለያውን ደግመው ያስገቡ።';
+        if (!$certificate && $certificateCodeCandidate) {
+            $stmt = $pdo->prepare('SELECT * FROM certificates WHERE certificate_code = :query LIMIT 1');
+            $stmt->execute([':query' => strtoupper($normalized)]);
+            $certificate = $stmt->fetch();
+        }
+
+        if (!$certificate && $numericCandidate) {
+            $stmt = $pdo->prepare('SELECT * FROM certificates WHERE id = :id LIMIT 1');
+            $stmt->execute([':id' => (int)$normalized]);
+            $certificate = $stmt->fetch();
+        }
+
+        if ($certificate) {
+            try {
+                $updateStmt = $pdo->prepare('UPDATE certificates SET last_verified_at = NOW(), last_verified_ip = :ip, last_verified_user_agent = :user_agent WHERE id = :id');
+                $updateStmt->execute([
+                    ':ip' => $_SERVER['REMOTE_ADDR'] ?? '',
+                    ':user_agent' => substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 500),
+                    ':id' => $certificate['id'],
+                ]);
+            } catch (PDOException $e) {
+                error_log('Certificate verification audit failed: ' . $e->getMessage());
+            }
+        } else {
+            $errors[] = 'ይህ ሰርቲፊኬት አልተገኘም። እባክዎ ሊንኩን ወይም QR ኮድን ትክክለኛ እንደሆነ ያረጋግጡ።';
+        }
     }
-              }
-  } else {
-    $errors[] = 'እባክዎ ትክክለኛ የሰርቲፊኬት መለያ ቁጥር (ለምሳሌ VC-000123 ወይም 123) ያስገቡ።';
-  }
+}
+
+$statusLabel = trim((string)($certificate['certificate_status'] ?? 'Valid'));
+$isCertificateValid = strtolower($statusLabel) === 'valid';
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -88,7 +115,7 @@ if ($certificateIdInput !== '') {
     </div>
 
     <form method="get" action="certificate_verification.php">
-      <input type="text" name="id" value="<?php echo safe($certificateIdInput); ?>" placeholder="Certificate ID (example: VC-000001 or 1)" required>
+      <input type="text" name="q" value="<?php echo safe($query ?? $verificationToken); ?>" placeholder="Verification token, certificate code, or certificate ID" required>
       <button type="submit">አረጋግጥ</button>
     </form>
 
@@ -97,16 +124,35 @@ if ($certificateIdInput !== '') {
     <?php endif; ?>
 
     <?php if ($certificate): ?>
+      <?php $statusLabel = trim((string)($certificate['certificate_status'] ?? 'Valid')); ?>
       <div class="result">
-        <strong>Certificate Found</strong>
-        <p class="muted">This record matches the certificate ID provided.</p>
+        <strong>Certificate Verified</strong>
+        <p class="muted">This certificate record was found and validated successfully. Scan the QR code on the certificate or use the verification link below for trusted validation.</p>
         <div class="grid">
-          <div class="mini"><h3>የሰርተፊኬት መለያ ቁጥር</h3><div class="value">VC-<?php echo str_pad((string)$certificate['id'], 6, '0', STR_PAD_LEFT); ?></div></div>
-          <div class="mini"><h3>ተማሪ</h3><div class="value"><?php echo safe($certificate['student_name'] ?? 'Student'); ?></div></div>
-          <div class="mini"><h3>የፈተናዉ አይነት</h3><div class="value"><?php echo safe($certificate['exam_type'] ?? 'Certificate'); ?></div></div>
+          <div class="mini"><h3>Certificate ID</h3><div class="value"><?php echo htmlspecialchars((string)($certificate['certificate_code'] ?? 'VC-' . str_pad((string)$certificate['id'], 6, '0', STR_PAD_LEFT)), ENT_QUOTES, 'UTF-8'); ?></div></div>
+          <div class="mini"><h3>Student</h3><div class="value"><?php echo safe($certificate['student_name'] ?? 'Student'); ?></div></div>
+          <div class="mini"><h3>Course / Exam</h3><div class="value"><?php echo safe($certificate['course_name'] ?? $certificate['exam_type'] ?? 'Certificate'); ?></div></div>
+          <div class="mini"><h3>Status</h3><div class="value"><?php echo safe($statusLabel); ?></div></div>
           <div class="mini"><h3>Score</h3><div class="value"><?php echo (int)($certificate['score'] ?? 0); ?> / <?php echo (int)($certificate['total_questions'] ?? 0); ?></div></div>
-          <div class="mini"><h3>የተሰጠ</h3><div class="value"><?php echo safe($certificate['issued_at'] ?? ''); ?></div></div>
+          <div class="mini"><h3>Completion</h3><div class="value"><?php echo safe($certificate['completion_date'] ?? $certificate['issued_at'] ?? ''); ?></div></div>
+          <div class="mini"><h3>Last Verified</h3><div class="value"><?php echo safe($certificate['last_verified_at'] ?? 'Not yet'); ?></div></div>
+          <div class="mini"><h3>Verification IP</h3><div class="value"><?php echo safe($certificate['last_verified_ip'] ?? '-'); ?></div></div>
+          <div class="mini"><h3>User Agent</h3><div class="value"><?php echo safe($certificate['last_verified_user_agent'] ?? '-'); ?></div></div>
         </div>
+        <?php if (!empty($certificate['qr_code_url'])):
+          <div style="margin-top:16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <div style="min-width:150px; text-align:center;">
+              <img src="<?php echo htmlspecialchars($certificate['qr_code_url'], ENT_QUOTES, 'UTF-8'); ?>" alt="QR code" style="max-width:160px; border-radius:14px; border:1px solid #e5eefb; background:#fff; padding:10px;" />
+              <div style="margin-top:8px; color:#475569; font-size:13px;">Scan QR code</div>
+            </div>
+            <?php if (!empty($certificate['verification_url'])): ?>
+              <div style="flex:1; min-width:220px;">
+                <div style="font-size:14px; font-weight:700; color:#1e293b; margin-bottom:6px;">Verification link</div>
+                <a class="link" href="<?php echo htmlspecialchars($certificate['verification_url'], ENT_QUOTES, 'UTF-8'); ?>"><?php echo htmlspecialchars($certificate['verification_url'], ENT_QUOTES, 'UTF-8'); ?></a>
+              </div>
+            <?php endif; ?>
+          </div>
+        <?php endif; ?>
       </div>
     <?php endif; ?>
   </div>

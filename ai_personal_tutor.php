@@ -14,7 +14,7 @@ $student = $stmt->fetch();
 $studentName = trim((string)($student['name'] ?? $student['student_name'] ?? 'Student'));
 $studentEmail = trim((string)($student['email'] ?? ''));
 
-$stmt = $pdo->prepare('SELECT c.id, c.course_name FROM courses c JOIN registrations r ON r.course_id = c.id WHERE r.student_id = :student_id ORDER BY r.created_at DESC LIMIT 8');
+$stmt = $pdo->prepare('SELECT DISTINCT c.id, c.course_name, c.category, c.level, c.pdf_file, c.short_description FROM courses c JOIN registrations r ON (r.course_id = c.id OR r.course = c.course_name) WHERE r.student_id = :student_id ORDER BY r.created_at DESC LIMIT 8');
 $stmt->execute([':student_id' => $studentId]);
 $enrolledCourses = $stmt->fetchAll();
 
@@ -338,7 +338,7 @@ $advice = 'ጥያቄዎችን ለማቅረብ፣ እባኮትን የኮርስ �
     const baseUrl = 'ai_tools.php';
 
     const selectFirstAvailableCourse = () => {
-        ['studyGuideCourse', 'quizCourse'].forEach((id) => {
+        ['chatCourse', 'studyGuideCourse', 'quizCourse'].forEach((id) => {
             const select = document.getElementById(id);
             if (!select || select.value) return;
             const firstOption = Array.from(select.options).find((option) => option.value !== '');
@@ -346,6 +346,7 @@ $advice = 'ጥያቄዎችን ለማቅረብ፣ እባኮትን የኮርስ �
                 select.value = firstOption.value;
             }
         });
+        renderCourseDetails(getSelectedCourseId('chatCourse'));
     };
 
     const getSelectedCourseId = (selectId) => {
@@ -358,6 +359,28 @@ $advice = 'ጥያቄዎችን ለማቅረብ፣ እባኮትን የኮርስ �
             return firstOption.value;
         }
         return '';
+    };
+
+    const renderCourseDetails = (courseId) => {
+        const detailsPanel = document.getElementById('courseDetailsPanel');
+        if (!detailsPanel) return;
+        const select = document.getElementById('chatCourse');
+        if (!select) {
+            detailsPanel.textContent = 'Select a course to see its PDF and overview.';
+            return;
+        }
+        const selectedOption = Array.from(select.options).find((option) => option.value === courseId.toString());
+        if (!selectedOption) {
+            detailsPanel.textContent = 'Select a course to see its PDF and overview.';
+            return;
+        }
+        const description = selectedOption.dataset.description || 'No description available.';
+        const pdfPath = selectedOption.dataset.pdf || '';
+        detailsPanel.innerHTML = `
+            <div><strong>Course:</strong> ${selectedOption.textContent}</div>
+            <div style="margin-top:8px; color:#475569;">${description}</div>
+            ${pdfPath ? `<div style="margin-top:10px;"><a href="${pdfPath}" target="_blank">Open course PDF</a></div>` : '<div style="margin-top:10px;color:#64748b;">No PDF available for this course.</div>'}
+        `;
     };
 
     const createBubble = (text, type) => {
@@ -376,12 +399,17 @@ $advice = 'ጥያቄዎችን ለማቅረብ፣ እባኮትን የኮርስ �
     const sendTutorChat = async () => {
         const message = chatInput.value.trim();
         if (!message) return;
+        const courseId = getSelectedCourseId('chatCourse');
+        if (!courseId) {
+            appendChat('Please select an enrolled course before asking course-specific questions.', 'ai');
+            return;
+        }
         appendChat(message, 'student');
         chatInput.value = '';
         appendChat('Working on your custom response...', 'ai');
 
         try {
-            const response = await fetch(`${baseUrl}?action=chat&message=${encodeURIComponent(message)}`);
+            const response = await fetch(`${baseUrl}?action=chat&message=${encodeURIComponent(message)}&course_id=${encodeURIComponent(courseId)}`);
             const data = await response.json();
             const aiBubble = chatHistory.querySelector('.chat-message.ai:last-child');
             if (data.success && data.reply) {

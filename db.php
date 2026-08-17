@@ -242,11 +242,201 @@ if ($pdo instanceof PDO) {
     try {
         ensureDemoStudentAccount($pdo);
         ensureCourseColumns($pdo);
+        ensureCertificateVerificationColumns($pdo);
         ensureUtf8mb4CourseSchema($pdo);
         ensureUtf8mb4TextColumns($pdo, 'courses', ['description', 'short_description', 'tutorial_text', 'assignment', 'quiz', 'certificate_requirements']);
         ensureBlogPoetrySchema($pdo);
     } catch (Throwable $e) {
         error_log('Course schema validation failed: ' . $e->getMessage());
+    }
+}
+
+if (!function_exists('buildAppBaseUrl')) {
+    function buildAppBaseUrl(): string
+    {
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = trim((string)($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? 'localhost'));
+        if ($host === '') {
+            $host = 'localhost';
+        }
+
+        return $scheme . '://' . $host;
+    }
+}
+
+if (!function_exists('ensureCertificateVerificationColumns')) {
+    function ensureCertificateVerificationColumns(PDO $pdo): void
+    {
+        $existingColumns = [];
+        $columnStmt = $pdo->query("SELECT COLUMN_NAME FROM information_schema.columns WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'certificates'");
+
+        foreach ($columnStmt->fetchAll(PDO::FETCH_COLUMN) as $columnName) {
+            $existingColumns[$columnName] = true;
+        }
+
+        $columnDefinitions = [
+            'certificate_code' => "ALTER TABLE certificates ADD COLUMN certificate_code VARCHAR(50) NULL",
+            'verification_token' => "ALTER TABLE certificates ADD COLUMN verification_token VARCHAR(255) NULL",
+            'verification_url' => "ALTER TABLE certificates ADD COLUMN verification_url VARCHAR(500) NULL",
+            'qr_code_url' => "ALTER TABLE certificates ADD COLUMN qr_code_url VARCHAR(500) NULL",
+            'certificate_status' => "ALTER TABLE certificates ADD COLUMN certificate_status VARCHAR(20) NOT NULL DEFAULT 'Valid'",
+            'course_name' => "ALTER TABLE certificates ADD COLUMN course_name VARCHAR(255) NULL",
+            'completion_date' => "ALTER TABLE certificates ADD COLUMN completion_date DATETIME NULL",
+        ];
+
+        foreach ($columnDefinitions as $columnName => $sql) {
+            if (!isset($existingColumns[$columnName])) {
+                try {
+                    $pdo->exec($sql);
+                } catch (PDOException $e) {
+                    error_log('Certificate schema migration warning for ' . $columnName . ': ' . $e->getMessage());
+                }
+            }
+        }
+
+        if (columnExists($pdo, 'certificates', 'certificate_status')) {
+            try {
+                $pdo->exec("UPDATE certificates SET certificate_status = 'Valid' WHERE certificate_status IS NULL OR certificate_status = ''");
+            } catch (PDOException $e) {
+                error_log('Certificate status backfill warning: ' . $e->getMessage());
+            }
+        }
+
+        $hasCertificateCode = columnExists($pdo, 'certificates', 'certificate_code');
+        $hasVerificationToken = columnExists($pdo, 'certificates', 'verification_token');
+        $hasVerificationUrl = columnExists($pdo, 'certificates', 'verification_url');
+        $hasQrCodeUrl = columnExists($pdo, 'certificates', 'qr_code_url');
+
+        if (!$hasCertificateCode || !$hasVerificationToken || !$hasVerificationUrl || !$hasQrCodeUrl) {
+            return;
+        }
+
+        try {
+            $stmt = $pdo->prepare('SELECT id, certificate_code, verification_token FROM certificates WHERE certificate_code IS NULL OR certificate_code = "" OR verification_token IS NULL OR verification_token = "" OR verification_url IS NULL OR verification_url = "" OR qr_code_url IS NULL OR qr_code_url = "" ORDER BY id ASC');
+            $stmt->execute();
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $baseUrl = buildAppBaseUrl();
+
+            foreach ($rows as $row) {
+                $certificateId = (int)($row['id'] ?? 0);
+                if ($certificateId <= 0) {
+                    continue;
+                }
+
+                $certificateCode = trim((string)($row['certificate_code'] ?? ''));
+                if ($certificateCode === '') {
+                    $certificateCode = 'VC-' . str_pad((string)$certificateId, 6, '0', STR_PAD_LEFT);
+                }
+
+                $verificationToken = trim((string)($row['verification_token'] ?? ''));
+                if ($verificationToken === '') {
+                    try {
+                        $verificationToken = bin2hex(random_bytes(16));
+                    } catch (Throwable $e) {
+                        $verificationToken = uniqid('token_', true);
+                    }
+                }
+
+                $verificationUrl = $baseUrl . '/certificate_verification.php?token=' . urlencode($verificationToken);
+                $qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' . urlencode($verificationUrl);
+
+                $updateStmt = $pdo->prepare('UPDATE certificates SET certificate_code = :certificate_code, verification_token = :verification_token, verification_url = :verification_url, qr_code_url = :qr_code_url, certificate_status = COALESCE(NULLIF(certificate_status, ""), "Valid") WHERE id = :id');
+                $updateStmt->execute([
+                    ':certificate_code' => $certificateCode,
+                    ':verification_token' => $verificationToken,
+                    ':verification_url' => $verificationUrl,
+                    ':qr_code_url' => $qrCodeUrl,
+                    ':id' => $certificateId,
+                ]);
+            }
+        } catch (PDOException $e) {
+            error_log('Certificate verification backfill warning: ' . $e->getMessage());
+        }
+    }
+}
+
+if (!function_exists('populateCertificateVerificationMetadata')) {
+    function populateCertificateVerificationMetadata(PDO $pdo, int $certificateId, string $courseName = '', ?string $completionDate = null): void
+    {
+        if ($certificateId <= 0) {
+            return;
+        }
+
+        $certificateCode = 'VC-' . str_pad((string)$certificateId, 6, '0', STR_PAD_LEFT);
+        $baseUrl = buildAppBaseUrl();
+        $courseName = trim($courseName);
+        $completionDateValue = $completionDate !== null && $completionDate !== '' ? $completionDate : null;
+
+        $setClauses = [];
+        $params = [':id' => $certificateId];
+
+        $existingMetadata = [];
+        try {
+            $metaStmt = $pdo->prepare('SELECT certificate_code, verification_token FROM certificates WHERE id = :id LIMIT 1');
+            $metaStmt->execute([':id' => $certificateId]);
+            $existingMetadata = $metaStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        } catch (PDOException $e) {
+            $existingMetadata = [];
+        }
+
+        $certificateCode = trim((string)($existingMetadata['certificate_code'] ?? ''));
+        if ($certificateCode === '') {
+            $certificateCode = 'VC-' . str_pad((string)$certificateId, 6, '0', STR_PAD_LEFT);
+        }
+
+        $verificationToken = trim((string)($existingMetadata['verification_token'] ?? ''));
+        if ($verificationToken === '') {
+            try {
+                $verificationToken = bin2hex(random_bytes(16));
+            } catch (Throwable $e) {
+                $verificationToken = uniqid('token_', true);
+            }
+        }
+
+        $verificationUrl = $baseUrl . '/verify_certificate.php?id=' . urlencode((string)$certificateId);
+        $qrCodeUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=' . urlencode($verificationUrl);
+
+        if (columnExists($pdo, 'certificates', 'certificate_code')) {
+            $setClauses[] = 'certificate_code = :certificate_code';
+            $params[':certificate_code'] = $certificateCode;
+        }
+
+        if (columnExists($pdo, 'certificates', 'verification_token')) {
+            $setClauses[] = 'verification_token = :verification_token';
+            $params[':verification_token'] = $verificationToken;
+        }
+
+        if (columnExists($pdo, 'certificates', 'verification_url')) {
+            $setClauses[] = 'verification_url = :verification_url';
+            $params[':verification_url'] = $verificationUrl;
+        }
+
+        if (columnExists($pdo, 'certificates', 'qr_code_url')) {
+            $setClauses[] = 'qr_code_url = :qr_code_url';
+            $params[':qr_code_url'] = $qrCodeUrl;
+        }
+
+        if (columnExists($pdo, 'certificates', 'certificate_status')) {
+            $setClauses[] = 'certificate_status = COALESCE(NULLIF(certificate_status, ""), "Valid")';
+        }
+
+        if (columnExists($pdo, 'certificates', 'course_name')) {
+            $setClauses[] = 'course_name = :course_name';
+            $params[':course_name'] = $courseName === '' ? null : $courseName;
+        }
+
+        if (columnExists($pdo, 'certificates', 'completion_date')) {
+            $setClauses[] = 'completion_date = COALESCE(completion_date, :completion_date)';
+            $params[':completion_date'] = $completionDateValue;
+        }
+
+        if ($setClauses === []) {
+            return;
+        }
+
+        $sql = 'UPDATE certificates SET ' . implode(', ', $setClauses) . ' WHERE id = :id';
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
     }
 }
 
@@ -423,6 +613,30 @@ function ensureBlogPoetrySchema(PDO $pdo): void
             error_log('Blog/poetry category seed warning: ' . $e->getMessage());
         }
     }
+}
+
+function ensureChurchResourcesTable(PDO $pdo): void
+{
+    $pdo->exec("CREATE TABLE IF NOT EXISTS church_resources (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        category VARCHAR(30) NOT NULL DEFAULT 'daily_verse',
+        title VARCHAR(255) NOT NULL,
+        subtitle VARCHAR(255) DEFAULT NULL,
+        description TEXT DEFAULT NULL,
+        reference VARCHAR(255) DEFAULT NULL,
+        scripture_text LONGTEXT DEFAULT NULL,
+        media_image VARCHAR(255) DEFAULT NULL,
+        pdf_url VARCHAR(255) DEFAULT NULL,
+        audio_url VARCHAR(255) DEFAULT NULL,
+        document_url VARCHAR(255) DEFAULT NULL,
+        video_url VARCHAR(255) DEFAULT NULL,
+        notes LONGTEXT DEFAULT NULL,
+        is_active TINYINT(1) NOT NULL DEFAULT 1,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_category (category),
+        INDEX idx_active (is_active)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 }
 
 function getStudentRegistration(PDO $pdo, string $studentId, int $courseId)
@@ -781,6 +995,28 @@ function ensureAiTables(PDO $pdo): void
         INDEX idx_student_ai_activity_student (student_id),
         INDEX idx_student_ai_activity_course (course_id),
         INDEX idx_student_ai_activity_action (action)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+
+    $pdo->exec('CREATE TABLE IF NOT EXISTS ai_tutor_conversations (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id VARCHAR(100) NOT NULL,
+        course_id INT DEFAULT NULL,
+        lesson_id INT DEFAULT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_ai_tutor_conversations_student (student_id),
+        INDEX idx_ai_tutor_conversations_course (course_id),
+        INDEX idx_ai_tutor_conversations_updated (updated_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+
+    $pdo->exec('CREATE TABLE IF NOT EXISTS ai_tutor_messages (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        conversation_id INT NOT NULL,
+        role VARCHAR(20) NOT NULL,
+        content TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_ai_tutor_messages_conversation (conversation_id),
+        INDEX idx_ai_tutor_messages_created (created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 }
 
@@ -1206,6 +1442,12 @@ if ($pdo instanceof PDO) {
         ensureAiTables($pdo);
     } catch (Throwable $e) {
         error_log('AI tables schema validation failed: ' . $e->getMessage());
+    }
+
+    try {
+        ensureChurchResourcesTable($pdo);
+    } catch (Throwable $e) {
+        error_log('Church resources schema validation failed: ' . $e->getMessage());
     }
 
     try {

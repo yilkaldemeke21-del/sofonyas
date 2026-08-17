@@ -32,6 +32,398 @@ function getRequestValue(string $key, $default = null)
 }
 
 $action = trim((string)(getRequestValue('action') ?? ''));
+
+function normalizeCourseText(?string $value): string
+{
+    if ($value === null) {
+        return '';
+    }
+
+    $text = html_entity_decode((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    $text = preg_replace('/<[^>]+>/', ' ', $text);
+    $text = preg_replace('/\s+/u', ' ', $text);
+    return trim($text);
+}
+
+function tokenizeText(string $value): array
+{
+    $normalized = mb_strtolower($value, 'UTF-8');
+    $normalized = preg_replace('/[^\p{L}\p{N}]+/u', ' ', $normalized);
+    $tokens = preg_split('/\s+/u', trim((string)$normalized), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    $stopWords = ['the','and','for','with','from','that','this','your','about','into','what','when','where','why','how','have','has','can','will','should','their','lesson','course','chapter','topic','study','learn','student','students','using','help','please','know','give','answer','details','detail'];
+    return array_values(array_filter($tokens, static function ($token) use ($stopWords): bool {
+        return strlen($token) > 2 && !in_array($token, $stopWords, true);
+    }));
+}
+
+function extractPdfText(string $pdfPath): string
+{
+    $normalizedPath = str_replace('\\', '/', trim($pdfPath));
+    if ($normalizedPath === '' || !is_file($normalizedPath)) {
+        return '';
+    }
+
+    $command = 'pdftotext -layout ' . escapeshellarg($normalizedPath) . ' - 2>/dev/null';
+    $output = [];
+    $exitCode = 0;
+    @exec($command, $output, $exitCode);
+    if ($exitCode === 0 && !empty($output)) {
+        return normalizeCourseText(implode("\n", $output));
+    }
+
+    return '';
+}
+
+function getAiProviderConfig(): array
+{
+    $apiKey = trim((string)(getenv('OPENAI_API_KEY') ?: getenv('AZURE_OPENAI_API_KEY') ?: ''));
+    $baseUrl = trim((string)(getenv('OPENAI_BASE_URL') ?: getenv('AZURE_OPENAI_ENDPOINT') ?: ''));
+    if ($baseUrl === '') {
+        $baseUrl = 'https://api.openai.com/v1';
+    }
+    $model = trim((string)(getenv('OPENAI_MODEL') ?: 'gpt-4o-mini'));
+
+    return [
+        'api_key' => $apiKey,
+        'base_url' => $baseUrl,
+        'model' => $model,
+    ];
+}
+
+function buildRetrievedContextText(array $context, array $history = []): string
+{
+    $courseName = trim((string)($context['course']['course_name'] ?? ''));
+    $lessonTitle = trim((string)($context['lesson_title'] ?? ''));
+    $moduleName = trim((string)($context['module_name'] ?? ''));
+    $courseDescription = trim((string)($context['course_description'] ?? ''));
+    $lessonContent = trim((string)($context['lesson_content'] ?? ''));
+    $notes = array_values(array_filter(array_map('trim', (array)($context['notes'] ?? [])))) ;
+    $pdfTexts = array_values(array_filter(array_map('trim', (array)($context['pdf_texts'] ?? [])))) ;
+
+    $sections = [];
+    if ($courseName !== '') {
+        $sections[] = "Course: {$courseName}";
+    }
+    if ($courseDescription !== '') {
+        $sections[] = "Course description: {$courseDescription}";
+    }
+    if ($moduleName !== '') {
+        $sections[] = "Chapter: {$moduleName}";
+    }
+    if ($lessonTitle !== '') {
+        $sections[] = "Lesson: {$lessonTitle}";
+    }
+    if ($lessonContent !== '') {
+        $sections[] = "Lesson content: {$lessonContent}";
+    }
+    foreach ($notes as $note) {
+        $sections[] = "Note: {$note}";
+    }
+    foreach ($pdfTexts as $pdfText) {
+        $sections[] = "PDF content: {$pdfText}";
+    }
+
+    if (!empty($history)) {
+        $historyChunks = [];
+        foreach ($history as $entry) {
+            $role = trim((string)($entry['role'] ?? ''));
+            $content = trim((string)($entry['content'] ?? ''));
+            if ($role !== '' && $content !== '') {
+                $historyChunks[] = ucfirst($role) . ': ' . $content;
+            }
+        }
+        if (!empty($historyChunks)) {
+            $sections[] = 'Conversation history: ' . implode("\n", $historyChunks);
+        }
+    }
+
+    return implode("\n\n", $sections);
+}
+
+function callAiRagProvider(string $message, array $context, array $history = []): ?string
+{
+    if (empty($context['course'])) {
+        return null;
+    }
+
+    $config = getAiProviderConfig();
+    if ($config['api_key'] === '') {
+        return null;
+    }
+
+    $contextText = buildRetrievedContextText($context, $history);
+    if ($contextText === '') {
+        return null;
+    }
+
+    $payload = [
+        'model' => $config['model'],
+        'temperature' => 0.1,
+        'max_tokens' => 400,
+        'messages' => [
+            [
+                'role' => 'system',
+                'content' => 'You are a helpful LMS tutor. Answer only from the course materials provided to you. If the answer is not present in those materials, respond exactly: This information is not available in your current course materials.'
+            ],
+            [
+                'role' => 'user',
+                'content' => "Question: {$message}\n\nRetrieved course materials:\n{$contextText}"
+            ],
+        ],
+    ];
+
+    $url = rtrim($config['base_url'], '/') . '/chat/completions';
+    $headers = [
+        'Content-Type: application/json',
+        'Authorization: Bearer ' . $config['api_key'],
+    ];
+
+    if (function_exists('curl_init')) {
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+        curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+        $responseBody = curl_exec($ch);
+        $curlError = curl_error($ch);
+        curl_close($ch);
+
+        if ($responseBody !== false && $responseBody !== '') {
+            $decoded = json_decode($responseBody, true);
+            if (is_array($decoded)) {
+                $content = $decoded['choices'][0]['message']['content'] ?? '';
+                if (is_string($content) && trim($content) !== '') {
+                    return trim($content);
+                }
+                if (isset($decoded['error']['message']) && is_string($decoded['error']['message'])) {
+                    error_log('AI provider error: ' . $decoded['error']['message']);
+                }
+            }
+            if ($curlError !== '') {
+                error_log('AI provider curl error: ' . $curlError);
+            }
+        }
+    }
+
+    return null;
+}
+
+function getStudentCourseContext(PDO $pdo, string $studentId, int $courseId, ?int $lessonId = null): ?array
+{
+    $studentId = trim($studentId);
+    if ($studentId === '' || $courseId <= 0) {
+        return null;
+    }
+
+    $courseStmt = $pdo->prepare('SELECT c.* FROM courses c JOIN registrations r ON (r.course_id = c.id OR r.course = c.course_name) WHERE r.student_id = :student_id AND c.id = :course_id LIMIT 1');
+    $courseStmt->execute([':student_id' => $studentId, ':course_id' => $courseId]);
+    $course = $courseStmt->fetch(PDO::FETCH_ASSOC);
+    if (!$course) {
+        return null;
+    }
+
+    $lessonStmt = $pdo->prepare('SELECT cl.*, cm.name AS module_name FROM course_lessons cl LEFT JOIN course_modules cm ON cm.id = cl.module_id WHERE cl.course_id = :course_id ORDER BY COALESCE(cl.module_id, 999999), cl.sort_order ASC, cl.id ASC');
+    $lessonStmt->execute([':course_id' => $courseId]);
+    $lessons = $lessonStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $selectedLesson = null;
+    if ($lessonId !== null && $lessonId > 0) {
+        foreach ($lessons as $lesson) {
+            if ((int)$lesson['id'] === $lessonId) {
+                $selectedLesson = $lesson;
+                break;
+            }
+        }
+    }
+
+    if ($selectedLesson === null && !empty($lessons)) {
+        $selectedLesson = $lessons[0];
+    }
+
+    $lessonContent = '';
+    $moduleName = '';
+    $lessonTitle = '';
+    if ($selectedLesson) {
+        $lessonContent = normalizeCourseText((string)($selectedLesson['content'] ?? ''));
+        $moduleName = trim((string)($selectedLesson['module_name'] ?? ''));
+        $lessonTitle = trim((string)($selectedLesson['title'] ?? ''));
+    }
+
+    $notesStmt = $pdo->prepare('SELECT title, description, file_path FROM admin_notes ORDER BY created_at DESC LIMIT 12');
+    $notesStmt->execute();
+    $notes = $notesStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $noteTexts = [];
+    foreach ($notes as $note) {
+        $noteTitle = trim((string)($note['title'] ?? ''));
+        $noteDescription = normalizeCourseText((string)($note['description'] ?? ''));
+        $noteText = trim($noteTitle . ' ' . $noteDescription);
+        if ($noteText !== '') {
+            $noteTexts[] = $noteText;
+        }
+    }
+
+    $pdfFiles = [];
+    $pdfValue = trim((string)($course['pdf_file'] ?? ''));
+    if ($pdfValue !== '') {
+        $pdfFiles[] = $pdfValue;
+    }
+
+    $pdfTexts = [];
+    foreach ($pdfFiles as $pdfFile) {
+        $absolutePath = $pdfFile;
+        if (strpos($pdfFile, '/') !== 0 && strpos($pdfFile, 'http') !== 0) {
+            $absolutePath = __DIR__ . '/' . ltrim($pdfFile, '/');
+        }
+        $extracted = extractPdfText($absolutePath);
+        if ($extracted !== '') {
+            $pdfTexts[] = $extracted;
+        }
+    }
+
+    return [
+        'course' => $course,
+        'lesson' => $selectedLesson,
+        'module_name' => $moduleName,
+        'lesson_title' => $lessonTitle,
+        'lesson_content' => $lessonContent,
+        'notes' => $noteTexts,
+        'pdf_files' => $pdfFiles,
+        'pdf_texts' => $pdfTexts,
+        'course_description' => normalizeCourseText((string)($course['short_description'] ?: $course['description'] ?: '')),
+    ];
+}
+
+function getConversationId(PDO $pdo, string $studentId, int $courseId, ?int $lessonId): int
+{
+    $studentId = trim($studentId);
+    if ($studentId === '') {
+        return 0;
+    }
+
+    $existingId = (int)($_SESSION['ai_tutor_conversation_id'] ?? 0);
+    if ($existingId > 0) {
+        return $existingId;
+    }
+
+    $stmt = $pdo->prepare('INSERT INTO ai_tutor_conversations (student_id, course_id, lesson_id) VALUES (:student_id, :course_id, :lesson_id)');
+    $stmt->execute([
+        ':student_id' => $studentId,
+        ':course_id' => $courseId > 0 ? $courseId : null,
+        ':lesson_id' => $lessonId !== null && $lessonId > 0 ? $lessonId : null,
+    ]);
+    $conversationId = (int)$pdo->lastInsertId();
+    if ($conversationId > 0) {
+        $_SESSION['ai_tutor_conversation_id'] = $conversationId;
+    }
+    return $conversationId;
+}
+
+function getConversationHistory(PDO $pdo, int $conversationId): array
+{
+    if ($conversationId <= 0) {
+        return [];
+    }
+
+    $stmt = $pdo->prepare('SELECT role, content FROM ai_tutor_messages WHERE conversation_id = :conversation_id ORDER BY id ASC LIMIT 20');
+    $stmt->execute([':conversation_id' => $conversationId]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+function saveConversationMessage(PDO $pdo, int $conversationId, string $role, string $content): void
+{
+    if ($conversationId <= 0 || trim($content) === '') {
+        return;
+    }
+
+    $stmt = $pdo->prepare('INSERT INTO ai_tutor_messages (conversation_id, role, content) VALUES (:conversation_id, :role, :content)');
+    $stmt->execute([
+        ':conversation_id' => $conversationId,
+        ':role' => $role,
+        ':content' => $content,
+    ]);
+}
+
+function buildAnswerFromContext(string $question, array $context, array $history = []): ?string
+{
+    $question = trim($question);
+    if ($question === '') {
+        return null;
+    }
+
+    $courseName = trim((string)($context['course']['course_name'] ?? ''));
+    $lessonTitle = trim((string)($context['lesson_title'] ?? ''));
+    $moduleName = trim((string)($context['module_name'] ?? ''));
+    $courseDescription = trim((string)($context['course_description'] ?? ''));
+    $lessonContent = trim((string)($context['lesson_content'] ?? ''));
+    $notes = array_values(array_filter(array_map('trim', (array)($context['notes'] ?? []))));
+    $pdfTexts = array_values(array_filter(array_map('trim', (array)($context['pdf_texts'] ?? []))));
+
+    $segments = [];
+    if ($courseName !== '') {
+        $segments[] = ['title' => 'Course overview', 'content' => $courseName . ' ' . $courseDescription];
+    }
+    if ($lessonTitle !== '') {
+        $segments[] = ['title' => 'Lesson title', 'content' => $lessonTitle . ' ' . $lessonContent];
+    }
+    if ($lessonContent !== '') {
+        $segments[] = ['title' => 'Lesson content', 'content' => $lessonContent];
+    }
+    foreach ($notes as $note) {
+        $segments[] = ['title' => 'Notes', 'content' => $note];
+    }
+    foreach ($pdfTexts as $pdfText) {
+        $segments[] = ['title' => 'PDF content', 'content' => $pdfText];
+    }
+
+    $keywords = tokenizeText($question);
+    if (empty($keywords)) {
+        $keywords = tokenizeText($courseName . ' ' . $lessonTitle);
+    }
+
+    $bestSegment = null;
+    $bestScore = 0;
+    foreach ($segments as $segment) {
+        $segmentText = $segment['title'] . ' ' . $segment['content'];
+        $segmentTokens = tokenizeText($segmentText);
+        $score = 0;
+        foreach ($keywords as $keyword) {
+            if (strpos(mb_strtolower($segmentText, 'UTF-8'), $keyword) !== false) {
+                $score += 2;
+            }
+        }
+        if ($score > $bestScore) {
+            $bestScore = $score;
+            $bestSegment = $segment;
+        }
+    }
+
+    if ($bestSegment === null || $bestScore < 2) {
+        return null;
+    }
+
+    $answerText = trim($bestSegment['content']);
+    if ($answerText === '') {
+        return null;
+    }
+
+    $excerpt = mb_substr($answerText, 0, 260, 'UTF-8');
+    $contextPrefix = $courseName !== '' ? "Based on your enrolled course '{$courseName}'" : 'Based on your enrolled course';
+    if ($moduleName !== '') {
+        $contextPrefix .= " in chapter '{$moduleName}'";
+    }
+    if ($lessonTitle !== '') {
+        $contextPrefix .= " and lesson '{$lessonTitle}'";
+    }
+
+    if (mb_strlen($answerText, 'UTF-8') > 260) {
+        $answerText = $excerpt . '...';
+    }
+
+    return $contextPrefix . ', I can answer from the course materials: ' . $answerText;
+}
+
 if ($action === '') {
     http_response_code(400);
     echo json_encode([
@@ -57,8 +449,20 @@ switch ($action) {
             exit;
         }
 
-        $reply = generateTutorReply($pdo, $studentId, $message);
-        logAiActivity($pdo, $studentId, 'chat', null, json_encode(['message' => $message]));
+        $courseId = (int)(getRequestValue('course_id') ?? $_GET['course_id'] ?? 0);
+        $lessonId = (int)(getRequestValue('lesson_id') ?? $_GET['lesson_id'] ?? 0);
+        $context = getStudentCourseContext($pdo, $studentId, $courseId, $lessonId > 0 ? $lessonId : null);
+        if ($context === null) {
+            $reply = 'I can only answer questions from the course materials of a course you are enrolled in. Please choose an enrolled course first.';
+        } else {
+            $conversationId = getConversationId($pdo, $studentId, $courseId, $lessonId > 0 ? $lessonId : null);
+            $history = getConversationHistory($pdo, $conversationId);
+            $reply = generateTutorReply($pdo, $studentId, $message, $context, $history);
+            saveConversationMessage($pdo, $conversationId, 'user', $message);
+            saveConversationMessage($pdo, $conversationId, 'assistant', $reply);
+        }
+
+        logAiActivity($pdo, $studentId, 'chat', $courseId > 0 ? $courseId : null, json_encode(['message' => $message]));
         echo json_encode(['success' => true, 'reply' => $reply]);
         break;
 
@@ -76,16 +480,23 @@ switch ($action) {
         break;
 
     case 'generate_quiz':
-        $courseId = (int)($_GET['course_id'] ?? 0);
-        $questionCount = max(3, min(10, (int)($_GET['questions'] ?? 5)));
+        $courseId = (int)(getRequestValue('course_id') ?? $_GET['course_id'] ?? 0);
+        $lessonId = (int)(getRequestValue('lesson_id') ?? $_GET['lesson_id'] ?? 0);
+        $questionCount = max(3, min(10, (int)(getRequestValue('questions') ?? $_GET['questions'] ?? 5)));
         if ($courseId <= 0) {
             http_response_code(400);
             echo json_encode(['success' => false, 'message' => 'Invalid course identifier.']);
             exit;
         }
 
-        $quiz = generateCourseQuiz($pdo, $courseId, $questionCount);
-        logAiActivity($pdo, $studentId, 'generate_quiz', $courseId, json_encode(['question_count' => $questionCount, 'questions' => count($quiz)]));
+        $context = getStudentCourseContext($pdo, $studentId, $courseId, $lessonId > 0 ? $lessonId : null);
+        if ($context === null) {
+            echo json_encode(['success' => false, 'message' => 'Please select an enrolled course before generating a quiz.']);
+            exit;
+        }
+
+        $quiz = generateCourseQuiz($pdo, $courseId, $questionCount, $lessonId > 0 ? $lessonId : null);
+        logAiActivity($pdo, $studentId, 'generate_quiz', $courseId, json_encode(['question_count' => $questionCount, 'questions' => count($quiz['questions'] ?? [])]));
         echo json_encode(['success' => true, 'quiz' => $quiz]);
         break;
 
@@ -110,33 +521,44 @@ function logAiActivity(PDO $pdo, string $studentId, string $action, ?int $course
     }
 }
 
-function generateTutorReply(PDO $pdo, string $studentId, string $message): string
+function generateTutorReply(PDO $pdo, string $studentId, string $message, array $context, array $history = []): string
 {
     $studentId = trim($studentId);
     $message = trim($message);
 
-    $courses = [];
-    if ($studentId !== '') {
-        $stmt = $pdo->prepare('SELECT c.course_name FROM courses c JOIN registrations r ON r.course_id = c.id WHERE r.student_id = :student_id ORDER BY r.created_at DESC LIMIT 5');
-        $stmt->execute([':student_id' => $studentId]);
-        $courses = array_values(array_filter(array_map('trim', array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'course_name'))));
+    if ($context === null || empty($context['course'])) {
+        return 'I can only answer questions from the course materials of a course you are enrolled in. Please choose an enrolled course first.';
     }
 
-    if (preg_match('/study|plan|schedule|timeline|day/i', $message)) {
-        $courseList = !empty($courses) ? 'Your enrolled courses include ' . implode(', ', $courses) . '.' : 'You can select an enrolled course from the study guide panel.';
-        return 'A strong study plan starts with small daily goals. ' . $courseList . ' Break each topic into 20–30 minute sessions and review the same lesson twice during the week.';
+    $historyText = '';
+    foreach ($history as $entry) {
+        $historyText .= trim((string)($entry['role'] ?? '')) . ': ' . trim((string)($entry['content'] ?? '')) . "\n";
+    }
+
+    if (preg_match('/^(hi|hello|hey|salut|salam)/i', $message)) {
+        $courseName = trim((string)($context['course']['course_name'] ?? 'your current course'));
+        return 'Hello! I can help you review ' . $courseName . ' using the current lesson, chapter, notes, and available course materials only.';
+    }
+
+    $providerReply = callAiRagProvider($message, $context, $history);
+    if ($providerReply !== null && trim($providerReply) !== '') {
+        return trim($providerReply);
+    }
+
+    $directAnswer = buildAnswerFromContext($message, $context, $history);
+    if ($directAnswer !== null) {
+        return $directAnswer;
     }
 
     if (preg_match('/quiz|test|practice/i', $message)) {
-        return 'Practice quizzes help you remember ideas faster. Pick a course, choose a few questions, and answer them without looking at your notes first. Then review the answers and focus on the topics you missed.';
+        return 'I can create a practice quiz from the current lesson only. Please use the quiz generator for that lesson so the questions stay grounded in your course materials.';
     }
 
-    if (preg_match('/course|lesson|topic/i', $message)) {
-        $courseList = !empty($courses) ? 'You are currently learning ' . implode(', ', $courses) . '.' : 'You can choose a course from the tutor panel.';
-        return 'Focus on one lesson at a time and summarize it in your own words. ' . $courseList . ' If you want a deeper breakdown, generate a study guide for that course.';
+    if (preg_match('/summary|outline|study guide|plan|schedule|timeline|day/i', $message)) {
+        return 'I can support your study plan using the current lesson and attached notes, but I will only answer from the course materials for your enrolled course.';
     }
 
-    return 'I can help you with study plans, course summaries, revision tips, and practice quiz questions. Tell me what course or topic you want to focus on next.';
+    return 'This information is not available in your current course materials.';
 }
 
 function getRecommendedCourses(PDO $pdo, string $studentId, int $limit = 5): array
@@ -150,7 +572,7 @@ function getRecommendedCourses(PDO $pdo, string $studentId, int $limit = 5): arr
     $preferredCategories = [];
     $preferredLevels = [];
 
-    $stmt = $pdo->prepare('SELECT c.id, c.course_name, c.category, c.level FROM courses c JOIN registrations r ON r.course_id = c.id WHERE r.student_id = :student_id');
+    $stmt = $pdo->prepare('SELECT DISTINCT c.id, c.course_name, c.category, c.level FROM courses c JOIN registrations r ON (r.course_id = c.id OR r.course = c.course_name) WHERE r.student_id = :student_id');
     $stmt->execute([':student_id' => $studentId]);
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
         $enrolledCourseIds[] = (int)$row['id'];
@@ -284,68 +706,74 @@ function generateStudyGuide(PDO $pdo, int $courseId, string $studentName): array
     ];
 }
 
-function generateCourseQuiz(PDO $pdo, int $courseId, int $questionCount): array
+function generateCourseQuiz(PDO $pdo, int $courseId, int $questionCount, ?int $lessonId = null): array
 {
     $courseStmt = $pdo->prepare('SELECT course_name, category, level FROM courses WHERE id = :id LIMIT 1');
     $courseStmt->execute([':id' => $courseId]);
     $course = $courseStmt->fetch(PDO::FETCH_ASSOC);
 
-    $lessonStmt = $pdo->prepare('SELECT title FROM course_lessons WHERE course_id = :course_id ORDER BY sort_order ASC, id ASC');
+    $lessonStmt = $pdo->prepare('SELECT cl.id, cl.title, cl.content, cm.name AS module_name FROM course_lessons cl LEFT JOIN course_modules cm ON cm.id = cl.module_id WHERE cl.course_id = :course_id ORDER BY COALESCE(cl.module_id, 999999), cl.sort_order ASC, cl.id ASC');
     $lessonStmt->execute([':course_id' => $courseId]);
-    $lessonTitles = array_column($lessonStmt->fetchAll(PDO::FETCH_ASSOC), 'title');
-    $lessonTitles = array_filter(array_map('trim', $lessonTitles));
-    $lessonTitles = array_values(array_unique($lessonTitles));
+    $lessons = $lessonStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $selectedLesson = null;
+    if ($lessonId !== null && $lessonId > 0) {
+        foreach ($lessons as $lesson) {
+            if ((int)$lesson['id'] === $lessonId) {
+                $selectedLesson = $lesson;
+                break;
+            }
+        }
+    }
+    if ($selectedLesson === null && !empty($lessons)) {
+        $selectedLesson = $lessons[0];
+    }
+
+    $lessonTitle = trim((string)($selectedLesson['title'] ?? 'Current lesson'));
+    $lessonText = normalizeCourseText((string)($selectedLesson['content'] ?? ''));
+    $segments = preg_split('/(?<=[.!?።])\s+/u', $lessonText, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    $segments = array_values(array_filter(array_map('trim', $segments), static function ($segment): bool {
+        return mb_strlen($segment, 'UTF-8') > 16;
+    }));
 
     $questions = [];
-    $topicPool = $lessonTitles;
-    if (empty($topicPool)) {
-        $topicPool = [trim((string)$course['category']) ?: 'core course topics'];
+    if (empty($segments)) {
+        $segments = [$lessonTitle !== '' ? $lessonTitle : 'The key lesson topic'];
     }
 
     for ($i = 0; $i < $questionCount; $i++) {
-        $baseTopic = $topicPool[$i % count($topicPool)];
+        $answer = trim((string)($segments[$i % count($segments)] ?? $segments[0]));
+        $answerExcerpt = mb_substr($answer, 0, 120, 'UTF-8');
         $wrongOptions = [];
-        $answer = $baseTopic;
-        $declaredOptions = [$answer];
-
-        $availableWrong = array_values(array_filter($topicPool, static function ($topic) use ($answer) {
-            return $topic !== $answer;
-        }));
-        shuffle($availableWrong);
-        while (count($wrongOptions) < 3 && !empty($availableWrong)) {
-            $wrongOptions[] = array_shift($availableWrong);
-        }
-
-        $genericDistractors = [
-            'Course setup and enrollment steps',
-            'Exam preparation strategies',
-            'General student support information',
-            'Classroom participation rules',
-        ];
-        foreach ($genericDistractors as $distractor) {
+        foreach ($segments as $segment) {
             if (count($wrongOptions) >= 3) {
                 break;
             }
-            if (!in_array($distractor, $wrongOptions, true) && $distractor !== $answer) {
-                $wrongOptions[] = $distractor;
+            if (trim((string)$segment) !== $answer && trim((string)$segment) !== '') {
+                $wrongOptions[] = mb_substr(trim((string)$segment), 0, 120, 'UTF-8');
             }
         }
+        if (count($wrongOptions) < 3) {
+            $wrongOptions[] = 'Review the lesson notes and course summary';
+            $wrongOptions[] = 'Ask the instructor for the answer';
+            $wrongOptions[] = 'Look for the answer in the course PDF';
+        }
 
-        $options = array_slice(array_merge([$answer], $wrongOptions), 0, 4);
+        $options = array_slice(array_values(array_unique(array_merge([$answerExcerpt], $wrongOptions))), 0, 4);
         shuffle($options);
 
         $questions[] = [
-            'question' => "Which of the following is most likely a key topic in the lesson titled '{$baseTopic}'?",
+            'question' => "Which option best matches the lesson focus for '{$lessonTitle}'?",
             'type' => 'multiple_choice',
             'options' => $options,
-            'answer' => $answer,
+            'answer' => $answerExcerpt,
         ];
     }
 
     return [
         'course_name' => trim((string)($course['course_name'] ?? 'Selected course')),
-        'category' => trim((string)($course['category'] ?? '')), 
-        'level' => trim((string)($course['level'] ?? '')), 
+        'category' => trim((string)($course['category'] ?? '')),
+        'level' => trim((string)($course['level'] ?? '')),
         'questions' => $questions,
     ];
 }

@@ -189,6 +189,11 @@ $instructor_photo_url = $instructor_photo !== '' ? htmlspecialchars(publicMediaU
 $student_photo_url = $student_photo !== '' ? htmlspecialchars(publicMediaUrl($student_photo), ENT_QUOTES, 'UTF-8') : htmlspecialchars(publicMediaUrl('yesofi 1 photo.jpg'), ENT_QUOTES, 'UTF-8');
 $instructor_photo_url .= '?v=' . $photoVersion;
 $student_photo_url .= '?v=' . $photoVersion;
+$qr_image = '';
+if (!empty($certificate['qr_code_url'])) {
+    $qr_image = htmlspecialchars(publicMediaUrl($certificate['qr_code_url']), ENT_QUOTES, 'UTF-8');
+}
+$verification_url = !empty($certificate['verification_url']) ? htmlspecialchars($certificate['verification_url'], ENT_QUOTES, 'UTF-8') : '';
 $show_watermark = !empty($certificate['show_watermark']) || !empty($certificate['watermark_mode']);
 
 foreach ([
@@ -429,6 +434,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .preview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 16px; }
         .preview-value { margin: 6px 0 0; font-size: 16px; color: #3f2319; font-weight: 700; }
         .mini { color: #7e5330; font-size: 13px; line-height: 1.6; }
+        .qr-code { margin: 18px auto 0; text-align: center; }
+        .qr-code img { border: 1px solid rgba(149, 101, 35, 0.18); border-radius: 16px; background: #fff; padding: 8px; }
+        .qr-code small { display: block; margin-top: 8px; color: #5a4026; font-size: 13px; }
         .mini strong { color: #7a1f1f; }
         .church-title { margin: 10px 0 8px; font-size: 22px; font-weight: 800; letter-spacing: 0.04em; text-align: center; color: #7a1f1f; text-transform: uppercase; }
         .church-title span { color: #a02a28; }
@@ -472,109 +480,84 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             size: A4 landscape;
             margin: 0;
         }
+
         @media print {
             html, body {
-                width: 297mm;
-                height: 210mm;
-                margin: 0;
-                padding: 0;
-                overflow: hidden;
-                background: #fff;
+                width: 297mm !important;
+                height: 210mm !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: visible !important;
+                background: #fff !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
             }
-            .topbar, .no-print, .msg, .actions { display: none !important; }
-            .wrap {
-                width: 297mm;
-                height: 210mm;
-                max-width: none;
-                margin: 0;
-                padding: 0;
+
+            body {
+                display: block !important;
+                zoom: 1 !important;
+                transform: none !important;
             }
-            .card {
-                width: 297mm;
-                height: 210mm;
-                box-shadow: none;
-                border: none;
-                background: transparent;
-                padding: 0;
-                margin: 0;
-                border-radius: 0;
+
+            .topbar,
+            .no-print,
+            .msg,
+            .actions,
+            form,
+            .photo-manager,
+            .signature-pad-wrap,
+            .signature-actions {
+                display: none !important;
+                visibility: hidden !important;
             }
-            .preview {
-                border: none;
-                box-shadow: none;
-                background: transparent;
-                margin: 0;
-                padding: 0;
-                border-radius: 0;
-            }
+
+            .wrap,
+            .card,
+            .preview,
+            .preview-frame,
             .certificate-container {
-                width: 297mm;
-                height: 210mm;
-                margin: 0;
-                padding: 0;
-                box-shadow: none;
-                background:
-                    linear-gradient(#fffdf8, #fffdf8) padding-box,
-                    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 700'%3E%3Crect x='8' y='8' width='984' height='684' fill='none' stroke='%23c5962e' stroke-width='4'/%3E%3Crect x='24' y='24' width='952' height='652' fill='none' stroke='%23f0dc8f' stroke-width='1.5'/%3E%3Ctext x='20' y='40' font-family='Georgia, serif' font-size='24' fill='%23c5962e'%3E✠%3C/text%3E%3Ctext x='960' y='40' font-family='Georgia, serif' font-size='24' fill='%23c5962e' text-anchor='end'%3E✠%3C/text%3E%3Ctext x='20' y='680' font-family='Georgia, serif' font-size='24' fill='%23c5962e'%3E✠%3C/text%3E%3Ctext x='960' y='680' font-family='Georgia, serif' font-size='24' fill='%23c5962e' text-anchor='end'%3E✠%3C/text%3E%3C/svg%3E") center/100% 100% no-repeat;
-            }
-            .certificate-container::before {
-                content: "";
-                position: absolute;
-                inset: 7mm;
-                border: 1px solid rgba(197, 150, 47, 0.75);
-                box-shadow: 0 0 12px rgba(197, 150, 47, 0.18);
-                pointer-events: none;
-            }
-            .preview-frame {
-                width: 100%;
-                height: 100%;
+                width: 297mm !important;
+                height: 210mm !important;
+                max-width: 297mm !important;
+                max-height: 210mm !important;
+                margin: 0 !important;
+                padding: 0 !important;
                 border: none !important;
                 border-radius: 0 !important;
-                padding: 10mm 12mm !important;
-                background: transparent !important;
+                box-sizing: border-box !important;
                 box-shadow: none !important;
-                overflow: hidden;
+                background: transparent !important;
+                overflow: visible !important;
+                transform: none !important;
             }
-            .preview-frame::before {
-                inset: 6mm;
-                border: 1px solid rgba(197, 150, 47, 0.55);
-                border-radius: 0;
+
+            .preview-frame {
+                position: relative !important;
+                background: radial-gradient(circle at top, #fffaf0 0%, #fffdf8 52%, #f2ead5 100%) !important;
+                border: 8px solid #d2a54f !important;
+                border-radius: 0 !important;
             }
+
+            .preview-frame::before,
+            .certificate-container::before {
+                inset: 10px !important;
+                border: 1px solid rgba(180, 139, 50, 0.65) !important;
+                border-radius: 0 !important;
+            }
+
             .certificate-verse {
-                width: 100%;
-                max-width: 520px;
-                margin: 0 auto 10px;
-                text-align: center;
-                position: relative;
-                left: 0;
-                transform: none;
+                width: 100% !important;
+                max-width: none !important;
+                margin: 0 auto 14px !important;
+                position: relative !important;
+                left: auto !important;
+                transform: none !important;
             }
-            .certificate-verse .verse-text {
-                display: block !important;
-                width: 100%;
-                text-align: center !important;
-                font-size: 18px !important;
-                font-weight: 900 !important;
-                line-height: 1.45 !important;
-                color: #10285e !important;
-                background: linear-gradient(90deg, #10285e 0%, #c59a2f 50%, #10285e 100%);
-                -webkit-background-clip: text !important;
-                -webkit-text-fill-color: transparent !important;
-                text-shadow: 0 1px 1px rgba(255,255,255,0.55), 0 0 10px rgba(16, 40, 94, 0.18) !important;
+
+            .watermark {
+                opacity: 0.65 !important;
+                transform: rotate(-18deg) !important;
             }
-            .certificate-verse .verse-reference {
-                display: block !important;
-                margin-top: 4px;
-                font-size: 12px !important;
-                font-weight: 800 !important;
-                letter-spacing: 0.12em !important;
-                color: #8b6323 !important;
-                text-shadow: 0 1px 1px rgba(255,255,255,0.48);
-            }
-            .certificate-verse .verse-divider {
-                margin-top: 8px;
-            }
-            .watermark { opacity: 0.65; }
         }
         @media (max-width: 768px) { .preview-grid { grid-template-columns: 1fr; } .meta-row { grid-template-columns: 1fr; } .photo-header { grid-template-columns: 1fr; } .cross-badge { margin: 0 auto; } .signature-row { grid-template-columns: 1fr; } }
     </style>
@@ -631,6 +614,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <p class="preview-value"><?php echo safe(date('Y-m-d H:i', strtotime($issued_at))); ?></p>
                     </div>
                 </div>
+                <?php if ($qr_image !== ''): ?>
+                    <div class="qr-code">
+                        <img src="<?php echo $qr_image; ?>" width="120" height="120" alt="Certificate Verification QR">
+                        <small>Scan to Verify</small>
+                    </div>
+                <?php endif; ?>
                 
                 <div class="signature-row">
                     <div class="signature-column">
@@ -766,21 +755,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         bindPhotoPreview('student_photo_file', 'studentPhotoPreview');
 
         function printCertificate() {
-            var preview = document.querySelector('.preview-frame');
-            if (!preview) {
-                window.print();
-                return;
-            }
-
-            var css = 'body{font-family: Georgia, "Times New Roman", serif; margin:0; padding:24px; background:#fff} .preview-frame{position:relative; overflow:hidden; border:8px solid #d2a54f; border-radius:28px; padding:18px 20px; background:radial-gradient(circle at top, #fffaf0 0%, #fffdf8 52%, #f2ead5 100%);} .preview-frame::before{content:""; position:absolute; inset:10px; border:1px solid rgba(180,139,50,0.65); border-radius:20px; pointer-events:none;} .photo-header{position:relative; z-index:1; display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:14px; margin-bottom:12px;} .photo-column{display:flex; flex-direction:column; align-items:center; gap:8px;} .photo-frame{width:116px; height:116px; padding:4px; border-radius:50%; background:linear-gradient(135deg, #f2d894, #7a1f1f); box-shadow:0 12px 24px rgba(122, 31, 31, 0.22);} .photo-frame img{width:100%; height:100%; object-fit:cover; border-radius:50%; border:3px solid #f7e6ba; background:#fffdf7;} .photo-label{font-size:11px; line-height:1.4; text-align:center; color:#7a1f1f; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;} .cross-badge{width:92px; height:92px; border-radius:50%; display:grid; place-items:center; font-size:34px; color:#7a1f1f; background:radial-gradient(circle at center, #fff7dd 0%, #f0d38b 54%, #a02a28 100%); border:3px solid #8f5b18; box-shadow:0 10px 22px rgba(122, 31, 31, 0.2);} .church-title{margin:10px 0 8px; font-size:22px; font-weight:800; letter-spacing:0.04em; text-align:center; color:#7a1f1f; text-transform:uppercase;} .church-title span{color:#a02a28;} .preview-grid{display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:14px; margin-top:16px;} .preview-value{margin:6px 0 0; font-size:16px; color:#3f2319; font-weight:700;} .mini{color:#7e5330; font-size:13px; line-height:1.6;} .mini strong{color:#7a1f1f;} .meta-row{position:relative; z-index:1; display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; margin-top:14px;} .meta-card{border:1px solid #dcbf83; border-radius:12px; padding:10px 12px; background:rgba(255,250,240,0.84);} .meta-label{display:block; font-size:11px; color:#885e2f; letter-spacing:0.08em; text-transform:uppercase; font-weight:700;} .meta-value{display:block; margin-top:4px; font-size:13px; font-weight:800; color:#4b2a1d; word-break:break-word;} .watermark{position:absolute; inset:0; display:grid; place-items:center; font-size:64px; font-weight:900; letter-spacing:5px; color:rgba(122,31,31,0.10); text-transform:uppercase; text-align:center; transform:rotate(-18deg); pointer-events:none; z-index:0;} .qr-box{position:relative; z-index:1; margin-top:14px; display:flex; align-items:center; gap:12px; border:1px solid #dcbf83; border-radius:14px; padding:10px; background:rgba(255,248,230,0.88);} .qr-box svg{flex:0 0 auto;} .qr-caption{font-size:12px; color:#6b4d2a; line-height:1.5;} .signature-row{position:relative; z-index:1; display:grid; grid-template-columns:1fr 180px 1fr; align-items:center; gap:16px; margin-top:18px;} .signature-line{border-top:1px solid #b88b41; padding-top:8px; text-align:center; font-size:12px; color:#7a1f1f; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;} .signature-image{min-height:70px; display:flex; align-items:center; justify-content:center;} .signature-image img{max-width:150px; max-height:68px; object-fit:contain;} .sign-placeholder{border:1px dashed #c99e42; border-radius:12px; padding:10px; color:#7a1f1f; font-weight:700; font-size:12px; background:rgba(247,236,207,0.8);} .seal{display:flex; justify-content:center; align-items:center;} .seal-svg{width:170px; height:170px; overflow:visible; filter:drop-shadow(0 8px 14px rgba(122,31,31,0.18));}';
-            var newWin = window.open('', '_blank');
-            newWin.document.open();
-            newWin.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Certificate Print</title><style>' + css + '</style></head><body>');
-            newWin.document.write(preview.outerHTML);
-            newWin.document.write('</body></html>');
-            newWin.document.close();
-            newWin.focus();
-            setTimeout(function(){ newWin.print(); }, 250);
+            window.print();
         }
 
         (function () {

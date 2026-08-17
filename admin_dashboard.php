@@ -768,6 +768,7 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
         <a href="admin_add_blog.php" class="action-btn featured blog">📝 ብሎግ ጨምር</a>
         <a href="content_manage.php?type=blog" class="action-btn featured">📚 ብሎግ/ፖዘት አስተዳድር</a>
         <a href="content_manage.php?type=poetry" class="action-btn featured">🎭 ግጥም/ፖዚት አስተዳድር</a>
+        <a href="admin_church_resources.php" class="action-btn featured announcement">✝️ Church Resources</a>
         <a href="admin_add_announcement.php" class="action-btn featured announcement">📢 ማስታወቂያ ጨምር</a>
         <a href="admin_website_settings.php" class="action-btn">⚙️ዌብሳይት ማስተካከያ</a>
         <a href="admin_ai_dashboard.php" class="action-btn featured">🤖 AI Smart ዳሽቦርድ</a>

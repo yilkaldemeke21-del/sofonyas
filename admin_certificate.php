@@ -177,7 +177,9 @@ function build_certificate_html($certificate): string
     $score = (int)($certificate['score'] ?? 0);
     $total = (int)($certificate['total_questions'] ?? 0);
     $issued = date('Y-m-d', strtotime((string)($certificate['issued_at'] ?? 'now')));
-    $verify = 'VC-' . str_pad((string)($certificate['id'] ?? 0), 6, '0', STR_PAD_LEFT);
+    $verify = htmlspecialchars((string)($certificate['certificate_code'] ?? 'VC-' . str_pad((string)($certificate['id'] ?? 0), 6, '0', STR_PAD_LEFT)), ENT_QUOTES, 'UTF-8');
+    $verificationUrl = htmlspecialchars((string)($certificate['verification_url'] ?? ''), ENT_QUOTES, 'UTF-8');
+    $qrImageUrl = htmlspecialchars((string)($certificate['qr_code_url'] ?? ''), ENT_QUOTES, 'UTF-8');
     $instructor_photo = htmlspecialchars((string)(publicMediaUrl($certificate['instructor_photo'] ?? 'sofi photo.jpg')), ENT_QUOTES, 'UTF-8');
     $student_photo = htmlspecialchars((string)(publicMediaUrl($certificate['student_photo'] ?? 'yesofi 1 photo.jpg')), ENT_QUOTES, 'UTF-8');
     $watermark_lines = htmlspecialchars("ዲ/ን ሶፎንያስ ደመቀ\nቤተ ገብርኤል ዌብሳይት", ENT_QUOTES, 'UTF-8');
@@ -212,6 +214,8 @@ function build_certificate_html($certificate): string
     .meta { text-align: center; font-size: 15px; color: #6d4b2d; margin-top: 10px; }
     .sign-row { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 42px; position: relative; z-index: 1; }
     .sign-box { width: 220px; text-align: center; font-size: 13px; color: #7a1f1f; border-top: 1px solid #b88b41; padding-top: 8px; font-weight: 700; text-transform: uppercase; }
+    .qr-box { width: 128px; text-align: center; font-size: 11px; color: #6b7280; }
+    .qr-box img { width: 110px; height: 110px; border: 2px solid #d7dce4; border-radius: 12px; background: #fff; padding: 4px; }
     .sig-img, .sig-placeholder { height: 86px; width: 180px; display: grid; place-items: center; }
     .sig-img img { max-width: 160px; max-height: 70px; object-fit: contain; }
     .sig-placeholder { border: 1px dashed #c99e42; border-radius: 12px; color: #7a1f1f; font-size: 12px; font-weight: 700; }
@@ -240,8 +244,13 @@ function build_certificate_html($certificate): string
     <div class="sign-row">
       <div class="sign-box">$signer</div>
       $signature_markup
-      <div class="sign-box">Church Registrar</div>
+      <div class="qr-box">
+        <div style="margin-bottom:6px; font-weight:700;">Verify</div>
+        <img src="$qrImageUrl" alt="QR verification code" />
+        <div style="margin-top:6px;">$verify</div>
+      </div>
     </div>
+    <div class="meta" style="margin-top:16px;"><a href="$verificationUrl" style="color:#1d4ed8; text-decoration:none;">Open public verification page</a></div>
   </div>
 </body>
 </html>
@@ -305,6 +314,16 @@ try {
         exam_type VARCHAR(50) NOT NULL,
         score INT NOT NULL DEFAULT 0,
         total_questions INT NOT NULL DEFAULT 0,
+        certificate_code VARCHAR(50) DEFAULT NULL,
+        verification_token VARCHAR(128) DEFAULT NULL,
+        verification_url VARCHAR(500) DEFAULT NULL,
+        qr_code_url VARCHAR(500) DEFAULT NULL,
+        certificate_status VARCHAR(20) NOT NULL DEFAULT "Valid",
+        course_name VARCHAR(255) DEFAULT NULL,
+        completion_date DATETIME DEFAULT NULL,
+        last_verified_at DATETIME DEFAULT NULL,
+        last_verified_ip VARCHAR(45) DEFAULT NULL,
+        last_verified_user_agent VARCHAR(500) DEFAULT NULL,
         issued_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         UNIQUE KEY uq_certificate (student_id, exam_type)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
@@ -330,6 +349,10 @@ if (isset($_GET['issue'])) {
                 ':score' => (int)$row['score'],
                 ':total_questions' => (int)$row['total_questions'],
             ]);
+            $certificateId = (int)$pdo->lastInsertId();
+            if ($certificateId > 0) {
+                populateCertificateVerificationMetadata($pdo, $certificateId, (string)$row['exam_type'] ?? '', null);
+            }
             $message = 'ሰርቲፊኬት ተለቋል።';
         }
     } catch (PDOException $e) {
@@ -371,6 +394,12 @@ try {
 try {
     $stmt = $pdo->query('SELECT * FROM certificates ORDER BY issued_at DESC');
     $certificates = $stmt->fetchAll();
+    foreach ($certificates as $index => $certificateRow) {
+        if (!empty($certificateRow['certificate_code']) && !empty($certificateRow['verification_url']) && !empty($certificateRow['qr_code_url'])) {
+            continue;
+        }
+        populateCertificateVerificationMetadata($pdo, (int)($certificateRow['id'] ?? 0), (string)($certificateRow['course_name'] ?? $certificateRow['exam_type'] ?? ''), (string)($certificateRow['completion_date'] ?? $certificateRow['issued_at'] ?? ''));
+    }
 } catch (PDOException $e) {
     $certificates = [];
 }
@@ -504,18 +533,26 @@ if (isset($_GET['download_document']) || isset($_GET['document_id']) || isset($_
                     <th>ፈተና</th>
                     <th>ውጤት</th>
                     <th>ቀን</th>
+                    <th>Verification</th>
                     <th>ድርጊት</th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (empty($certificates)): ?>
-                    <tr><td colspan="5">ምንም ሰርቲፊኬት አልተሰጠም።</td></tr>
+                    <tr><td colspan="6">ምንም ሰርቲፊኬት አልተሰጠም።</td></tr>
                 <?php else: foreach ($certificates as $row): ?>
                     <tr>
                         <td><?php echo safe($row['student_name']); ?></td>
                         <td><?php echo safe($row['exam_type']); ?></td>
                         <td><?php echo (int)$row['score']; ?> / <?php echo (int)$row['total_questions']; ?></td>
                         <td><?php echo safe($row['issued_at']); ?></td>
+                        <td>
+                            <?php if (!empty($row['verification_url'])): ?>
+                                <a class="link" href="<?php echo htmlspecialchars($row['verification_url'], ENT_QUOTES, 'UTF-8'); ?>" target="_blank">View</a>
+                            <?php else: ?>
+                                <span style="color:#6b7280;">Pending</span>
+                            <?php endif; ?>
+                        </td>
                         <td>
                             <a class="btn issue" href="admin_edit_certificate.php?id=<?php echo (int)$row['id']; ?>">አስተካከል</a>
                             <a class="btn del" href="admin_certificate.php?delete=<?php echo (int)$row['id']; ?>" onclick="return confirm('ይህን ሰርቲፊኬት ሰርዝ?');">ሰርዝ</a>
