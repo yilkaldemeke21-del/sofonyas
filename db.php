@@ -956,6 +956,29 @@ function ensureNotificationSupportTables(PDO $pdo): void
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
 }
 
+function ensureSiteAnnouncementsTable(PDO $pdo): void
+{
+    $pdo->exec('CREATE TABLE IF NOT EXISTS site_announcements (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL DEFAULT "",
+        description TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        admin_id INT UNSIGNED NOT NULL DEFAULT 0,
+        is_deleted TINYINT(1) NOT NULL DEFAULT 0,
+        deleted_at DATETIME NULL DEFAULT NULL,
+        INDEX idx_site_announcements_recent (is_deleted, created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+}
+
+function getSiteAnnouncements(PDO $pdo, int $limit = 8): array
+{
+    $limit = max(1, min(50, $limit));
+    $stmt = $pdo->prepare('SELECT id, title, description, created_at FROM site_announcements WHERE is_deleted = 0 ORDER BY created_at DESC LIMIT :limit');
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+    return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+}
+
 function ensurePushSubscriptionTable(PDO $pdo): void
 {
     $pdo->exec('CREATE TABLE IF NOT EXISTS push_subscriptions (
@@ -1157,6 +1180,74 @@ function ensureSiteSettingsTable(PDO $pdo): void
         setting_value TEXT DEFAULT NULL,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+}
+
+function ensureWebsiteVisitCounterTable(PDO $pdo): void
+{
+    $pdo->exec('CREATE TABLE IF NOT EXISTS website_visits (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        page VARCHAR(255) NOT NULL DEFAULT "/",
+        session_id VARCHAR(128) NOT NULL DEFAULT "",
+        ip_address VARCHAR(45) DEFAULT NULL,
+        user_agent VARCHAR(255) DEFAULT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uniq_session_page (session_id, page),
+        INDEX idx_page_created_at (page, created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+}
+
+function recordWebsiteVisit(PDO $pdo, string $page = ''): void
+{
+    if (!$pdo instanceof PDO) {
+        return;
+    }
+
+    if (!function_exists('session_id') || session_id() === '') {
+        return;
+    }
+
+    $page = trim((string)$page);
+    if ($page === '') {
+        $page = trim((string)($_SERVER['REQUEST_URI'] ?? '/'));
+    }
+
+    $page = preg_replace('/\?.*$/', '', $page) ?: '/';
+    $sessionId = session_id();
+    $ipAddress = trim((string)($_SERVER['REMOTE_ADDR'] ?? ''));
+    $userAgent = trim((string)($_SERVER['HTTP_USER_AGENT'] ?? ''));
+
+    try {
+        $stmt = $pdo->prepare('SELECT id FROM website_visits WHERE session_id = :session_id AND page = :page LIMIT 1');
+        $stmt->execute([':session_id' => $sessionId, ':page' => $page]);
+        if ($stmt->fetch(PDO::FETCH_ASSOC)) {
+            return;
+        }
+
+        $stmt = $pdo->prepare('INSERT INTO website_visits (page, session_id, ip_address, user_agent, created_at) VALUES (:page, :session_id, :ip_address, :user_agent, NOW())');
+        $stmt->execute([
+            ':page' => $page,
+            ':session_id' => $sessionId,
+            ':ip_address' => $ipAddress,
+            ':user_agent' => $userAgent,
+        ]);
+    } catch (Throwable $e) {
+        error_log('Website visit counter insert failed: ' . $e->getMessage());
+    }
+}
+
+function getWebsiteVisitCount(PDO $pdo): int
+{
+    if (!$pdo instanceof PDO) {
+        return 0;
+    }
+
+    try {
+        $stmt = $pdo->query('SELECT COUNT(*) FROM website_visits');
+        return (int)$stmt->fetchColumn();
+    } catch (Throwable $e) {
+        error_log('Website visit counter read failed: ' . $e->getMessage());
+        return 0;
+    }
 }
 
 function getSiteSettings(?PDO $pdo): array

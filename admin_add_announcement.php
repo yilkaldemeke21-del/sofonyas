@@ -18,8 +18,7 @@ function e($value): string
 
 function ensureColumn(PDO $pdo, string $table, string $column, string $definition): void
 {
-    $stmt = $pdo->prepare("SHOW COLUMNS FROM `{$table}` LIKE :column");
-    $stmt->execute([':column' => $column]);
+    $stmt = $pdo->query("SHOW COLUMNS FROM `{$table}` LIKE '{$column}'");
     if ($stmt->fetch()) {
         return;
     }

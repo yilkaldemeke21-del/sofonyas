@@ -21,6 +21,26 @@ try {
     // ignore schema bootstrap issues
 }
 
+try {
+    ensureSiteAnnouncementsTable($pdo);
+} catch (Throwable $e) {
+    error_log('Site announcement schema bootstrap warning: ' . $e->getMessage());
+}
+
+try {
+    ensureWebsiteVisitCounterTable($pdo);
+    recordWebsiteVisit($pdo, basename($_SERVER['SCRIPT_NAME'] ?? 'sofonyas2.php'));
+} catch (Throwable $e) {
+    error_log('Website visit counter bootstrap warning: ' . $e->getMessage());
+}
+
+$announcementRows = [];
+try {
+    $announcementRows = getSiteAnnouncements($pdo, 8);
+} catch (Throwable $e) {
+    $announcementRows = [];
+}
+
 $siteSettings = getSiteSettings($pdo);
 $siteName = trim((string)($siteSettings['website_name'] ?? ''));
 if ($siteName === '') {
@@ -60,6 +80,29 @@ $callLink = 'tel:' . rawurlencode($phoneNumber !== '' ? $phoneNumber : '+2519276
 $lang = getCurrentLanguage();
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['set_lang'])) {
     $lang = setCurrentLanguage($_POST['set_lang']);
+}
+
+$studentCount = 500;
+$courseCount = 25;
+$instructorCount = 12;
+$visitCount = getWebsiteVisitCount($pdo);
+
+try {
+    $studentCount = (int)($pdo->query('SELECT COUNT(*) FROM students')->fetchColumn());
+    $courseCount = (int)($pdo->query('SELECT COUNT(*) FROM courses')->fetchColumn());
+    $instructorCount = (int)($pdo->query('SELECT COUNT(DISTINCT TRIM(instructor)) FROM courses WHERE instructor IS NOT NULL AND TRIM(instructor) <> ""')->fetchColumn());
+} catch (Throwable $e) {
+    error_log('Homepage dynamic metric query warning: ' . $e->getMessage());
+}
+
+if ($studentCount < 1) {
+    $studentCount = 500;
+}
+if ($courseCount < 1) {
+    $courseCount = 25;
+}
+if ($instructorCount < 1) {
+    $instructorCount = 12;
 }
 
 $chatMessages = [];
@@ -847,10 +890,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
     </div>
     <section class="announcement-ticker" aria-label="Latest announcements">
         <div class="announcement-track">
-            <span>•እንኳን ወደ ዲ/ን ሶፎንያስ ደመቀ ቤተ ገብርኤል ዌቭሣይት በደህና መጡ!•</span>
-            <span>ቤተ ገብርኤል በመቅደላ አምባ ዩኒቨርሲቲ በፈለገ ሰላም አዲስ አምባ ግቢ ጉባኤ የቤተሰብ እናት አባት አደረጃጀት ውስጥ አንዱና ተናፋቂው ቡድን ነው•</span>
-            <span>ይህ ድር ገፅ በእውነተኛ ባክኤንድ ገፆች ላይ የተመሰረተ ኢንተርአክቲቭ ፕላትፎርም ነው። ኮርስ መመዝገብ ዳሽቦርድ መመልከት•ፎርም መግባት እና ትምህርት ማየት በአንድ ቦታ ይሰራሉ።•</span>
-            <span>እንኳን ወደ ዲ/ን ሶፎንያስ ደመቀ ቤተ ገብርኤል ዌቭሣይት በደህና መጡ!•</span>
+            <?php if (!empty($announcementRows)): ?>
+                <?php foreach ($announcementRows as $announcement): ?>
+                    <?php $announcementText = trim((string)($announcement['title'] ?? '') . ' ' . (string)($announcement['description'] ?? '')); ?>
+                    <?php if ($announcementText !== ''): ?>
+                        <span>•<?php echo safe($announcementText); ?>•</span>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <span>•እንኳን ወደ ዲ/ን ሶፎንያስ ደመቀ ቤተ ገብርኤል ዌቭሣይት በደህና መጡ!•</span>
+                <span>ቤተ ገብርኤል በመቅደላ አምባ ዩኒቨርሲቲ በፈለገ ሰላም አዲስ አምባ ግቢ ጉባኤ የቤተሰብ እናት አባት አደረጃጀት ውስጥ አንዱና ተናፋቂው ቡድን ነው•</span>
+                <span>ይህ ድር ገፅ በእውነተኛ ባክኤንድ ገፆች ላይ የተመሰረተ ኢንተርአክቲቭ ፕላትፎርም ነው። ኮርስ መመዝገብ ዳሽቦርድ መመልከት•ፎርም መግባት እና ትምህርት ማየት በአንድ ቦታ ይሰራሉ።•</span>
+            <?php endif; ?>
         </div>
     </section>
 <section class="hero-intro">
@@ -965,9 +1016,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
     <section class="card reveal hero-stats-section" aria-label="LMS stats">
         <h2 data-am="የቤተ ገብርኤል አጠቃላይ ዕይታ" data-en="Professional LMS Features">Professional LMS Features</h2>
         <section class="stats-grid" aria-label="Detailed stats">
-            <article class="stat-card" data-target="500" data-suffix="+"><strong data-counter>0</strong><span>የተመዘገቡ ተማሪዎች</span><span class="stat-label">Growing Community</span></article>
-            <article class="stat-card" data-target="25" data-suffix=""><strong data-counter>0</strong><span>የተለያዩ ኮርሶች</span><span class="stat-label">Modern Learning</span></article>
-            <article class="stat-card" data-target="12" data-suffix=""><strong data-counter>0</strong><span>የተማሪ ዳሽቦርዶች</span><span class="stat-label">Smart Access</span></article>
+            <article class="stat-card" data-target="<?php echo (int)$studentCount; ?>" data-suffix="+"><strong data-counter>0</strong><span>የተመዘገቡ ተማሪዎች</span><span class="stat-label">Growing Community</span></article>
+            <article class="stat-card" data-target="<?php echo (int)$courseCount; ?>" data-suffix=""><strong data-counter>0</strong><span>የተለያዩ ኮርሶች</span><span class="stat-label">Modern Learning</span></article>
+            <article class="stat-card" data-target="<?php echo (int)$instructorCount; ?>" data-suffix=""><strong data-counter>0</strong><span>የመምህራን ብዛት</span><span class="stat-label">Expert Teachers</span></article>
+            <article class="stat-card" data-target="<?php echo (int)max(12, $visitCount); ?>" data-suffix=""><strong data-counter>0</strong><span>የድር ጎብኚዎች</span><span class="stat-label">Website Visitors</span></article>
             <article class="stat-card" data-target="100" data-suffix="%"><strong data-counter>0</strong><span>የእምነት እና የትምህርት ማዕከል</span><span class="stat-label">Trusted Experience</span></article>
         </section>
     </section>
@@ -1994,6 +2046,69 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
             enableNotificationsBtn.addEventListener('click', subscribeToPush);
         }
 
+        function isMobileDevice() {
+            return /Android|iPhone|iPad|iPod|Mobile|mobile|webOS|BlackBerry|Windows Phone/i.test(navigator.userAgent || '');
+        }
+
+        function playAnnouncementTone() {
+            try {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContextClass) return;
+                const ctx = new AudioContextClass();
+                const oscillator = ctx.createOscillator();
+                const gain = ctx.createGain();
+                const now = ctx.currentTime;
+                oscillator.type = 'triangle';
+                oscillator.frequency.setValueAtTime(880, now);
+                oscillator.frequency.setValueAtTime(1320, now + 0.055);
+                gain.gain.setValueAtTime(0.0001, now);
+                gain.gain.setValueAtTime(0.045, now + 0.005);
+                gain.gain.setValueAtTime(0.0001, now + 0.135);
+                oscillator.connect(gain).connect(ctx.destination);
+                oscillator.start(now);
+                oscillator.stop(now + 0.14);
+            } catch (err) {
+                // Ignore unsupported browsers and missing audio support.
+            }
+        }
+
+        function maybeShowAnnouncementDesktopNotification(message) {
+            if (!('Notification' in window)) {
+                return;
+            }
+            if (Notification.permission === 'granted' && message) {
+                try {
+                    new Notification('Sofoniyas Announcement', {
+                        body: message,
+                        icon: 'sofi fikr.jpg'
+                    });
+                } catch (err) {
+                    // Ignore notification creation issues.
+                }
+            }
+        }
+
+        function pushAnnouncementNotification(message) {
+            const mobile = isMobileDevice();
+            const announcement = (message || '').trim();
+            if (!announcement) return;
+            if (mobile && 'vibrate' in navigator) {
+                try {
+                    navigator.vibrate([35, 40, 70]);
+                } catch (err) {
+                    // Ignore vibration issues on unsupported browsers.
+                }
+            }
+            if (!mobile) {
+                playAnnouncementTone();
+            }
+            if (mobile) {
+                showToast(announcement, 'info', 4800);
+                return;
+            }
+            maybeShowAnnouncementDesktopNotification(announcement);
+        }
+
         function applyLanguage(lang) {
             document.documentElement.lang = lang;
             document.body.setAttribute('data-lang', lang);
@@ -2171,6 +2286,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
                     welcomeToast.classList.remove('show');
                 }, 3800);
             }, 250);
+        }
+
+        const announcementTrack = document.querySelector('.announcement-track');
+        const firstAnnouncementText = announcementTrack
+            ? announcementTrack.querySelector('span')?.textContent.trim()
+            : '';
+        if (firstAnnouncementText) {
+            pushAnnouncementNotification(firstAnnouncementText);
         }
 
         if (form) {
