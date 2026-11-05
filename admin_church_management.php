@@ -3,11 +3,7 @@ session_start();
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/management_schema.php';
 require_once __DIR__ . '/admin_management_i18n.php';
-
-if (!isset($_SESSION['admin_id'])) {
-    header('Location: admin_login.php');
-    exit;
-}
+requireRole(['admin'], $pdo);
 
 if (!($pdo instanceof PDO)) {
     http_response_code(503);
@@ -118,7 +114,7 @@ $activeMembers = (int)$pdo->query("SELECT COUNT(*) FROM church_members WHERE sta
 <body>
 <header class="topbar">
     <h1><?php echo safe(adminManagementText('church_title')); ?></h1>
-    <nav style="display:flex;gap:8px;flex-wrap:wrap"><a href="<?php echo safe($adminManagementSwitchUrl); ?>"><?php echo safe(adminManagementText('language_switch')); ?></a><a href="admin_church_members.php"><?php echo safe(adminManagementText('church_members_page')); ?></a><a href="admin_management_dashboard.php">← <?php echo safe(adminManagementText('back_dashboard')); ?></a></nav>
+    <nav style="display:flex;gap:8px;flex-wrap:wrap"><a href="<?php echo safe($adminManagementSwitchUrl); ?>"><?php echo safe(adminManagementText('language_switch')); ?></a><a href="admin_church_members.php"><?php echo safe(adminManagementText('church_members_page')); ?></a><a href="church_attendance_qr_checkin.php">Quick QR check-in</a><a href="admin_management_dashboard.php">← <?php echo safe(adminManagementText('back_dashboard')); ?></a></nav>
 </header>
 <main class="wrap">
     <?php if ($message !== ''): ?><div class="notice"><?php echo safe($message); ?></div><?php endif; ?>

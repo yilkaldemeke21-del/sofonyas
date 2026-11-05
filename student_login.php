@@ -21,7 +21,7 @@ $maxAttempts = 5;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $submittedToken = trim((string)($_POST['csrf_token'] ?? ''));
-        $csrfValid = $submittedToken === '' ? true : validateCsrfToken($submittedToken);
+        $csrfValid = validateCsrfToken($submittedToken);
         if (!$csrfValid) {
             $error = 'ደህንነት ተሰርዟል። እባክዎ ገጹን እንደገና ይጫኑ።';
             $_SESSION['csrf_token'] = bin2hex(random_bytes(32));

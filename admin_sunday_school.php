@@ -17,6 +17,9 @@ $messageKey = [
     'staff' => 'ministry_saved_staff',
     'program' => 'ministry_saved_program',
     'status' => 'ministry_status_updated',
+    'subject' => 'sunday_subject_saved',
+    'year' => 'sunday_year_saved',
+    'semester' => 'sunday_semester_saved',
 ][(string)($_GET['saved'] ?? '')] ?? '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -84,6 +87,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         exit;
                     }
                 }
+            } elseif ($action === 'add_subject') {
+                $subjectName = trim((string)($_POST['subject_name'] ?? ''));
+                $subjectCode = trim((string)($_POST['subject_code'] ?? ''));
+                $description = trim((string)($_POST['subject_description'] ?? ''));
+                if ($subjectName === '') {
+                    $error = adminManagementText('ministry_invalid_program');
+                } else {
+                    $stmt = $pdo->prepare('INSERT INTO school_subjects (subject_name, subject_code, description) VALUES (:subject_name, :subject_code, :description)');
+                    $stmt->execute([
+                        ':subject_name' => $subjectName,
+                        ':subject_code' => $subjectCode !== '' ? $subjectCode : null,
+                        ':description' => $description !== '' ? $description : null,
+                    ]);
+                    header('Location: admin_sunday_school.php?lang=' . urlencode($adminManagementLanguage) . '&saved=subject');
+                    exit;
+                }
+            } elseif ($action === 'add_academic_year') {
+                $yearName = trim((string)($_POST['year_name'] ?? ''));
+                $startDate = trim((string)($_POST['start_date'] ?? ''));
+                $endDate = trim((string)($_POST['end_date'] ?? ''));
+                $validStart = $startDate === '' || preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate) === 1;
+                $validEnd = $endDate === '' || preg_match('/^\d{4}-\d{2}-\d{2}$/', $endDate) === 1;
+                if ($yearName === '' || !$validStart || !$validEnd) {
+                    $error = adminManagementText('sunday_invalid_entry');
+                } else {
+                    $stmt = $pdo->prepare('INSERT INTO school_academic_years (year_name, start_date, end_date) VALUES (:year_name, :start_date, :end_date)');
+                    $stmt->execute([
+                        ':year_name' => $yearName,
+                        ':start_date' => $startDate !== '' ? $startDate : null,
+                        ':end_date' => $endDate !== '' ? $endDate : null,
+                    ]);
+                    header('Location: admin_sunday_school.php?lang=' . urlencode($adminManagementLanguage) . '&saved=year');
+                    exit;
+                }
+            } elseif ($action === 'add_semester') {
+                $yearId = (int)($_POST['academic_year_id'] ?? 0);
+                $semesterName = trim((string)($_POST['semester_name'] ?? ''));
+                $startDate = trim((string)($_POST['semester_start_date'] ?? ''));
+                $endDate = trim((string)($_POST['semester_end_date'] ?? ''));
+                if ($yearId < 1 || $semesterName === '') {
+                    $error = adminManagementText('sunday_invalid_entry');
+                } else {
+                    $stmt = $pdo->prepare('INSERT INTO school_semesters (academic_year_id, semester_name, start_date, end_date) VALUES (:academic_year_id, :semester_name, :start_date, :end_date)');
+                    $stmt->execute([
+                        ':academic_year_id' => $yearId,
+                        ':semester_name' => $semesterName,
+                        ':start_date' => $startDate !== '' ? $startDate : null,
+                        ':end_date' => $endDate !== '' ? $endDate : null,
+                    ]);
+                    header('Location: admin_sunday_school.php?lang=' . urlencode($adminManagementLanguage) . '&saved=semester');
+                    exit;
+                }
             } elseif ($action === 'set_staff_status') {
                 $id = (int)($_POST['id'] ?? 0);
                 $status = (string)($_POST['status'] ?? '');
@@ -114,6 +169,9 @@ $staffCounts = $pdo->query("SELECT role, COUNT(*) AS total FROM church_ministry_
 $programCounts = $pdo->query("SELECT COUNT(*) FROM church_education_programs WHERE status = 'active'")->fetchColumn();
 $serviceCounts = $pdo->query("SELECT program_type, COUNT(*) AS total FROM church_education_programs WHERE status = 'active' GROUP BY program_type")->fetchAll(PDO::FETCH_KEY_PAIR);
 $staff = $pdo->query('SELECT id, full_name, role, phone, email, specialization, status FROM church_ministry_staff ORDER BY status ASC, role ASC, full_name ASC LIMIT 100')->fetchAll(PDO::FETCH_ASSOC);
+$subjects = $pdo->query('SELECT * FROM school_subjects ORDER BY status ASC, subject_name ASC')->fetchAll(PDO::FETCH_ASSOC);
+$academicYears = $pdo->query('SELECT * FROM school_academic_years ORDER BY start_date DESC, year_name DESC')->fetchAll(PDO::FETCH_ASSOC);
+$semesters = $pdo->query('SELECT s.*, y.year_name FROM school_semesters s JOIN school_academic_years y ON y.id = s.academic_year_id ORDER BY y.start_date DESC, s.start_date DESC, s.semester_name ASC')->fetchAll(PDO::FETCH_ASSOC);
 $activeLeaders = $pdo->query("SELECT id, full_name, role FROM church_ministry_staff WHERE status = 'active' AND role IN ('teacher', 'singer') ORDER BY full_name ASC")->fetchAll(PDO::FETCH_ASSOC);
 $programs = $pdo->query('SELECT p.*, s.full_name AS leader_name, s.role AS leader_role FROM church_education_programs p LEFT JOIN church_ministry_staff s ON s.id = p.leader_id ORDER BY p.status ASC, p.program_type ASC, p.program_name ASC LIMIT 100')->fetchAll(PDO::FETCH_ASSOC);
 $programTypeKeys = [
@@ -150,7 +208,7 @@ $serviceTypeKeys = [
 <body>
 <header class="topbar">
     <div class="brand"><h1><?php echo safe(adminManagementText('ministry_title')); ?></h1><p><?php echo safe(adminManagementText('ministry_intro')); ?></p></div>
-    <nav class="nav"><a href="<?php echo safe($adminManagementSwitchUrl); ?>"><?php echo safe(adminManagementText('language_switch')); ?></a><a href="admin_sunday_school_classes.php"><?php echo safe(adminManagementText('sunday_dashboard')); ?></a><a href="admin_management_dashboard.php">← <?php echo safe(adminManagementText('back_dashboard')); ?></a></nav>
+    <nav class="nav"><a href="<?php echo safe($adminManagementSwitchUrl); ?>"><?php echo safe(adminManagementText('language_switch')); ?></a><a href="admin_sunday_school_classes.php"><?php echo safe(adminManagementText('sunday_dashboard')); ?></a><a href="sunday_school_parent_portal.php"><?php echo safe(adminManagementText('sunday_parent_portal')); ?></a><a href="admin_management_dashboard.php">← <?php echo safe(adminManagementText('back_dashboard')); ?></a></nav>
 </header>
 <main class="wrap">
     <?php if ($messageKey !== ''): ?><div class="notice"><?php echo safe(adminManagementText($messageKey)); ?></div><?php endif; ?>
@@ -169,6 +227,51 @@ $serviceTypeKeys = [
             <div class="stat"><span><?php echo safe(adminManagementText($translationKey)); ?></span><strong><?php echo number_format((int)($serviceCounts[$serviceType] ?? 0)); ?></strong></div>
         <?php endforeach; ?>
     </section>
+    <div class="columns">
+        <section class="section">
+            <h3><?php echo safe(adminManagementText('sunday_academic_years')); ?></h3>
+            <form method="post">
+                <input type="hidden" name="csrf_token" value="<?php echo safe($csrf); ?>">
+                <input type="hidden" name="action" value="add_academic_year">
+                <div class="form-grid">
+                    <div class="field"><label for="year_name"><?php echo safe(adminManagementText('sunday_academic_year')); ?> *</label><input id="year_name" name="year_name" maxlength="60" required></div>
+                    <div class="field"><label for="start_date"><?php echo safe(adminManagementText('sunday_start_date')); ?></label><input id="start_date" type="date" name="start_date"></div>
+                    <div class="field"><label for="end_date"><?php echo safe(adminManagementText('sunday_end_date')); ?></label><input id="end_date" type="date" name="end_date"></div>
+                </div>
+                <button class="submit" type="submit"><?php echo safe(adminManagementText('ministry_save_program')); ?></button>
+            </form>
+            <?php if ($academicYears): ?><div class="table-wrap" style="margin-top:12px"><table><thead><tr><th><?php echo safe(adminManagementText('sunday_academic_year')); ?></th><th><?php echo safe(adminManagementText('sunday_start_date')); ?></th><th><?php echo safe(adminManagementText('sunday_end_date')); ?></th></tr></thead><tbody><?php foreach ($academicYears as $year): ?><tr><td><?php echo safe($year['year_name']); ?></td><td><?php echo safe($year['start_date'] ?? ''); ?></td><td><?php echo safe($year['end_date'] ?? ''); ?></td></tr><?php endforeach; ?></tbody></table></div><?php endif; ?>
+        </section>
+        <section class="section">
+            <h3><?php echo safe(adminManagementText('sunday_semesters')); ?></h3>
+            <form method="post">
+                <input type="hidden" name="csrf_token" value="<?php echo safe($csrf); ?>">
+                <input type="hidden" name="action" value="add_semester">
+                <div class="form-grid">
+                    <div class="field"><label for="academic_year_id"><?php echo safe(adminManagementText('sunday_academic_year')); ?> *</label><select id="academic_year_id" name="academic_year_id" required><option value="0"><?php echo safe(adminManagementText('ministry_no_leader')); ?></option><?php foreach ($academicYears as $year): ?><option value="<?php echo (int)$year['id']; ?>"><?php echo safe($year['year_name']); ?></option><?php endforeach; ?></select></div>
+                    <div class="field"><label for="semester_name"><?php echo safe(adminManagementText('sunday_semester')); ?> *</label><input id="semester_name" name="semester_name" maxlength="80" required></div>
+                    <div class="field"><label for="semester_start_date"><?php echo safe(adminManagementText('sunday_start_date')); ?></label><input id="semester_start_date" type="date" name="semester_start_date"></div>
+                    <div class="field"><label for="semester_end_date"><?php echo safe(adminManagementText('sunday_end_date')); ?></label><input id="semester_end_date" type="date" name="semester_end_date"></div>
+                </div>
+                <button class="submit" type="submit"><?php echo safe(adminManagementText('ministry_save_program')); ?></button>
+            </form>
+            <?php if ($semesters): ?><div class="table-wrap" style="margin-top:12px"><table><thead><tr><th><?php echo safe(adminManagementText('sunday_semester')); ?></th><th><?php echo safe(adminManagementText('sunday_academic_year')); ?></th><th><?php echo safe(adminManagementText('sunday_start_date')); ?></th><th><?php echo safe(adminManagementText('sunday_end_date')); ?></th></tr></thead><tbody><?php foreach ($semesters as $semester): ?><tr><td><?php echo safe($semester['semester_name']); ?></td><td><?php echo safe($semester['year_name']); ?></td><td><?php echo safe($semester['start_date'] ?? ''); ?></td><td><?php echo safe($semester['end_date'] ?? ''); ?></td></tr><?php endforeach; ?></tbody></table></div><?php endif; ?>
+        </section>
+        <section class="section">
+            <h3><?php echo safe(adminManagementText('sunday_subjects')); ?></h3>
+            <form method="post">
+                <input type="hidden" name="csrf_token" value="<?php echo safe($csrf); ?>">
+                <input type="hidden" name="action" value="add_subject">
+                <div class="form-grid">
+                    <div class="field"><label for="subject_name"><?php echo safe(adminManagementText('sunday_subject_name')); ?> *</label><input id="subject_name" name="subject_name" maxlength="120" required></div>
+                    <div class="field"><label for="subject_code"><?php echo safe(adminManagementText('sunday_subject_code')); ?></label><input id="subject_code" name="subject_code" maxlength="30"></div>
+                    <div class="field full"><label for="subject_description"><?php echo safe(adminManagementText('ministry_description')); ?></label><textarea id="subject_description" name="subject_description" maxlength="500"></textarea></div>
+                </div>
+                <button class="submit" type="submit"><?php echo safe(adminManagementText('ministry_save_program')); ?></button>
+            </form>
+            <?php if ($subjects): ?><div class="table-wrap" style="margin-top:12px"><table><thead><tr><th><?php echo safe(adminManagementText('sunday_subject_name')); ?></th><th><?php echo safe(adminManagementText('sunday_subject_code')); ?></th><th><?php echo safe(adminManagementText('ministry_description')); ?></th></tr></thead><tbody><?php foreach ($subjects as $subject): ?><tr><td><?php echo safe($subject['subject_name']); ?></td><td><?php echo safe($subject['subject_code'] ?? ''); ?></td><td><?php echo safe($subject['description'] ?? ''); ?></td></tr><?php endforeach; ?></tbody></table></div><?php endif; ?>
+        </section>
+    </div>
     <div class="columns">
         <section class="section">
             <h3><?php echo safe(adminManagementText('ministry_add_staff')); ?></h3>

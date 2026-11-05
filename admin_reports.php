@@ -1,8 +1,10 @@
 <?php
 session_start();
 require_once __DIR__ . '/db.php';
+requireRole(['admin'], $pdo);
 
-$isAdmin = !empty($_SESSION['admin_id']);
+$isAdmin = true;
+$csrfToken = csrfToken();
 $type = $_GET['type'] ?? 'students';
 $printMode = !empty($_GET['print']);
 
@@ -43,7 +45,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['contact_id'], $_POST[
     $reply = trim((string)$_POST['admin_reply']);
     $adminName = trim((string)($_SESSION['admin_name'] ?? $_SESSION['admin_username'] ?? 'Admin'));
 
-    if ($contactId > 0 && $reply !== '') {
+    if (!validateCsrfToken((string)($_POST['csrf_token'] ?? ''))) {
+        http_response_code(400);
+        $error = 'Security token failed. Refresh the page and try again.';
+    } elseif ($contactId > 0 && $reply !== '') {
         $stmt = $pdo->prepare('UPDATE contact_messages SET admin_reply = :admin_reply, replied_at = NOW(), replied_by = :replied_by, status = :status WHERE id = :id');
         $stmt->execute([
             ':admin_reply' => $reply,
@@ -184,6 +189,7 @@ switch ($type) {
                         <?php if ($type === 'contact_messages'): ?>
                             <td>
                                 <form method="post" style="display:flex; flex-direction:column; gap:6px; min-width:260px;">
+                                    <input type="hidden" name="csrf_token" value="<?php echo safe($csrfToken); ?>">
                                     <input type="hidden" name="contact_id" value="<?php echo (int)($row['id'] ?? 0); ?>">
                                     <textarea name="admin_reply" rows="3" placeholder="Type response here..." style="padding:8px;border:1px solid #cbd5e1;border-radius:6px;"><?php echo safe($row['admin_reply'] ?? ''); ?></textarea>
                                     <button type="submit" style="width:auto;">Save Reply</button>

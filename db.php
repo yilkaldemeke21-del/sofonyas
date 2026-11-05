@@ -63,7 +63,6 @@ $pass = getenv('DB_PASS');
 
 $hostHeader = $_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? '');
 $hostHeader = is_string($hostHeader) ? preg_replace('/:.*$/', '', trim($hostHeader)) : '';
-$useHostedDefaults = is_string($hostHeader) && preg_match('/(infinityfreeapp\.com|epizy\.com)$/i', $hostHeader) === 1;
 $isLocalRequest = $hostHeader === '' || in_array(strtolower($hostHeader), ['localhost', '127.0.0.1', '::1'], true);
 
 if ($isLocalRequest) {
@@ -71,16 +70,8 @@ if ($isLocalRequest) {
     $db = 'sofonyas_db';
     $user = 'root';
     $pass = '';
-} elseif (($host === false || trim((string)$host) === '' || strtolower(trim((string)$host)) === 'localhost' || strtolower(trim((string)$host)) === '127.0.0.1') && $useHostedDefaults) {
-    $host = 'sql311.infinityfree.com';
-    $db = $db ?: 'if0_42532820_sofonyas_db';
-    $user = $user ?: 'if0_42532820';
-    $pass = $pass ?: 'sofonyas2127';
-} elseif ($host === false || trim((string)$host) === '' || strtolower(trim((string)$host)) === 'localhost') {
-    $host = '127.0.0.1';
-    $db = $db ?: 'sofonyas_db';
-    $user = $user ?: 'root';
-    $pass = $pass ?: '';
+} elseif ($host === false || trim((string)$host) === '' || in_array(strtolower(trim((string)$host)), ['localhost', '127.0.0.1', '::1'], true)) {
+    $host = '';
 }
 
 $port = getenv('DB_PORT') ?: '3306';
@@ -98,14 +89,13 @@ $options = [
 $pdo = null;
 $lastError = null;
 
-$hosts = array_values(array_unique(array_filter([
-    $host,
-    '127.0.0.1',
-    '::1',
-    'localhost',
-], static function ($value): bool {
-    return $value !== null && $value !== '';
-})));
+$hasRemoteDatabaseConfig = $host !== false && trim((string)$host) !== ''
+    && $db !== false && trim((string)$db) !== ''
+    && $user !== false && trim((string)$user) !== ''
+    && $pass !== false && (string)$pass !== '';
+$hosts = $isLocalRequest
+    ? array_values(array_unique(array_filter([$host, '127.0.0.1', '::1', 'localhost'])))
+    : ($hasRemoteDatabaseConfig ? array_values(array_unique(array_filter([$host]))) : []);
 
 $socketUsed = false;
 if ($socket !== '' && (is_file($socket) || strpos($socket, 'mysql.sock') !== false)) {
@@ -121,16 +111,12 @@ if ($socket !== '' && (is_file($socket) || strpos($socket, 'mysql.sock') !== fal
 if (!$pdo) {
     $databaseCandidates = array_values(array_unique(array_filter([
         $db,
-        'if0_42532820_sofonyas_db',
-        'sofonyas_db',
     ], static function ($value): bool {
         return $value !== null && $value !== '';
     })));
 
     $userCandidates = array_values(array_unique(array_filter([
         $user,
-        'if0_42532820',
-        'root',
     ], static function ($value): bool {
         return $value !== null && $value !== '';
     })));
@@ -159,7 +145,7 @@ $dbConnectionError = '';
 if (!$pdo) {
     $dbConnectionError = 'DB connection failed. Please start the MySQL service on port 3306 and confirm the database credentials.';
     if ($lastError instanceof PDOException) {
-        $dbConnectionError .= ' Details: ' . $lastError->getMessage();
+        error_log('Database connection failed: ' . $lastError->getMessage());
     }
     error_log($dbConnectionError);
 }
@@ -238,29 +224,23 @@ if (!function_exists('ensureCourseColumns')) {
     }
 }
 
-if ($pdo instanceof PDO) {
-    try {
-        ensureDemoStudentAccount($pdo);
-        ensureCourseColumns($pdo);
-        ensureCertificateVerificationColumns($pdo);
-        ensureUtf8mb4CourseSchema($pdo);
-        ensureUtf8mb4TextColumns($pdo, 'courses', ['description', 'short_description', 'tutorial_text', 'assignment', 'quiz', 'certificate_requirements']);
-        ensureBlogPoetrySchema($pdo);
-    } catch (Throwable $e) {
-        error_log('Course schema validation failed: ' . $e->getMessage());
-    }
-}
-
 if (!function_exists('buildAppBaseUrl')) {
     function buildAppBaseUrl(): string
     {
-        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-        $host = trim((string)($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? 'localhost'));
-        if ($host === '') {
-            $host = 'localhost';
-        }
+        return rtrim(buildAppUrl(), '/');
+    }
+}
 
-        return $scheme . '://' . $host;
+if (!function_exists('safe')) {
+    function safe($value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+        if (is_scalar($value)) {
+            return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
+        }
+        return '';
     }
 }
 
@@ -352,6 +332,19 @@ if (!function_exists('ensureCertificateVerificationColumns')) {
         } catch (PDOException $e) {
             error_log('Certificate verification backfill warning: ' . $e->getMessage());
         }
+    }
+}
+
+if ($pdo instanceof PDO) {
+    try {
+        ensureDemoStudentAccount($pdo);
+        ensureCourseColumns($pdo);
+        ensureCertificateVerificationColumns($pdo);
+        ensureUtf8mb4CourseSchema($pdo);
+        ensureUtf8mb4TextColumns($pdo, 'courses', ['description', 'short_description', 'tutorial_text', 'assignment', 'quiz', 'certificate_requirements']);
+        ensureBlogPoetrySchema($pdo);
+    } catch (Throwable $e) {
+        error_log('Course schema validation failed: ' . $e->getMessage());
     }
 }
 

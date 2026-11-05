@@ -29,9 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ':expires_at' => $expiresAt,
                 ]);
 
-                $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-                $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-                $resetUrl = $scheme . '://' . $host . '/reset_password.php?token=' . urlencode($token);
+                $resetUrl = buildAppUrl('reset_password.php?token=' . urlencode($token));
                 sendAppEmail(
                     $email,
                     'Reset your password',

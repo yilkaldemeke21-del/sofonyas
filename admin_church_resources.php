@@ -1,12 +1,8 @@
 <?php
 session_start();
-if (!isset($_SESSION['admin_id'])) {
-    header('Location: admin_login.php');
-    exit;
-}
-
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/admin_management_i18n.php';
+requireRole(['admin'], $pdo);
 
 if (!($pdo instanceof PDO)) {
     die(adminManagementText('db_unavailable'));

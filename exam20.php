@@ -147,9 +147,7 @@ function sendCertificateEmail(PDO $pdo, string $studentId, string $studentName, 
 
     populateCertificateVerificationMetadata($pdo, (int)$certificate['id'], $examType, date('Y-m-d H:i:s'));
 
-    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    $downloadUrl = $scheme . '://' . $host . '/admin_certificate.php?download=' . (int)$certificate['id'];
+    $downloadUrl = buildAppUrl('admin_certificate.php?download=' . (int)$certificate['id']);
 
     $message = '<p>Hello ' . safe($studentName) . ',</p>'
         . '<p>Congratulations! You completed the exam with a perfect score.</p>'

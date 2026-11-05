@@ -1,39 +1,15 @@
 <?php
+session_start();
 require_once __DIR__ . '/db.php';
-
-$paymentMethods = [
-    'telebirr' => 'Telebirr',
-    'cbe_birr' => 'CBE Birr',
-    'chapa' => 'Chapa',
-    'arifpay' => 'ArifPay',
-];
+requireRole(['student'], $pdo);
 
 $current = null;
-
 if (isset($_GET['id'])) {
-    $id = $_GET['id'];
-    $stmt = $pdo->prepare('SELECT * FROM registrations WHERE id = :id');
-    $stmt->execute([':id' => $id]);
-    $current = $stmt->fetch();
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $id = $_POST['id'] ?? '';
-    $paymentMethod = $_POST['payment_method'] ?? null;
-    if (!isset($paymentMethods[$paymentMethod])) {
-        $paymentMethod = null;
-    }
-
-    $stmt = $pdo->prepare('UPDATE registrations SET payment_status = :status, payment_method = :payment_method, paid_at = :paid_at WHERE id = :id');
+    $stmt = $pdo->prepare('SELECT * FROM registrations WHERE id = :id AND student_id = :student_id LIMIT 1');
     $stmt->execute([
-        ':status' => 'paid',
-        ':payment_method' => $paymentMethod,
-        ':paid_at' => date('Y-m-d H:i:s'),
-        ':id' => $id,
+        ':id' => trim((string)$_GET['id']),
+        ':student_id' => (string)$_SESSION['student_id'],
     ]);
-
-    $stmt = $pdo->prepare('SELECT * FROM registrations WHERE id = :id');
-    $stmt->execute([':id' => $id]);
     $current = $stmt->fetch();
 }
 ?>
@@ -41,7 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="am">
 <head>
     <meta charset="UTF-8">
-    <title>ክፍያ ገጽ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>የክፍያ ሁኔታ</title>
     <style>
         body { font-family: Arial, sans-serif; background: #f2f8ff; color: #1f2937; padding: 20px; }
         .card { max-width: 650px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 18px rgba(0,0,0,0.08); }
@@ -72,17 +49,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
 
         <?php if ($current['payment_status'] !== 'paid'): ?>
-            <form method="post" style="margin-top: 20px;">
-                <input type="hidden" name="id" value="<?php echo safe($current['id']); ?>">
-                <label for="payment_method" style="display:block; margin-bottom:10px; font-weight:700;">የክፍያ ዘዴ ይምረጡ</label>
-                <select id="payment_method" name="payment_method" required style="width:100%; padding:10px 12px; border:1px solid #cbd5e1; border-radius:8px; margin-bottom:16px;">
-                    <option value="">-- ይምረጡ --</option>
-                    <?php foreach ($paymentMethods as $key => $label): ?>
-                        <option value="<?php echo safe($key); ?>"><?php echo safe($label); ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <button type="submit" class="button">ክፍያ አረጋግጥ</button>
-            </form>
+            <p>Online payment is not connected yet. Payment status is updated only after an administrator verifies the payment.</p>
+            <a class="button" href="student_dashboard.php">ወደ ዳሽቦርድ ተመለስ</a>
         <?php else: ?>
             <p>ክፍያዎ ተከፍሏል። እናመሰግናለን።</p>
             <a class="button" href="dashboard.php">ዳሽቦርድ እይ</a>

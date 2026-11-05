@@ -71,8 +71,6 @@ if ($query !== '') {
 
 $statusLabel = trim((string)($certificate['certificate_status'] ?? 'Valid'));
 $isCertificateValid = strtolower($statusLabel) === 'valid';
-    }
-}
 ?>
 <!DOCTYPE html>
 <html lang="am">
@@ -139,7 +137,7 @@ $isCertificateValid = strtolower($statusLabel) === 'valid';
           <div class="mini"><h3>Verification IP</h3><div class="value"><?php echo safe($certificate['last_verified_ip'] ?? '-'); ?></div></div>
           <div class="mini"><h3>User Agent</h3><div class="value"><?php echo safe($certificate['last_verified_user_agent'] ?? '-'); ?></div></div>
         </div>
-        <?php if (!empty($certificate['qr_code_url'])):
+        <?php if (!empty($certificate['qr_code_url'])): ?>
           <div style="margin-top:16px; display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
             <div style="min-width:150px; text-align:center;">
               <img src="<?php echo htmlspecialchars($certificate['qr_code_url'], ENT_QUOTES, 'UTF-8'); ?>" alt="QR code" style="max-width:160px; border-radius:14px; border:1px solid #e5eefb; background:#fff; padding:10px;" />

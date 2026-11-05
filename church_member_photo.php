@@ -1,11 +1,7 @@
 <?php
 session_start();
-if (!isset($_SESSION['admin_id'])) {
-    http_response_code(403);
-    exit;
-}
-
 require_once __DIR__ . '/db.php';
+requireRole(['admin'], $pdo);
 if (!($pdo instanceof PDO)) {
     http_response_code(503);
     exit;

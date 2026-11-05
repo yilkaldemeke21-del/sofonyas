@@ -2,6 +2,7 @@
 session_start();
 require_once __DIR__ . '/db.php';
 requireRole(['admin'], $pdo);
+$csrf = csrfToken();
 
 // Get statistics
 $stmt = $pdo->query('SELECT COUNT(*) as total FROM registrations');
@@ -309,6 +310,10 @@ foreach ($backupFiles as $file) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!validateCsrfToken((string)($_POST['csrf_token'] ?? ''))) {
+        http_response_code(400);
+        exit('Security token failed. Refresh the page and try again.');
+    }
     $action = $_POST['action'] ?? '';
     if (in_array($action, ['backup_daily', 'backup_weekly', 'backup_manual'], true)) {
         if (!$pdo instanceof PDO) {
@@ -324,10 +329,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $backupFiles = loadBackupFiles($backupDir);
         }
     } elseif ($action === 'restore') {
-        if (empty($_FILES['backup_file']['tmp_name'])) {
+        $backupUpload = $_FILES['backup_file'] ?? null;
+        if (!$backupUpload || (int)($backupUpload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file((string)$backupUpload['tmp_name']) || (int)$backupUpload['size'] > 50 * 1024 * 1024 || strtolower(pathinfo((string)$backupUpload['name'], PATHINFO_EXTENSION)) !== 'sql') {
             $backupError = 'Please select a SQL backup file to restore.';
         } else {
-            $uploadedContent = file_get_contents($_FILES['backup_file']['tmp_name']);
+            $uploadedContent = file_get_contents($backupUpload['tmp_name']);
             if ($uploadedContent === false) {
                 $backupError = 'Unable to read the uploaded file.';
             } elseif (!$pdo instanceof PDO) {
@@ -895,6 +901,7 @@ $healthOverallStatus = empty($healthMissingTables) ? 'Healthy' : 'Needs review';
                     <h2 class="panel-title">Daily Backup</h2>
                     <p class="note">Create a daily recovery point. The dashboard also auto-generates a daily backup when due.</p>
                     <form method="post">
+                        <input type="hidden" name="csrf_token" value="<?php echo safe($csrf); ?>">
                         <input type="hidden" name="action" value="backup_daily">
                         <button type="submit" class="btn btn-primary btn-lg">Create Daily Backup</button>
                     </form>
@@ -910,6 +917,7 @@ $healthOverallStatus = empty($healthMissingTables) ? 'Healthy' : 'Needs review';
                     <h2 class="panel-title">Weekly Backup</h2>
                     <p class="note">Create a weekly database snapshot and keep a weekly recovery point.</p>
                     <form method="post">
+                        <input type="hidden" name="csrf_token" value="<?php echo safe($csrf); ?>">
                         <input type="hidden" name="action" value="backup_weekly">
                         <button type="submit" class="btn btn-primary btn-lg">Create Weekly Backup</button>
                     </form>
@@ -924,7 +932,8 @@ $healthOverallStatus = empty($healthMissingTables) ? 'Healthy' : 'Needs review';
                 <div class="card p-4">
                     <h2 class="panel-title">Restore Backup</h2>
                     <p class="note">Upload any valid SQL backup to restore the database.</p>
-                    <form method="post" enctype="multipart/form-data">
+                    <form method="post" enctype="multipart/form-data" onsubmit="return confirm('Restoring can replace current database data. Continue only with an approved backup.');">
+                        <input type="hidden" name="csrf_token" value="<?php echo safe($csrf); ?>">
                         <input type="hidden" name="action" value="restore">
                         <div class="mb-3">
                             <label class="form-label">Backup file</label>
@@ -956,7 +965,7 @@ $healthOverallStatus = empty($healthMissingTables) ? 'Healthy' : 'Needs review';
                                 <td><?php echo htmlspecialchars(ucfirst($file['type']), ENT_QUOTES, 'UTF-8'); ?></td>
                                 <td><?php echo number_format((int)$file['size'] / 1024, 2); ?> KB</td>
                                 <td><?php echo date('Y-m-d H:i', (int)$file['time']); ?></td>
-                                <td><a href="backups/<?php echo rawurlencode($file['name']); ?>" class="btn btn-sm btn-outline-secondary" target="_blank">Download</a></td>
+                                <td><a href="admin_db_backup.php?download=<?php echo rawurlencode($file['name']); ?>" class="btn btn-sm btn-outline-secondary">Download</a></td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>

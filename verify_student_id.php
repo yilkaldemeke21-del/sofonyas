@@ -15,7 +15,7 @@ if ($code !== '') {
 }
 
 if ($studentId !== '') {
-    $stmt = $pdo->prepare('SELECT * FROM students WHERE REPLACE(UPPER(student_id), "-", "") = :student_id LIMIT 1');
+    $stmt = $pdo->prepare('SELECT student_id FROM students WHERE REPLACE(UPPER(student_id), "-", "") = :student_id LIMIT 1');
     $stmt->execute([':student_id' => $studentId]);
     $foundStudent = $stmt->fetch();
     if (!$foundStudent) {
@@ -70,18 +70,7 @@ function formatStudentField(string $label, string $value): string
         <?php endif; ?>
 
         <?php if ($foundStudent): ?>
-            <div class="alert success">Verification succeeded. This student ID is valid.</div>
-            <div class="student-summary">
-                <?php echo formatStudentField('Name', $foundStudent['name'] ?? $foundStudent['student_name'] ?? 'ተማሪ'); ?>
-                <?php echo formatStudentField('Student ID', $foundStudent['student_id'] ?? ''); ?>
-                <?php echo formatStudentField('Email', $foundStudent['email'] ?? ''); ?>
-                <?php echo formatStudentField('Country', $foundStudent['country'] ?? ''); ?>
-                <?php echo formatStudentField('City', $foundStudent['city'] ?? ''); ?>
-                <div class="summary-box">
-                    <strong>Verification Code</strong>
-                    <span><?php echo htmlspecialchars($code !== '' ? $code : 'N/A', ENT_QUOTES, 'UTF-8'); ?></span>
-                </div>
-            </div>
+                    <div class="alert success">Verification succeeded. This student ID is valid. Personal account details are not shown.</div>
             <div class="qr-code">
                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=210x210&data=<?php echo urlencode(buildAppUrl('verify_student_id.php?code=' . urlencode($code))); ?>" alt="Verification QR code" />
                 <p style="margin-top:10px; color:#475569;">Scan this QR code to verify again later.</p>

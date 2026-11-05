@@ -1,28 +1,24 @@
 <?php
 session_start();
 require_once __DIR__ . '/db.php';
+requireRole(['admin'], $pdo);
+$csrf = csrfToken();
 
-if (!isset($_SESSION['admin_id'])) {
-    header('Location: admin_login.php');
-    exit;
-}
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!validateCsrfToken((string)($_POST['csrf_token'] ?? ''))) {
+        http_response_code(400);
+        exit('Security token failed. Refresh the page and try again.');
+    }
 
-if (isset($_GET['mark_paid'])) {
-    $id = $_GET['mark_paid'];
-    $stmt = $pdo->prepare('UPDATE registrations SET payment_status = :status, paid_at = :paid_at WHERE id = :id');
-    $stmt->execute([
-        ':status' => 'paid',
-        ':paid_at' => date('Y-m-d H:i:s'),
-        ':id' => $id,
-    ]);
-    header('Location: admin_registrations.php');
-    exit;
-}
-
-if (isset($_GET['delete'])) {
-    $id = $_GET['delete'];
-    $stmt = $pdo->prepare('DELETE FROM registrations WHERE id = :id');
-    $stmt->execute([':id' => $id]);
+    $id = trim((string)($_POST['id'] ?? ''));
+    $action = (string)($_POST['action'] ?? '');
+    if ($id !== '' && $action === 'mark_paid') {
+        $stmt = $pdo->prepare('UPDATE registrations SET payment_status = :status, paid_at = :paid_at WHERE id = :id');
+        $stmt->execute([':status' => 'paid', ':paid_at' => date('Y-m-d H:i:s'), ':id' => $id]);
+    } elseif ($id !== '' && $action === 'delete') {
+        $stmt = $pdo->prepare('DELETE FROM registrations WHERE id = :id');
+        $stmt->execute([':id' => $id]);
+    }
     header('Location: admin_registrations.php');
     exit;
 }
@@ -97,11 +93,21 @@ $registrations = $stmt->fetchAll();
                             <td><span class="badge <?php echo ($row['payment_status'] === 'paid' ? 'paid' : 'unpaid'); ?>"><?php echo safe($row['payment_status']); ?></span></td>
                             <td>
                                 <?php if ($row['payment_status'] !== 'paid'): ?>
-                                    <a class="button" href="admin_registrations.php?mark_paid=<?php echo urlencode($row['id']); ?>">ክፍያ አረጋግጥ</a>
+                                    <form method="post" style="display:inline">
+                                        <input type="hidden" name="csrf_token" value="<?php echo safe($csrf); ?>">
+                                        <input type="hidden" name="action" value="mark_paid">
+                                        <input type="hidden" name="id" value="<?php echo safe($row['id']); ?>">
+                                        <button class="button" type="submit">ክፍያ አረጋግጥ</button>
+                                    </form>
                                 <?php else: ?>
                                     ተከፍሏል
                                 <?php endif; ?>
-                                <a class="button danger" href="admin_registrations.php?delete=<?php echo urlencode($row['id']); ?>" onclick="return confirm('ይህን ምዝገባ ሰርዝ?');">ሰርዝ</a>
+                                <form method="post" style="display:inline" onsubmit="return confirm('ይህን ምዝገባ ሰርዝ?');">
+                                    <input type="hidden" name="csrf_token" value="<?php echo safe($csrf); ?>">
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="id" value="<?php echo safe($row['id']); ?>">
+                                    <button class="button danger" type="submit">ሰርዝ</button>
+                                </form>
                             </td>
                         </tr>
                     <?php endforeach; ?>

@@ -1,41 +1,14 @@
 <?php
 session_start();
 require_once __DIR__ . '/db.php';
-
-if (!isset($_SESSION['admin_id'])) {
-    header('Location: admin_login.php');
-    exit;
-}
-
-$candidatePasswords = [
-    '123456', '123456789', '12345', 'password', 'Password1', 'password123', 'Password123',
-    'student', 'student123', 'Student123', 'student2024', 'student2025', 'student2026',
-    'yilkal', 'Yilkal', 'Yilkal123', 'yilkal123', 'Yilkal2024', 'yilkal2025',
-    'demeke', 'Demeke', 'demeke123', 'Demeke123', 'yilkaldemeke', 'yilkaldemeke21',
-    'YilkalDemeke', 'YilkalDemeke21', '27', '027', 'sofonyas', 'Sofonyas', 'sofonyas123',
-    'Sofonyas123', 'admin', 'admin123', 'Admin123', 'welcome', 'Welcome1', 'qwerty',
-    'Qwerty123', 'abc123', 'Abc123', '1234', '0000', 'secret', 'test', 'test123', 'demo',
-    'demo123', 'school', 'school123'
-];
-
-function recoverKnownPassword($passwordHash, $candidates) {
-    foreach ($candidates as $candidate) {
-        if (password_verify($candidate, $passwordHash)) {
-            return $candidate;
-        }
-    }
-
-    return null;
-}
-
-$stmt = $pdo->query('SELECT id, name, email, student_id, password_hash, created_at FROM students ORDER BY created_at DESC');
-$students = $stmt->fetchAll();
+requireRole(['admin'], $pdo);
 ?>
 <!DOCTYPE html>
 <html lang="am">
 <head>
     <meta charset="UTF-8">
-    <title>የይለፍ ቃል ማስቀመጫ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password security</title>
     <style>
         body { font-family: Arial, sans-serif; background: #f5f7fa; color: #333; margin: 0; }
         .navbar { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
@@ -67,44 +40,9 @@ $students = $stmt->fetchAll();
 
 <div class="container">
     <div class="card">
-        <h1>የይለፍ ቃል ማስቀመጫ</h1>
-        <p class="note">ይህ ገጽ ለዳሞ እና ለሙከራ መለያዎች የታወቁትን የይለፍ ቃል ተጨማሪ ያሳያል። ሌሎች ሃሽዎች የተጠበቁ ስለሆኑ እውነተኛ ይለፍ ቃል አይታይም።</p>
-
-        <?php if (empty($students)): ?>
-            <p>ምንም የተማሪ መረጃ የለም።</p>
-        <?php else: ?>
-            <table>
-                <thead>
-                    <tr>
-                        <th>ስም</th>
-                        <th>ኢሜይል</th>
-                        <th>የተማሪ መለያ</th>
-                        <th>የተቀመጠ ሃሽ</th>
-                        <th>የታወቀ የይለፍ ቃል</th>
-                        <th>ተጨማሪ</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($students as $student): ?>
-                        <?php $recoveredPassword = recoverKnownPassword($student['password_hash'], $candidatePasswords); ?>
-                        <tr>
-                            <td><?php echo safe($student['name']); ?></td>
-                            <td><?php echo safe($student['email']); ?></td>
-                            <td><?php echo safe($student['student_id']); ?></td>
-                            <td class="hash"><?php echo safe($student['password_hash']); ?></td>
-                            <td>
-                                <?php if ($recoveredPassword): ?>
-                                    <span class="badge"><?php echo safe($recoveredPassword); ?></span>
-                                <?php else: ?>
-                                    <span class="badge muted">አልታወቀም</span>
-                                <?php endif; ?>
-                            </td>
-                            <td><?php echo date('M d, Y', strtotime($student['created_at'])); ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        <?php endif; ?>
+        <h1>Password recovery</h1>
+        <p class="note">For security, password hashes and candidate passwords are not displayed. Ask the account holder to use the password recovery flow.</p>
+        <a href="admin_dashboard.php">Return to admin dashboard</a>
     </div>
 </div>
 </body>

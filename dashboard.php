@@ -1,13 +1,7 @@
 <?php
+session_start();
 require_once __DIR__ . '/db.php';
-
-if (isset($_GET['mark_paid'])) {
-    $markPaidId = $_GET['mark_paid'];
-    $stmt = $pdo->prepare('UPDATE registrations SET payment_status = :status WHERE id = :id');
-    $stmt->execute([':status' => 'paid', ':id' => $markPaidId]);
-    header('Location: dashboard.php');
-    exit;
-}
+requireRole(['admin'], $pdo);
 
 $stmt = $pdo->query('SELECT * FROM registrations ORDER BY created_at DESC');
 $registrations = $stmt->fetchAll();
@@ -97,7 +91,7 @@ foreach ($registrations as $row) {
                         <td><span class="badge <?php echo ($row['payment_status'] === 'paid' ? 'paid' : 'unpaid'); ?>"><?php echo safe($row['payment_status']); ?></span></td>
                         <td>
                             <?php if ($row['payment_status'] !== 'paid'): ?>
-                                <a class="button" href="payment.php?id=<?php echo urlencode($row['id']); ?>">ክፍያ አረጋግጥ</a>
+                                <a class="button" href="admin_registrations.php">ክፍያን አስተዳድር</a>
                             <?php else: ?>
                                 ተከፍሏል
                             <?php endif; ?>

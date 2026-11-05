@@ -3,11 +3,8 @@ session_start();
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/management_schema.php';
 require_once __DIR__ . '/admin_management_i18n.php';
-
-if (!isset($_SESSION['admin_id'])) {
-    header('Location: admin_login.php');
-    exit;
-}
+require_once __DIR__ . '/mail_config.php';
+requireRole(['admin'], $pdo);
 if (!($pdo instanceof PDO)) {
     http_response_code(503);
     exit(adminManagementText('db_unavailable'));
@@ -21,6 +18,9 @@ $savedKey = [
     'updated' => 'member_saved_update',
     'family' => 'member_family_created',
     'status' => 'member_status_updated',
+    'review_sent' => 'member_portal_notification_sent',
+    'review_failed' => 'member_portal_notification_failed',
+    'review_saved' => 'member_portal_review_saved',
 ][(string)($_GET['saved'] ?? '')] ?? '';
 $privateUploadDirectory = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'private_uploads' . DIRECTORY_SEPARATOR . 'church_members';
 
@@ -30,7 +30,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         $action = (string)($_POST['action'] ?? '');
         try {
-            if ($action === 'add_family') {
+            if ($action === 'review_change_request') {
+                $requestId = (int)($_POST['request_id'] ?? 0);
+                $decision = (string)($_POST['decision'] ?? '');
+                $reviewNote = trim((string)($_POST['review_note'] ?? ''));
+                if ($requestId < 1 || !in_array($decision, ['approved', 'rejected'], true) || strlen($reviewNote) > 1000) {
+                    $errorKey = 'member_portal_validation';
+                } else {
+                    $pdo->beginTransaction();
+                    $requestStmt = $pdo->prepare("SELECT id, member_id, requested_by_student_id, requested_changes FROM church_member_change_requests WHERE id = :id AND status = 'pending' FOR UPDATE");
+                    $requestStmt->execute([':id' => $requestId]);
+                    $request = $requestStmt->fetch(PDO::FETCH_ASSOC);
+                    if (!$request) {
+                        $pdo->rollBack();
+                        $errorKey = 'member_portal_validation';
+                    } else {
+                        $changes = json_decode((string)$request['requested_changes'], true);
+                        $allowedChanges = [];
+                        $allowedFields = ['full_name' => 180, 'phone' => 40, 'address' => 255];
+                        if ($decision === 'approved' && is_array($changes)) {
+                            foreach ($allowedFields as $field => $maxLength) {
+                                if (array_key_exists($field, $changes) && is_string($changes[$field]) && strlen($changes[$field]) <= $maxLength && ($field !== 'full_name' || trim($changes[$field]) !== '')) {
+                                    $allowedChanges[$field] = $changes[$field];
+                                }
+                            }
+                        }
+
+                        if ($decision === 'approved' && !$allowedChanges) {
+                            $pdo->rollBack();
+                            $errorKey = 'member_portal_validation';
+                        } else {
+                            if ($decision === 'approved') {
+                                $assignments = [];
+                                $values = [':member_id' => (int)$request['member_id']];
+                                foreach ($allowedChanges as $field => $value) {
+                                    $assignments[] = $field . ' = :' . $field;
+                                    $values[':' . $field] = $value !== '' ? $value : null;
+                                }
+                                $updateMember = $pdo->prepare('UPDATE church_members SET ' . implode(', ', $assignments) . ' WHERE id = :member_id');
+                                $updateMember->execute($values);
+                            }
+                            $reviewStmt = $pdo->prepare('UPDATE church_member_change_requests SET status = :status, reviewed_by = :reviewed_by, reviewed_at = NOW(), review_note = :review_note WHERE id = :id AND status = \'pending\'');
+                            $reviewStmt->execute([
+                                ':status' => $decision,
+                                ':reviewed_by' => (int)$_SESSION['admin_id'],
+                                ':review_note' => $reviewNote !== '' ? $reviewNote : null,
+                                ':id' => $requestId,
+                            ]);
+                            $memberEmailStmt = $pdo->prepare('SELECT s.email, s.email_verified, m.full_name FROM students s JOIN church_members m ON m.id = :member_id WHERE s.student_id = :student_id LIMIT 1');
+                            $memberEmailStmt->execute([':member_id' => (int)$request['member_id'], ':student_id' => (string)$request['requested_by_student_id']]);
+                            $emailTarget = $memberEmailStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+                            $pdo->commit();
+                            $notificationStatus = 'not_sent';
+                            if ($emailTarget && (int)$emailTarget['email_verified'] === 1 && filter_var($emailTarget['email'], FILTER_VALIDATE_EMAIL)) {
+                                $mailBody = '<p>' . htmlspecialchars(adminManagementText($decision === 'approved' ? 'member_portal_approved' : 'member_portal_rejected'), ENT_QUOTES, 'UTF-8') . '</p>'
+                                    . '<p>' . htmlspecialchars((string)$emailTarget['full_name'], ENT_QUOTES, 'UTF-8') . ' · ' . htmlspecialchars((string)$reviewNote, ENT_QUOTES, 'UTF-8') . '</p>';
+                                $notificationStatus = sendAppEmail((string)$emailTarget['email'], adminManagementText('member_portal_request_status'), $mailBody) ? 'sent' : 'failed';
+                            }
+                            $noticeStmt = $pdo->prepare('UPDATE church_member_change_requests SET notification_status = :notification_status WHERE id = :id');
+                            $noticeStmt->execute([':notification_status' => $notificationStatus, ':id' => $requestId]);
+                            $savedValue = $notificationStatus === 'sent' ? 'review_sent' : ($notificationStatus === 'failed' ? 'review_failed' : 'review_saved');
+                            header('Location: admin_church_members.php?lang=' . urlencode($adminManagementLanguage) . '&saved=' . $savedValue);
+                            exit;
+                        }
+                    }
+                }
+            } elseif ($action === 'add_family') {
                 $familyName = trim((string)($_POST['family_name'] ?? ''));
                 $familyAddress = trim((string)($_POST['family_address'] ?? ''));
                 if ($familyName === '' || strlen($familyName) > 180) {
@@ -61,6 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $birthDateInput = (string)($_POST['birth_date'] ?? '');
                 $joinedOn = (string)($_POST['joined_on'] ?? '');
                 $familyId = (int)($_POST['family_id'] ?? 0);
+                $branchId = (int)($_POST['branch_id'] ?? 0);
                 $classGroup = trim((string)($_POST['class_group'] ?? ''));
                 $serviceGroup = trim((string)($_POST['service_group'] ?? ''));
                 $status = (string)($_POST['status'] ?? 'active');
@@ -79,6 +145,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $familyCheck->execute([':id' => $familyId]);
                         if (!$familyCheck->fetchColumn()) {
                             $familyId = 0;
+                        }
+                    }
+                    if ($branchId > 0) {
+                        $branchCheck = $pdo->prepare('SELECT id FROM church_branches WHERE id = :id LIMIT 1');
+                        $branchCheck->execute([':id' => $branchId]);
+                        if (!$branchCheck->fetchColumn()) {
+                            $errorKey = 'member_validation_error';
                         }
                     }
 
@@ -124,7 +197,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                         $pdo->beginTransaction();
                         if ($memberId > 0) {
-                            $stmt = $pdo->prepare('UPDATE church_members SET full_name = :full_name, phone = :phone, email = :email, gender = :gender, address = :address, birth_date = :birth_date, photo_path = :photo_path, family_id = :family_id, class_group = :class_group, service_group = :service_group, joined_on = :joined_on, status = :status WHERE id = :id');
+                            $stmt = $pdo->prepare('UPDATE church_members SET full_name = :full_name, phone = :phone, email = :email, gender = :gender, address = :address, birth_date = :birth_date, photo_path = :photo_path, family_id = :family_id, branch_id = :branch_id, class_group = :class_group, service_group = :service_group, joined_on = :joined_on, status = :status WHERE id = :id');
                             $stmt->execute([
                                 ':full_name' => $fullName,
                                 ':phone' => $phone !== '' ? $phone : null,
@@ -134,6 +207,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 ':birth_date' => $birthDate ? $birthDate->format('Y-m-d') : null,
                                 ':photo_path' => $photoPath,
                                 ':family_id' => $familyId > 0 ? $familyId : null,
+                                ':branch_id' => $branchId > 0 ? $branchId : null,
                                 ':class_group' => $classGroup !== '' ? $classGroup : null,
                                 ':service_group' => $serviceGroup !== '' ? $serviceGroup : null,
                                 ':joined_on' => $joinedOn,
@@ -142,9 +216,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             ]);
                             $successValue = 'updated';
                         } else {
-                            $stmt = $pdo->prepare('INSERT INTO church_members (member_number, full_name, phone, email, gender, address, birth_date, photo_path, family_id, class_group, service_group, joined_on, status) VALUES (:member_number, :full_name, :phone, :email, :gender, :address, :birth_date, :photo_path, :family_id, :class_group, :service_group, :joined_on, :status)');
+                            $newMemberToken = bin2hex(random_bytes(32));
+                            $stmt = $pdo->prepare('INSERT INTO church_members (member_number, verification_token, full_name, phone, email, gender, address, birth_date, photo_path, family_id, branch_id, class_group, service_group, joined_on, status) VALUES (:member_number, :verification_token, :full_name, :phone, :email, :gender, :address, :birth_date, :photo_path, :family_id, :branch_id, :class_group, :service_group, :joined_on, :status)');
                             $stmt->execute([
                                 ':member_number' => 'TMP-' . bin2hex(random_bytes(8)),
+                                ':verification_token' => $newMemberToken,
                                 ':full_name' => $fullName,
                                 ':phone' => $phone !== '' ? $phone : null,
                                 ':email' => $email !== '' ? $email : null,
@@ -153,6 +229,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 ':birth_date' => $birthDate ? $birthDate->format('Y-m-d') : null,
                                 ':photo_path' => $photoPath,
                                 ':family_id' => $familyId > 0 ? $familyId : null,
+                                ':branch_id' => $branchId > 0 ? $branchId : null,
                                 ':class_group' => $classGroup !== '' ? $classGroup : null,
                                 ':service_group' => $serviceGroup !== '' ? $serviceGroup : null,
                                 ':joined_on' => $joinedOn,
@@ -165,13 +242,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $successValue = 'member';
                         }
                         $pdo->commit();
+                        if ($successValue === 'member' && $email !== '') {
+                            try {
+                                $verifiedAccount = $pdo->prepare('SELECT email_verified FROM students WHERE email = :email LIMIT 1');
+                                $verifiedAccount->execute([':email' => $email]);
+                                if ((int)$verifiedAccount->fetchColumn() === 1) {
+                                    $verificationUrl = buildAppUrl('verify_church_member.php?token=' . urlencode($newMemberToken));
+                                    $mailBody = '<p>' . htmlspecialchars(adminManagementText('member_registered'), ENT_QUOTES, 'UTF-8') . '</p>'
+                                        . '<p>' . htmlspecialchars($fullName, ENT_QUOTES, 'UTF-8') . ' · ' . htmlspecialchars($memberNumber, ENT_QUOTES, 'UTF-8') . '</p>'
+                                        . '<p><a href="' . htmlspecialchars($verificationUrl, ENT_QUOTES, 'UTF-8') . '">' . htmlspecialchars(adminManagementText('member_portal_card'), ENT_QUOTES, 'UTF-8') . '</a></p>';
+                                    if (!sendAppEmail($email, adminManagementText('member_portal_card'), $mailBody)) {
+                                        error_log('Church member verification email could not be sent for member ' . $memberId);
+                                    }
+                                }
+                            } catch (Throwable $mailException) {
+                                error_log('Church member registration notification failed: ' . $mailException->getMessage());
+                            }
+                        }
                         if ($existing && !empty($existing['photo_path']) && $photoPath !== $existing['photo_path']) {
                             $oldPath = $privateUploadDirectory . DIRECTORY_SEPARATOR . basename($existing['photo_path']);
                             if (is_file($oldPath)) {
                                 unlink($oldPath);
                             }
                         }
-                        header('Location: admin_church_members.php?lang=' . urlencode($adminManagementLanguage) . '&saved=' . $successValue);
+                        $redirectUrl = 'admin_church_members.php?lang=' . urlencode($adminManagementLanguage) . '&saved=' . $successValue;
+                        if ($successValue === 'member') {
+                            $redirectUrl .= '&member_id=' . $memberId;
+                        }
+                        header('Location: ' . $redirectUrl);
                         exit;
                     }
                 }
@@ -206,8 +304,12 @@ $savedKeys = [
     'updated' => 'member_saved_update',
     'family' => 'member_family_created',
     'status' => 'member_status_updated',
+    'review_sent' => 'member_portal_notification_sent',
+    'review_failed' => 'member_portal_notification_failed',
+    'review_saved' => 'member_portal_review_saved',
 ];
 $savedKey = $savedKeys[(string)($_GET['saved'] ?? '')] ?? '';
+$savedMemberId = (string)($_GET['saved'] ?? '') === 'member' ? (int)($_GET['member_id'] ?? 0) : 0;
 $editingId = (int)($_GET['edit'] ?? 0);
 $editingMember = null;
 if ($editingId > 0) {
@@ -260,7 +362,7 @@ if ($ageFilter !== '') {
     $where[] = '(m.birth_date IS NOT NULL AND ' . $ageConditions[$ageFilter] . ')';
 }
 $whereSql = $where ? ' WHERE ' . implode(' AND ', $where) : '';
-$query = 'SELECT m.*, f.family_name, f.family_number, TIMESTAMPDIFF(YEAR, m.birth_date, CURDATE()) AS age FROM church_members m LEFT JOIN church_families f ON f.id = m.family_id' . $whereSql . ' ORDER BY m.full_name ASC';
+$query = 'SELECT m.*, f.family_name, f.family_number, b.branch_name, TIMESTAMPDIFF(YEAR, m.birth_date, CURDATE()) AS age FROM church_members m LEFT JOIN church_families f ON f.id = m.family_id LEFT JOIN church_branches b ON b.id = m.branch_id' . $whereSql . ' ORDER BY m.full_name ASC';
 $stmt = $pdo->prepare($query);
 $stmt->execute($params);
 $countStmt = $pdo->prepare('SELECT COUNT(*) FROM church_members m' . $whereSql);
@@ -293,10 +395,12 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
 $stmt->execute($params);
 $members = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $families = $pdo->query('SELECT id, family_number, family_name FROM church_families ORDER BY family_name ASC')->fetchAll(PDO::FETCH_ASSOC);
+$branches = $pdo->query('SELECT id, branch_code, branch_name, status FROM church_branches ORDER BY status ASC, branch_name ASC')->fetchAll(PDO::FETCH_ASSOC);
 $classGroups = $pdo->query("SELECT DISTINCT class_group FROM church_members WHERE class_group IS NOT NULL AND class_group <> '' ORDER BY class_group")->fetchAll(PDO::FETCH_COLUMN);
 $serviceGroups = $pdo->query("SELECT DISTINCT service_group FROM church_members WHERE service_group IS NOT NULL AND service_group <> '' ORDER BY service_group")->fetchAll(PDO::FETCH_COLUMN);
 $activeCount = (int)$pdo->query("SELECT COUNT(*) FROM church_members WHERE status = 'active'")->fetchColumn();
 $familyCount = (int)$pdo->query('SELECT COUNT(*) FROM church_families')->fetchColumn();
+$pendingChangeRequests = $pdo->query("SELECT r.id, r.member_id, r.requested_by_student_id, r.requested_changes, r.created_at, m.full_name, m.member_number, b.branch_name FROM church_member_change_requests r JOIN church_members m ON m.id = r.member_id LEFT JOIN church_branches b ON b.id = m.branch_id WHERE r.status = 'pending' ORDER BY r.created_at ASC LIMIT 100")->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="<?php echo safe($adminManagementLanguage); ?>">
@@ -310,9 +414,19 @@ $familyCount = (int)$pdo->query('SELECT COUNT(*) FROM church_families')->fetchCo
 <body>
 <header class="topbar"><div><h1><?php echo safe(adminManagementText('church_members_page')); ?></h1><p><?php echo safe(adminManagementText('church_members_intro')); ?></p></div><nav class="nav"><a href="<?php echo safe($adminManagementSwitchUrl); ?>"><?php echo safe(adminManagementText('language_switch')); ?></a><a href="admin_church_management.php"><?php echo safe(adminManagementText('attendance_report')); ?></a><a href="admin_management_dashboard.php">← <?php echo safe(adminManagementText('back_dashboard')); ?></a></nav></header>
 <main class="wrap">
-    <?php if ($savedKey !== ''): ?><div class="notice"><?php echo safe(adminManagementText($savedKey)); ?></div><?php endif; ?>
+    <?php if ($savedKey !== ''): ?><div class="notice"><?php echo safe(adminManagementText($savedKey)); ?><?php if ($savedMemberId > 0): ?> <a href="church_member_id_card.php?id=<?php echo $savedMemberId; ?>&lang=<?php echo safe($adminManagementLanguage); ?>"><?php echo safe(adminManagementText('member_portal_card')); ?></a><?php endif; ?></div><?php endif; ?>
     <?php if ($errorKey !== ''): ?><div class="notice error"><?php echo safe(adminManagementText($errorKey)); ?></div><?php endif; ?>
     <section class="stats"><div class="stat"><span><?php echo safe(adminManagementText('active_members')); ?></span><strong><?php echo number_format($activeCount); ?></strong></div><div class="stat"><span><?php echo safe(adminManagementText('member_family')); ?></span><strong><?php echo number_format($familyCount); ?></strong></div><div class="stat"><span><?php echo safe(adminManagementText('member_records_count')); ?></span><strong><?php echo number_format($matchingCount); ?></strong></div></section>
+    <section class="section" id="member-change-requests">
+        <h3><?php echo safe(adminManagementText('member_portal_admin_requests')); ?> · <?php echo count($pendingChangeRequests); ?></h3>
+        <?php if (!$pendingChangeRequests): ?><p class="muted"><?php echo safe(adminManagementText('member_portal_no_requests')); ?></p><?php else: ?>
+        <div class="table-wrap"><table><thead><tr><th><?php echo safe(adminManagementText('date')); ?></th><th><?php echo safe(adminManagementText('member')); ?></th><th><?php echo safe(adminManagementText('member_portal_request')); ?></th><th><?php echo safe(adminManagementText('action')); ?></th></tr></thead><tbody>
+        <?php foreach ($pendingChangeRequests as $request): $requestedChanges = json_decode((string)$request['requested_changes'], true) ?: []; $requestFieldLabels = ['full_name' => 'member_portal_field_name', 'phone' => 'member_portal_field_phone', 'address' => 'member_portal_field_address']; ?>
+            <tr><td><?php echo safe($request['created_at']); ?></td><td><?php echo safe($request['full_name'] . ' · ' . $request['member_number']); ?><?php if (!empty($request['branch_name'])): ?><br><small class="muted"><?php echo safe($request['branch_name']); ?></small><?php endif; ?></td><td><?php foreach ($requestedChanges as $field => $value): if (!isset($requestFieldLabels[$field])) continue; ?><div><strong><?php echo safe(adminManagementText($requestFieldLabels[$field])); ?>:</strong> <?php echo safe((string)$value); ?></div><?php endforeach; ?></td><td><form method="post"><input type="hidden" name="csrf_token" value="<?php echo safe($csrf); ?>"><input type="hidden" name="action" value="review_change_request"><input type="hidden" name="request_id" value="<?php echo (int)$request['id']; ?>"><input name="review_note" maxlength="1000" placeholder="<?php echo safe(adminManagementText('member_portal_review_note')); ?>"><div class="actions"><button class="submit" type="submit" name="decision" value="approved"><?php echo safe(adminManagementText('member_portal_approve')); ?></button><button class="submit" type="submit" name="decision" value="rejected"><?php echo safe(adminManagementText('member_portal_reject')); ?></button></div></form></td></tr>
+        <?php endforeach; ?>
+        </tbody></table></div>
+        <?php endif; ?>
+    </section>
     <div class="columns">
         <section class="section form-section">
             <h3><?php echo safe(adminManagementText($editingMember ? 'member_update' : 'member_new')); ?></h3>
@@ -327,6 +441,7 @@ $familyCount = (int)$pdo->query('SELECT COUNT(*) FROM church_families')->fetchCo
                     <div class="field"><label for="email"><?php echo safe(adminManagementText('email')); ?></label><input id="email" name="email" type="email" maxlength="190" value="<?php echo safe($editingMember['email'] ?? ''); ?>"></div>
                     <div class="field full"><label for="address"><?php echo safe(adminManagementText('address')); ?></label><input id="address" name="address" maxlength="255" value="<?php echo safe($editingMember['address'] ?? ''); ?>"></div>
                     <div class="field"><label for="family_id"><?php echo safe(adminManagementText('member_family')); ?></label><select id="family_id" name="family_id"><option value="0"><?php echo safe(adminManagementText('member_no_family')); ?></option><?php foreach ($families as $family): ?><option value="<?php echo (int)$family['id']; ?>" <?php echo (int)($editingMember['family_id'] ?? 0) === (int)$family['id'] ? 'selected' : ''; ?>><?php echo safe($family['family_number'] . ' · ' . $family['family_name']); ?></option><?php endforeach; ?></select></div>
+                    <div class="field"><label for="branch_id"><?php echo $adminManagementLanguage === 'en' ? 'Church branch' : 'የቤተክርስቲያን ቅርንጫፍ'; ?></label><select id="branch_id" name="branch_id"><option value="0"><?php echo $adminManagementLanguage === 'en' ? 'No branch' : 'ቅርንጫፍ አልተመረጠም'; ?></option><?php foreach ($branches as $branch): ?><option value="<?php echo (int)$branch['id']; ?>" <?php echo (int)($editingMember['branch_id'] ?? 0) === (int)$branch['id'] ? 'selected' : ''; ?>><?php echo safe($branch['branch_name']); ?><?php echo $branch['status'] === 'active' ? '' : ' · ' . ($adminManagementLanguage === 'en' ? 'Inactive' : 'ንቁ ያልሆነ'); ?></option><?php endforeach; ?></select></div>
                     <div class="field"><label for="status"><?php echo safe(adminManagementText('status')); ?></label><select id="status" name="status"><option value="active" <?php echo ($editingMember['status'] ?? 'active') === 'active' ? 'selected' : ''; ?>><?php echo safe(adminManagementText('member_active')); ?></option><option value="inactive" <?php echo ($editingMember['status'] ?? '') === 'inactive' ? 'selected' : ''; ?>><?php echo safe(adminManagementText('member_inactive')); ?></option></select></div>
                     <div class="field"><label for="class_group"><?php echo safe(adminManagementText('member_class_group')); ?></label><input id="class_group" name="class_group" maxlength="100" list="class-groups" value="<?php echo safe($editingMember['class_group'] ?? ''); ?>"><datalist id="class-groups"><?php foreach ($classGroups as $group): ?><option value="<?php echo safe($group); ?>"><?php endforeach; ?></datalist></div>
                     <div class="field"><label for="service_group"><?php echo safe(adminManagementText('member_service_group')); ?></label><input id="service_group" name="service_group" maxlength="100" list="service-groups" value="<?php echo safe($editingMember['service_group'] ?? ''); ?>"><datalist id="service-groups"><?php foreach ($serviceGroups as $group): ?><option value="<?php echo safe($group); ?>"><?php endforeach; ?></datalist></div>
@@ -347,7 +462,7 @@ $familyCount = (int)$pdo->query('SELECT COUNT(*) FROM church_families')->fetchCo
         <div class="intro"><div><h3><?php echo safe(adminManagementText('member_list_report')); ?></h3><div class="muted"><?php echo number_format($matchingCount); ?> <?php echo safe(adminManagementText('member_records_count')); ?></div></div><a class="button secondary no-print" href="<?php echo safe('admin_church_members.php?' . http_build_query(array_merge($_GET, ['export' => 'csv']))); ?>"><?php echo safe(adminManagementText('member_export_csv')); ?></a></div>
         <form method="get" class="filters no-print"><input type="hidden" name="lang" value="<?php echo safe($adminManagementLanguage); ?>"><input name="q" value="<?php echo safe($search); ?>" placeholder="<?php echo safe(adminManagementText('member_search')); ?>"><select name="class_group"><option value=""><?php echo safe(adminManagementText('member_class_group')); ?></option><?php foreach ($classGroups as $group): ?><option value="<?php echo safe($group); ?>" <?php echo $classFilter === $group ? 'selected' : ''; ?>><?php echo safe($group); ?></option><?php endforeach; ?></select><select name="service_group"><option value=""><?php echo safe(adminManagementText('member_service_group')); ?></option><?php foreach ($serviceGroups as $group): ?><option value="<?php echo safe($group); ?>" <?php echo $serviceFilter === $group ? 'selected' : ''; ?>><?php echo safe($group); ?></option><?php endforeach; ?></select><select name="age_group"><option value=""><?php echo safe(adminManagementText('member_all_ages')); ?></option><?php foreach (['child' => 'member_child', 'youth' => 'member_youth', 'adult' => 'member_adult', 'senior' => 'member_senior'] as $key => $label): ?><option value="<?php echo safe($key); ?>" <?php echo $ageFilter === $key ? 'selected' : ''; ?>><?php echo safe(adminManagementText($label)); ?></option><?php endforeach; ?></select><select name="status"><option value="all" <?php echo $statusFilter === 'all' ? 'selected' : ''; ?>><?php echo safe(adminManagementText('all')); ?></option><option value="active" <?php echo $statusFilter === 'active' ? 'selected' : ''; ?>><?php echo safe(adminManagementText('member_active')); ?></option><option value="inactive" <?php echo $statusFilter === 'inactive' ? 'selected' : ''; ?>><?php echo safe(adminManagementText('member_inactive')); ?></option></select><button class="submit" style="margin:0" type="submit"><?php echo safe(adminManagementText('member_search_button')); ?></button></form>
         <div class="table-wrap"><table><thead><tr><th><?php echo safe(adminManagementText('full_name')); ?></th><th><?php echo safe(adminManagementText('member_number')); ?></th><th><?php echo safe(adminManagementText('member_age')); ?></th><th><?php echo safe(adminManagementText('phone')); ?></th><th><?php echo safe(adminManagementText('member_family')); ?></th><th><?php echo safe(adminManagementText('member_class_group')); ?></th><th><?php echo safe(adminManagementText('member_service_group')); ?></th><th><?php echo safe(adminManagementText('status')); ?></th><th class="no-print"><?php echo safe(adminManagementText('action')); ?></th></tr></thead><tbody>
-        <?php if (!$members): ?><tr><td colspan="9" class="empty"><?php echo safe(adminManagementText('member_no_results')); ?></td></tr><?php else: foreach ($members as $member): ?><tr><td><div class="person"><?php if (!empty($member['photo_path'])): ?><img class="photo" src="church_member_photo.php?id=<?php echo (int)$member['id']; ?>" alt="<?php echo safe(adminManagementText('member_photo')); ?>"><?php else: ?><span class="avatar"><?php echo safe(mb_substr($member['full_name'], 0, 1)); ?></span><?php endif; ?><span><?php echo safe($member['full_name']); ?><br><small class="muted"><?php echo safe($member['email'] ?? ''); ?></small></span></div></td><td><?php echo safe($member['member_number']); ?></td><td><?php echo $member['age'] !== null ? (int)$member['age'] : safe(adminManagementText('member_age_unknown')); ?></td><td><?php echo safe($member['phone'] ?? ''); ?></td><td><?php echo safe($member['family_name'] ? $member['family_number'] . ' · ' . $member['family_name'] : ''); ?></td><td><?php echo safe($member['class_group'] ?? ''); ?></td><td><?php echo safe($member['service_group'] ?? ''); ?></td><td><?php echo safe(adminManagementText($member['status'] === 'active' ? 'member_active' : 'member_inactive')); ?></td><td class="no-print"><div class="actions"><a href="admin_church_members.php?lang=<?php echo safe($adminManagementLanguage); ?>&edit=<?php echo (int)$member['id']; ?>"><?php echo safe(adminManagementText('resource_edit_action')); ?></a><form method="post"><input type="hidden" name="csrf_token" value="<?php echo safe($csrf); ?>"><input type="hidden" name="action" value="set_status"><input type="hidden" name="id" value="<?php echo (int)$member['id']; ?>"><input type="hidden" name="status" value="<?php echo $member['status'] === 'active' ? 'inactive' : 'active'; ?>"><button type="submit"><?php echo safe(adminManagementText($member['status'] === 'active' ? 'set_inactive' : 'set_active')); ?></button></form></div></td></tr><?php endforeach; endif; ?>
+        <?php if (!$members): ?><tr><td colspan="9" class="empty"><?php echo safe(adminManagementText('member_no_results')); ?></td></tr><?php else: foreach ($members as $member): ?><tr><td><div class="person"><?php if (!empty($member['photo_path'])): ?><img class="photo" src="church_member_photo.php?id=<?php echo (int)$member['id']; ?>" alt="<?php echo safe(adminManagementText('member_photo')); ?>"><?php else: ?><span class="avatar"><?php echo safe(mb_substr($member['full_name'], 0, 1)); ?></span><?php endif; ?><span><?php echo safe($member['full_name']); ?><br><small class="muted"><?php echo safe($member['email'] ?? ''); ?></small></span></div></td><td><?php echo safe($member['member_number']); ?></td><td><?php echo $member['age'] !== null ? (int)$member['age'] : safe(adminManagementText('member_age_unknown')); ?></td><td><?php echo safe($member['phone'] ?? ''); ?></td><td><?php echo safe($member['family_name'] ? $member['family_number'] . ' · ' . $member['family_name'] : ''); ?></td><td><?php echo safe($member['class_group'] ?? ''); ?></td><td><?php echo safe($member['service_group'] ?? ''); ?></td><td><?php echo safe(adminManagementText($member['status'] === 'active' ? 'member_active' : 'member_inactive')); ?></td><td class="no-print"><div class="actions"><a href="church_member_id_card.php?id=<?php echo (int)$member['id']; ?>"><?php echo $adminManagementLanguage === 'en' ? 'ID card' : 'መታወቂያ'; ?></a><a href="admin_church_members.php?lang=<?php echo safe($adminManagementLanguage); ?>&edit=<?php echo (int)$member['id']; ?>"><?php echo safe(adminManagementText('resource_edit_action')); ?></a><form method="post"><input type="hidden" name="csrf_token" value="<?php echo safe($csrf); ?>"><input type="hidden" name="action" value="set_status"><input type="hidden" name="id" value="<?php echo (int)$member['id']; ?>"><input type="hidden" name="status" value="<?php echo $member['status'] === 'active' ? 'inactive' : 'active'; ?>"><button type="submit"><?php echo safe(adminManagementText($member['status'] === 'active' ? 'set_inactive' : 'set_active')); ?></button></form></div></td></tr><?php endforeach; endif; ?>
         </tbody></table></div>
     </section>
 </main>

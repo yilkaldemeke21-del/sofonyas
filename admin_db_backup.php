@@ -1,11 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/db.php';
-
-if (!isset($_SESSION['admin_id'])) {
-    header('Location: admin_login.php');
-    exit;
-}
+requireRole(['admin'], $pdo);
 
 $backupDir = __DIR__ . '/backups';
 if (!is_dir($backupDir)) {
@@ -14,6 +10,23 @@ if (!is_dir($backupDir)) {
 
 $message = '';
 $error = '';
+$csrf = csrfToken();
+
+if (isset($_GET['download'])) {
+    $fileName = basename((string)$_GET['download']);
+    $filePath = realpath($backupDir . DIRECTORY_SEPARATOR . $fileName);
+    $backupRoot = realpath($backupDir);
+    if ($backupRoot === false || $filePath === false || dirname($filePath) !== $backupRoot || !preg_match('/^[A-Za-z0-9_-]+_backup_(?:(?:daily|weekly)_)?[0-9]{8}_[0-9]{6}\.sql$/', $fileName)) {
+        http_response_code(404);
+        exit('Backup not found.');
+    }
+    header('Content-Type: application/sql');
+    header('Content-Disposition: attachment; filename="' . $fileName . '"');
+    header('Content-Length: ' . filesize($filePath));
+    header('X-Content-Type-Options: nosniff');
+    readfile($filePath);
+    exit;
+}
 
 function safePath(string $path): string {
     return str_replace(['..', '\\', '/'], '', $path);
@@ -132,6 +145,10 @@ function restoreBackup(PDO $pdo, string $sqlContent): array
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!validateCsrfToken((string)($_POST['csrf_token'] ?? ''))) {
+        http_response_code(400);
+        exit('Security token failed. Refresh the page and try again.');
+    }
     $action = $_POST['action'] ?? '';
     if ($action === 'backup') {
         if (!$pdo instanceof PDO) {
@@ -146,10 +163,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     } elseif ($action === 'restore') {
-        if (empty($_FILES['backup_file']['tmp_name'])) {
+        $backupUpload = $_FILES['backup_file'] ?? null;
+        if (!$backupUpload || (int)($backupUpload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || !is_uploaded_file((string)$backupUpload['tmp_name']) || (int)$backupUpload['size'] > 50 * 1024 * 1024 || strtolower(pathinfo((string)$backupUpload['name'], PATHINFO_EXTENSION)) !== 'sql') {
             $error = 'Please select a SQL backup file to restore.';
         } else {
-            $uploadedContent = file_get_contents($_FILES['backup_file']['tmp_name']);
+            $uploadedContent = file_get_contents($backupUpload['tmp_name']);
             if ($uploadedContent === false) {
                 $error = 'Unable to read the uploaded file.';
             } elseif (!$pdo instanceof PDO) {
@@ -255,6 +273,7 @@ function formatBytes(int $bytes): string
                 <h2 class="panel-title">Create New Backup</h2>
                 <p class="note">Click the button below to generate a fresh database backup file. The backup includes table schema and all current data.</p>
                 <form method="post">
+                    <input type="hidden" name="csrf_token" value="<?php echo safe($csrf); ?>">
                     <input type="hidden" name="action" value="backup">
                     <button type="submit" class="btn btn-primary btn-lg">Generate Backup</button>
                 </form>
@@ -265,7 +284,8 @@ function formatBytes(int $bytes): string
             <div class="card p-4">
                 <h2 class="panel-title">Restore From Backup</h2>
                 <p class="note">Upload a valid SQL file to restore the database. This action may overwrite existing data.</p>
-                <form method="post" enctype="multipart/form-data">
+                <form method="post" enctype="multipart/form-data" onsubmit="return confirm('Restoring can replace current database data. Continue only with an approved backup.');">
+                    <input type="hidden" name="csrf_token" value="<?php echo safe($csrf); ?>">
                     <input type="hidden" name="action" value="restore">
                     <div class="mb-3">
                         <label class="form-label">Backup file</label>
@@ -306,7 +326,7 @@ function formatBytes(int $bytes): string
                                 <td><?php echo safe($file['name']); ?></td>
                                 <td><?php echo safe(formatBytes((int)$file['size'])); ?></td>
                                 <td><?php echo date('Y-m-d H:i:s', (int)$file['time']); ?></td>
-                                <td><a href="backups/<?php echo rawurlencode($file['name']); ?>" class="btn btn-sm btn-outline-secondary" target="_blank">Download</a></td>
+                                <td><a href="admin_db_backup.php?download=<?php echo rawurlencode($file['name']); ?>" class="btn btn-sm btn-outline-secondary">Download</a></td>
                             </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>

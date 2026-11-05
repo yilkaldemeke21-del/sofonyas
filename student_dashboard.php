@@ -825,6 +825,7 @@ if (empty($notifications)) {
             <a href="tutorial.php">Courses</a>
             <a href="my_courses.php">My Courses</a>
             <a href="sunday_school_student.php"><?php echo safe(adminManagementText('sunday_student_portal')); ?></a>
+            <a href="church_member_portal.php"><?php echo safe(adminManagementText('member_portal_title')); ?></a>
             <a href="ai_personal_tutor.php">AI Tutor</a>
             <a href="smart_learning_path.php">Learning Path</a>
             <a href="live_class.php">Live Class</a>

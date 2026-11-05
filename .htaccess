@@ -1,0 +1,6 @@
+<FilesMatch "(?i)^(\.env(\..*)?|database\.sql|.*\.sql|service-account\.json|temp_.*\.php|tmp_.*\.php|.*_(output|response|cookies|logged_in).*\.txt)$">
+    Require all denied
+</FilesMatch>
+
+RewriteEngine On
+RewriteRule ^\.git(?:/|$) - [F,L]
