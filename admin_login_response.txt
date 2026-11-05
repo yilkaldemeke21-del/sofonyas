@@ -158,6 +158,14 @@
         .report-action.secondary:hover { background: #64748b; color: white; }
         .table-section { background: var(--surface); padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); color: var(--text); }
         .backup-panel .card { min-height: 240px; }
+        .health-center-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-top: 12px; }
+        .health-center-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .health-center-card.ok { border-left: 4px solid #16a34a; }
+        .health-center-card.warn { border-left: 4px solid #f59e0b; }
+        .health-center-card.bad { border-left: 4px solid #dc2626; }
+        .health-center-card .health-title { font-weight: 800; font-size: 13px; color: var(--text); margin-bottom: 8px; }
+        .health-center-card .health-value { font-size: 28px; font-weight: 800; color: var(--primary); line-height: 1.3; }
+        .health-center-card .health-meta { color: var(--muted); font-size: 11px; }
         .status-box { border-radius: 14px; padding: 14px 18px; margin-bottom: 18px; }
         .status-success { background: #ecfdf5; color: #166534; border: 1px solid #bbf7d0; }
         .status-error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
@@ -365,7 +373,36 @@
 
     <div class="report-section">
         <div class="report-header">
-            <h3>🌍 Student Location Map + Registration Heat Map</h3>
+            <h3>� System Health Center</h3>
+            <p style="margin: 0; color: var(--muted);">Database reachability, table availability, and project record health.</p>
+        </div>
+        <div class="health-center-grid">
+            <div class="health-center-card ok">
+                <div class="health-title">Database</div>
+                <div class="health-value">Online</div>
+                <div class="health-meta">sofonyas_db</div>
+            </div>
+            <div class="health-center-card ok">
+                <div class="health-title">Overall</div>
+                <div class="health-value">Healthy</div>
+                <div class="health-meta">7 monitored tables</div>
+            </div>
+            <div class="health-center-card ok">
+                <div class="health-title">Site Settings</div>
+                <div class="health-value">0</div>
+                <div class="health-meta">Stored settings</div>
+            </div>
+            <div class="health-center-card ok">
+                <div class="health-title">Announcements</div>
+                <div class="health-value">0</div>
+                <div class="health-meta">Public feed rows</div>
+            </div>
+        </div>
+            </div>
+
+    <div class="report-section">
+        <div class="report-header">
+            <h3>�🌍 Student Location Map + Registration Heat Map</h3>
             <p style="margin: 0; color: var(--muted);">View student location markers and registration density overlaid with a Leaflet heat map. This display is driven by enrolled student records and registration coordinates.</p>
         </div>
         <div class="card" style="padding: 16px;">

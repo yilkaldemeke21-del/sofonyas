@@ -367,6 +367,36 @@ $recent_email_notifications = $pdo->query('SELECT * FROM email_notifications ORD
 $recent_course_updates = $pdo->query('SELECT cu.*, c.course_name FROM course_updates cu JOIN courses c ON cu.course_id = c.id ORDER BY cu.created_at DESC LIMIT 5')->fetchAll();
 $recent_exam_reminders = $pdo->query('SELECT * FROM exam_reminders ORDER BY created_at DESC LIMIT 5')->fetchAll();
 $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_date DESC LIMIT 5')->fetchAll();
+
+$healthTables = ['admin_users', 'students', 'courses', 'registrations', 'site_settings', 'site_announcements', 'site_chat_messages'];
+$healthTableRows = [];
+$healthMissingTables = [];
+$healthDbReady = true;
+$databaseName = 'local';
+
+try {
+    $databaseName = (string)$pdo->query('SELECT DATABASE()')->fetchColumn();
+    foreach ($healthTables as $table) {
+        try {
+            $exists = $pdo->query("SELECT 1 FROM information_schema.tables WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{$table}' LIMIT 1")->fetchColumn();
+            if ($exists) {
+                $count = (int)$pdo->query("SELECT COUNT(*) FROM `{$table}`")->fetchColumn();
+                $healthTableRows[] = ['table' => $table, 'count' => $count, 'ok' => true];
+            } else {
+                $healthMissingTables[] = $table;
+                $healthDbReady = false;
+            }
+        } catch (Throwable $e) {
+            $healthMissingTables[] = $table;
+            $healthDbReady = false;
+        }
+    }
+} catch (Throwable $e) {
+    $healthDbReady = false;
+}
+
+$healthConnection = $healthDbReady ? 'Online' : 'Attention';
+$healthOverallStatus = empty($healthMissingTables) ? 'Healthy' : 'Needs review';
 ?>
 <!DOCTYPE html>
 <html lang="am">
@@ -528,6 +558,14 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
         .report-action.secondary:hover { background: #64748b; color: white; }
         .table-section { background: var(--surface); padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); color: var(--text); }
         .backup-panel .card { min-height: 240px; }
+        .health-center-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-top: 12px; }
+        .health-center-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .health-center-card.ok { border-left: 4px solid #16a34a; }
+        .health-center-card.warn { border-left: 4px solid #f59e0b; }
+        .health-center-card.bad { border-left: 4px solid #dc2626; }
+        .health-center-card .health-title { font-weight: 800; font-size: 13px; color: var(--text); margin-bottom: 8px; }
+        .health-center-card .health-value { font-size: 28px; font-weight: 800; color: var(--primary); line-height: 1.3; }
+        .health-center-card .health-meta { color: var(--muted); font-size: 11px; }
         .status-box { border-radius: 14px; padding: 14px 18px; margin-bottom: 18px; }
         .status-success { background: #ecfdf5; color: #166534; border: 1px solid #bbf7d0; }
         .status-error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
@@ -731,7 +769,41 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
 
     <div class="report-section">
         <div class="report-header">
-            <h3>🌍 Student Location Map + Registration Heat Map</h3>
+            <h3>� System Health Center</h3>
+            <p style="margin: 0; color: var(--muted);">Database reachability, table availability, and project record health.</p>
+        </div>
+        <div class="health-center-grid">
+            <div class="health-center-card <?php echo empty($healthMissingTables) ? 'ok' : 'warn'; ?>">
+                <div class="health-title">Database</div>
+                <div class="health-value"><?php echo htmlspecialchars($healthConnection, ENT_QUOTES, 'UTF-8'); ?></div>
+                <div class="health-meta"><?php echo htmlspecialchars($databaseName ?? 'local database', ENT_QUOTES, 'UTF-8'); ?></div>
+            </div>
+            <div class="health-center-card <?php echo empty($healthMissingTables) ? 'ok' : 'warn'; ?>">
+                <div class="health-title">Overall</div>
+                <div class="health-value"><?php echo htmlspecialchars($healthOverallStatus, ENT_QUOTES, 'UTF-8'); ?></div>
+                <div class="health-meta"><?php echo count($healthTableRows); ?> monitored tables</div>
+            </div>
+            <div class="health-center-card ok">
+                <div class="health-title">Site Settings</div>
+                <div class="health-value"><?php echo (int)$pdo->query('SELECT COUNT(*) FROM site_settings')->fetchColumn(); ?></div>
+                <div class="health-meta">Stored settings</div>
+            </div>
+            <div class="health-center-card ok">
+                <div class="health-title">Announcements</div>
+                <div class="health-value"><?php echo (int)$pdo->query('SELECT COUNT(*) FROM site_announcements')->fetchColumn(); ?></div>
+                <div class="health-meta">Public feed rows</div>
+            </div>
+        </div>
+        <?php if (!empty($healthMissingTables)): ?>
+            <div class="status-box status-error" style="margin-top:12px;">
+                Missing table checks: <?php echo htmlspecialchars(implode(', ', $healthMissingTables), ENT_QUOTES, 'UTF-8'); ?>
+            </div>
+        <?php endif; ?>
+    </div>
+
+    <div class="report-section">
+        <div class="report-header">
+            <h3>�🌍 Student Location Map + Registration Heat Map</h3>
             <p style="margin: 0; color: var(--muted);">View student location markers and registration density overlaid with a Leaflet heat map. This display is driven by enrolled student records and registration coordinates.</p>
         </div>
         <div class="card" style="padding: 16px;">
@@ -768,7 +840,14 @@ $recent_events = $pdo->query('SELECT * FROM event_announcements ORDER BY event_d
         <a href="admin_add_blog.php" class="action-btn featured blog">📝 ብሎግ ጨምር</a>
         <a href="content_manage.php?type=blog" class="action-btn featured">📚 ብሎግ/ፖዘት አስተዳድር</a>
         <a href="content_manage.php?type=poetry" class="action-btn featured">🎭 ግጥም/ፖዚት አስተዳድር</a>
-        <a href="admin_church_resources.php" class="action-btn featured announcement">✝️ Church Resources</a>
+        <a href="admin_church_resources.php" class="action-btn featured announcement">✝️ የቤተ ክርስቲያን መረጃና ግብዓቶች</a>
+        <a href="admin_church_members.php" class="action-btn featured announcement">የቤተክርስቲያን አባላት</a>
+        <a href="admin_spiritual_dashboard.php" class="action-btn featured announcement">መንፈሳዊ እንቅስቃሴዎች</a>
+        <a href="admin_finance.php" class="action-btn featured announcement">የገንዘብ እና የልገሳ አስተዳደር</a>
+        <a href="admin_sunday_school.php" class="action-btn featured announcement">ሰንበት ትምህርት እና አገልግሎት</a>
+        <a href="admin_sunday_school_classes.php" class="action-btn featured announcement">የሰንበት ክፍሎች፣ ተሳትፎና ውጤት</a>
+        <a href="admin_education_dashboard.php" class="action-btn featured announcement">የትምህርት አስተዳደር</a>
+        <a href="admin_management_dashboard.php" class="action-btn featured announcement">የቤተ ክርስቲያን ትምህርት አስተዳደር</a>
         <a href="admin_add_announcement.php" class="action-btn featured announcement">📢 ማስታወቂያ ጨምር</a>
         <a href="admin_website_settings.php" class="action-btn">⚙️ዌብሳይት ማስተካከያ</a>
         <a href="admin_ai_dashboard.php" class="action-btn featured">🤖 AI Smart ዳሽቦርድ</a>

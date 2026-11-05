@@ -4,6 +4,7 @@ header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 header('Expires: 0');
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/admin_management_i18n.php';
 requireRole(['student'], $pdo);
 
 function extractCourseModules($value): array
@@ -823,6 +824,7 @@ if (empty($notifications)) {
             <a href="sofonyas%20(2).html">Home</a>
             <a href="tutorial.php">Courses</a>
             <a href="my_courses.php">My Courses</a>
+            <a href="sunday_school_student.php"><?php echo safe(adminManagementText('sunday_student_portal')); ?></a>
             <a href="ai_personal_tutor.php">AI Tutor</a>
             <a href="smart_learning_path.php">Learning Path</a>
             <a href="live_class.php">Live Class</a>

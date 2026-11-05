@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/admin_management_i18n.php';
 
 if (!isset($_SESSION['admin_id']) || ($_SESSION['user_role'] ?? 'Admin') !== 'Instructor') {
     header('Location: admin_login.php');
@@ -116,6 +117,7 @@ $recent_students = $pdo->query('SELECT * FROM students ORDER BY created_at DESC 
                 <a class="btn" href="admin_view_courses.php">View Courses</a>
                 <a class="btn secondary" href="admin_questions.php">Manage Questions</a>
                 <a class="btn" href="admin_courses.php">Create Course</a>
+                <a class="btn secondary" href="sunday_school_teacher.php"><?php echo safe(adminManagementText('sunday_teacher_portal')); ?></a>
             </div>
         </div>
 

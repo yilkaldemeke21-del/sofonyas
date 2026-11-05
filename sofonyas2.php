@@ -1488,6 +1488,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reply_message']) && i
                 </ul>
             </div>
             <div style="background:#fff; border-radius:12px; padding:14px; box-shadow:0 8px 20px rgba(15,23,42,0.05);">
+                <strong data-am="የተማሪ ማህበራዊ ቡድኖች" data-en="Study Groups">የተማሪ ማህበራዊ ቡድኖች</strong>
+                <ul style="margin:8px 0 0 16px; padding:0; color:#475569; line-height:1.6;">
+                    <li data-am="ቡድን መፍጠር" data-en="Create group">ቡድን መፍጠር</li>
+                    <li data-am="ተማሪዎችን መጋበዝ" data-en="Invite students">ተማሪዎችን መጋበዝ</li>
+                    <li data-am="የቡድን ውይይት" data-en="Group discussion">የቡድን ውይይት</li>
+                    <li data-am="የተጋራ ሀብት" data-en="Shared resources">የተጋራ ሀብት</li>
+                    <li data-am="የቡድን እድገት" data-en="Group progress">የቡድን እድገት</li>
+                </ul>
+            </div>
+            <div style="background:#fff; border-radius:12px; padding:14px; box-shadow:0 8px 20px rgba(15,23,42,0.05);">
+                <strong data-am="የፍተሻ አቻ አቻ ግምገማ" data-en="Peer Review">የፍተሻ አቻ አቻ ግምገማ</strong>
+                <ul style="margin:8px 0 0 16px; padding:0; color:#475569; line-height:1.6;">
+                    <li data-am="ተማሪ ሥራ ይሰጣል" data-en="Student assignment submission">ተማሪ ሥራ ይሰጣል</li>
+                    <li data-am="ሌላ ተማሪ ይገመግመዋል" data-en="Another student reviews it">ሌላ ተማሪ ይገመግመዋል</li>
+                    <li data-am="የሪቡሪክ እና የግብረመልስ ፍተሻ" data-en="Rubric and feedback">የሪቡሪክ እና የግብረመልስ ፍተሻ</li>
+                </ul>
+            </div>
+            <div style="background:#fff; border-radius:12px; padding:14px; box-shadow:0 8px 20px rgba(15,23,42,0.05);">
                 <strong data-am="አለም አቀፍ ፍለጋ" data-en="Global Search">Global Search</strong>
                 <p style="margin:6px 0 0; color:#475569;" data-am="በአጭሩ የእርስዎን መረጃ የሚያገኙበት የፍለጋ ስርዓት" data-en="Provide a fast search experience so learners can instantly find the information they need.">Provide a fast search experience so learners can instantly find the information they need.</p>
             </div>
