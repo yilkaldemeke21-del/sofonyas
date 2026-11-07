@@ -181,6 +181,31 @@ function ensureManagementTables(PDO $pdo): void
         }
     }
 
+    $pdo->exec("CREATE TABLE IF NOT EXISTS church_sacramental_records (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        record_number VARCHAR(40) DEFAULT NULL,
+        record_type ENUM('baptism', 'marriage', 'communion', 'confirmation', 'funeral', 'other') NOT NULL,
+        member_id INT UNSIGNED DEFAULT NULL,
+        participant_name VARCHAR(180) NOT NULL,
+        other_participant_name VARCHAR(180) DEFAULT NULL,
+        event_date DATE NOT NULL,
+        officiant VARCHAR(180) DEFAULT NULL,
+        branch_id INT UNSIGNED DEFAULT NULL,
+        location VARCHAR(180) DEFAULT NULL,
+        sponsor_names VARCHAR(500) DEFAULT NULL,
+        certificate_number VARCHAR(80) DEFAULT NULL,
+        notes TEXT DEFAULT NULL,
+        created_by INT DEFAULT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_sacramental_record_number (record_number),
+        UNIQUE KEY uq_sacramental_certificate_number (certificate_number),
+        INDEX idx_sacramental_type_date (record_type, event_date),
+        INDEX idx_sacramental_member_date (member_id, event_date),
+        CONSTRAINT fk_sacramental_member FOREIGN KEY (member_id) REFERENCES church_members (id) ON DELETE SET NULL,
+        CONSTRAINT fk_sacramental_branch FOREIGN KEY (branch_id) REFERENCES church_branches (id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
     $pdo->exec("CREATE TABLE IF NOT EXISTS finance_transactions (
         id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         transaction_type ENUM('income', 'expense') NOT NULL,
@@ -194,6 +219,90 @@ function ensureManagementTables(PDO $pdo): void
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_finance_type_date (transaction_type, transaction_date),
         INDEX idx_finance_date (transaction_date)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS church_payroll_employees (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        employee_code VARCHAR(40) NOT NULL,
+        full_name VARCHAR(180) NOT NULL,
+        job_title VARCHAR(120) NOT NULL,
+        phone VARCHAR(40) DEFAULT NULL,
+        email VARCHAR(190) DEFAULT NULL,
+        monthly_salary DECIMAL(12,2) NOT NULL,
+        status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+        created_by INT DEFAULT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_payroll_employee_code (employee_code),
+        INDEX idx_payroll_employee_status_name (status, full_name)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS church_payroll_records (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        payroll_number VARCHAR(50) DEFAULT NULL,
+        employee_id INT UNSIGNED NOT NULL,
+        payroll_period CHAR(7) NOT NULL,
+        gross_salary DECIMAL(12,2) NOT NULL,
+        income_tax DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+        pension DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+        other_deductions DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+        net_pay DECIMAL(12,2) NOT NULL,
+        status ENUM('pending', 'paid') NOT NULL DEFAULT 'pending',
+        payment_date DATE DEFAULT NULL,
+        payment_method VARCHAR(60) DEFAULT NULL,
+        payment_reference VARCHAR(120) DEFAULT NULL,
+        finance_transaction_id BIGINT UNSIGNED DEFAULT NULL,
+        notes VARCHAR(500) DEFAULT NULL,
+        created_by INT DEFAULT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_payroll_number (payroll_number),
+        UNIQUE KEY uq_payroll_employee_period (employee_id, payroll_period),
+        UNIQUE KEY uq_payroll_finance_transaction (finance_transaction_id),
+        INDEX idx_payroll_period_status (payroll_period, status),
+        CONSTRAINT fk_payroll_record_employee FOREIGN KEY (employee_id) REFERENCES church_payroll_employees (id) ON DELETE RESTRICT,
+        CONSTRAINT fk_payroll_record_finance FOREIGN KEY (finance_transaction_id) REFERENCES finance_transactions (id) ON DELETE RESTRICT
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS church_benevolence_cases (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        member_id INT UNSIGNED NOT NULL,
+        case_type ENUM('food', 'housing', 'medical', 'education', 'financial', 'other') NOT NULL DEFAULT 'other',
+        request_summary VARCHAR(500) NOT NULL,
+        requested_amount DECIMAL(12,2) DEFAULT NULL,
+        approved_amount DECIMAL(12,2) DEFAULT NULL,
+        status ENUM('pending', 'approved', 'declined', 'disbursed', 'closed') NOT NULL DEFAULT 'pending',
+        confidential_notes TEXT DEFAULT NULL,
+        requested_on DATE NOT NULL,
+        reviewed_by INT DEFAULT NULL,
+        reviewed_at DATETIME DEFAULT NULL,
+        disbursed_at DATETIME DEFAULT NULL,
+        finance_transaction_id BIGINT UNSIGNED DEFAULT NULL,
+        created_by INT DEFAULT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_benevolence_finance_transaction (finance_transaction_id),
+        INDEX idx_benevolence_status_date (status, requested_on),
+        INDEX idx_benevolence_member_date (member_id, requested_on),
+        CONSTRAINT fk_benevolence_member FOREIGN KEY (member_id) REFERENCES church_members (id) ON DELETE RESTRICT,
+        CONSTRAINT fk_benevolence_finance FOREIGN KEY (finance_transaction_id) REFERENCES finance_transactions (id) ON DELETE RESTRICT
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $pdo->exec("CREATE TABLE IF NOT EXISTS church_livestreams (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(180) NOT NULL,
+        description TEXT DEFAULT NULL,
+        platform ENUM('youtube', 'facebook', 'website', 'other') NOT NULL DEFAULT 'youtube',
+        stream_url VARCHAR(1000) DEFAULT NULL,
+        replay_url VARCHAR(1000) DEFAULT NULL,
+        event_at DATETIME NOT NULL,
+        status ENUM('scheduled', 'live', 'ended', 'cancelled') NOT NULL DEFAULT 'scheduled',
+        is_public TINYINT(1) NOT NULL DEFAULT 1,
+        created_by INT DEFAULT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_church_livestream_status_date (status, event_at),
+        INDEX idx_church_livestream_public_date (is_public, event_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
     $pdo->exec("CREATE TABLE IF NOT EXISTS church_ministry_staff (

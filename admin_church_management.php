@@ -70,6 +70,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ]);
                     $message = adminManagementText('attendance_saved');
                 }
+            } elseif ($action === 'record_bulk_attendance') {
+                $serviceName = trim((string)($_POST['bulk_service_name'] ?? ''));
+                $serviceDate = (string)($_POST['bulk_service_date'] ?? '');
+                $bulkStatuses = $_POST['bulk_status'] ?? [];
+                $validDate = DateTime::createFromFormat('!Y-m-d', $serviceDate);
+                $invalidBulkInput = !is_array($bulkStatuses)
+                    || $serviceName === ''
+                    || strlen($serviceName) > 120
+                    || !$validDate
+                    || $validDate->format('Y-m-d') !== $serviceDate;
+                $selectedStatuses = [];
+                $memberIds = [];
+
+                if (!$invalidBulkInput) {
+                    foreach ($bulkStatuses as $rawMemberId => $status) {
+                        $memberId = filter_var((string)$rawMemberId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+                        if ($memberId === false || !is_string($status) || !in_array($status, ['', 'present', 'late', 'absent'], true)) {
+                            $invalidBulkInput = true;
+                            break;
+                        }
+                        $memberIds[] = (int)$memberId;
+                        if ($status !== '') {
+                            $selectedStatuses[(int)$memberId] = $status;
+                        }
+                    }
+                }
+
+                if ($invalidBulkInput || !$memberIds || !$selectedStatuses) {
+                    $error = adminManagementText('attendance_bulk_invalid');
+                } else {
+                    $memberPlaceholders = implode(',', array_fill(0, count($memberIds), '?'));
+                    $activeMemberStmt = $pdo->prepare("SELECT id FROM church_members WHERE status = 'active' AND id IN ($memberPlaceholders)");
+                    $activeMemberStmt->execute($memberIds);
+                    $activeMemberIds = array_map('intval', $activeMemberStmt->fetchAll(PDO::FETCH_COLUMN));
+                    sort($activeMemberIds);
+                    $submittedMemberIds = array_values(array_unique($memberIds));
+                    sort($submittedMemberIds);
+
+                    if ($activeMemberIds !== $submittedMemberIds) {
+                        $error = adminManagementText('attendance_bulk_invalid');
+                    } else {
+                        $pdo->beginTransaction();
+                        $bulkStmt = $pdo->prepare("INSERT INTO church_attendance (member_id, service_name, service_date, attendance_status, attendance_method, recorded_by) VALUES (:member_id, :service_name, :service_date, :attendance_status, 'manual', :recorded_by) ON DUPLICATE KEY UPDATE attendance_status = VALUES(attendance_status), recorded_by = VALUES(recorded_by)");
+                        $recordedBy = (string)($_SESSION['admin_username'] ?? $_SESSION['admin_name'] ?? 'Admin');
+                        foreach ($selectedStatuses as $memberId => $status) {
+                            $bulkStmt->execute([
+                                ':member_id' => $memberId,
+                                ':service_name' => $serviceName,
+                                ':service_date' => $serviceDate,
+                                ':attendance_status' => $status,
+                                ':recorded_by' => $recordedBy,
+                            ]);
+                        }
+                        $pdo->commit();
+                        $message = adminManagementText('attendance_bulk_saved');
+                    }
+                }
             } elseif ($action === 'set_member_status') {
                 $memberId = (int)($_POST['member_id'] ?? 0);
                 $status = (string)($_POST['status'] ?? '');
@@ -80,6 +137,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         } catch (PDOException $exception) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
             $error = $exception->getCode() === '23000'
                 ? adminManagementText('duplicate_attendance')
                 : adminManagementText('save_error');
@@ -96,9 +156,31 @@ if (!$selectedDate || $selectedDate->format('Y-m-d') !== $attendanceDate) {
 
 $members = $pdo->query('SELECT id, full_name, phone, email, joined_on, status FROM church_members ORDER BY full_name ASC')->fetchAll(PDO::FETCH_ASSOC);
 $recentMembers = $pdo->query('SELECT id, full_name, phone, email, joined_on, status FROM church_members ORDER BY created_at DESC LIMIT 30')->fetchAll(PDO::FETCH_ASSOC);
-$attendanceStmt = $pdo->prepare('SELECT a.*, m.full_name FROM church_attendance a JOIN church_members m ON m.id = a.member_id WHERE a.service_date = :service_date ORDER BY a.service_name, m.full_name');
-$attendanceStmt->execute([':service_date' => $attendanceDate]);
+$serviceOptions = $pdo->query("SELECT DISTINCT service_name FROM church_attendance WHERE service_name <> '' ORDER BY service_name ASC")->fetchAll(PDO::FETCH_COLUMN);
+$serviceFilter = trim((string)($_GET['service_name'] ?? ''));
+if (!in_array($serviceFilter, $serviceOptions, true)) {
+    $serviceFilter = '';
+}
+
+if ($serviceFilter !== '') {
+    $attendanceStmt = $pdo->prepare('SELECT m.id AS member_id, m.full_name, a.service_name, a.attendance_status, a.notes, a.recorded_by FROM church_members m LEFT JOIN church_attendance a ON a.member_id = m.id AND a.service_date = :service_date AND a.service_name = :service_name WHERE m.status = "active" ORDER BY m.full_name ASC');
+    $attendanceStmt->execute([':service_date' => $attendanceDate, ':service_name' => $serviceFilter]);
+} else {
+    $attendanceStmt = $pdo->prepare('SELECT a.*, m.full_name FROM church_attendance a JOIN church_members m ON m.id = a.member_id WHERE a.service_date = :service_date ORDER BY a.service_name, m.full_name');
+    $attendanceStmt->execute([':service_date' => $attendanceDate]);
+}
 $attendanceRows = $attendanceStmt->fetchAll(PDO::FETCH_ASSOC);
+$attendanceCounts = ['present' => 0, 'late' => 0, 'absent' => 0, 'not_recorded' => 0];
+if ($serviceFilter !== '') {
+    foreach ($attendanceRows as $attendanceRow) {
+        $status = (string)($attendanceRow['attendance_status'] ?? '');
+        if (array_key_exists($status, $attendanceCounts)) {
+            $attendanceCounts[$status]++;
+        } else {
+            $attendanceCounts['not_recorded']++;
+        }
+    }
+}
 $activeMembers = (int)$pdo->query("SELECT COUNT(*) FROM church_members WHERE status = 'active'")->fetchColumn();
 ?>
 <!DOCTYPE html>
@@ -158,12 +240,41 @@ $activeMembers = (int)$pdo->query("SELECT COUNT(*) FROM church_members WHERE sta
     </div>
     <section class="section" id="attendance-report">
         <div class="toolbar">
-            <div><h3 style="margin-bottom:4px"><?php echo safe(adminManagementText('attendance_report')); ?></h3><span class="muted"><?php echo count($attendanceRows); ?> <?php echo safe(adminManagementText('records_for')); ?> <?php echo safe($attendanceDate); ?></span></div>
-            <form method="get" class="no-print"><label for="date"><?php echo safe(adminManagementText('service_date')); ?></label><input id="date" name="date" type="date" value="<?php echo safe($attendanceDate); ?>"><button class="submit" type="submit" style="margin:0"><?php echo safe(adminManagementText('view')); ?></button><button class="submit print" type="button" onclick="window.print()"><?php echo safe(adminManagementText('print')); ?></button></form>
+            <div><h3 style="margin-bottom:4px"><?php echo safe(adminManagementText('attendance_report')); ?></h3><span class="muted"><?php echo count($attendanceRows); ?> <?php echo safe(adminManagementText($serviceFilter !== '' ? 'attendance_members_for' : 'records_for')); ?> <?php echo safe($serviceFilter !== '' ? $serviceFilter . ' · ' : ''); ?><?php echo safe($attendanceDate); ?></span></div>
+            <form method="get" class="no-print"><label for="date"><?php echo safe(adminManagementText('service_date')); ?></label><input id="date" name="date" type="date" value="<?php echo safe($attendanceDate); ?>"><label for="attendance_service_filter"><?php echo safe(adminManagementText('service_name')); ?></label><select id="attendance_service_filter" name="service_name"><option value=""><?php echo safe(adminManagementText('attendance_all_services')); ?></option><?php foreach ($serviceOptions as $serviceOption): ?><option value="<?php echo safe($serviceOption); ?>" <?php echo $serviceFilter === $serviceOption ? 'selected' : ''; ?>><?php echo safe($serviceOption); ?></option><?php endforeach; ?></select><button class="submit" type="submit" style="margin:0"><?php echo safe(adminManagementText('view')); ?></button><button class="submit print" type="button" onclick="window.print()"><?php echo safe(adminManagementText('print')); ?></button></form>
         </div>
+        <?php if ($serviceFilter !== ''): ?>
+            <div class="toolbar" style="justify-content:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+                <span class="stat"><strong><?php echo number_format($attendanceCounts['present']); ?></strong><?php echo safe(adminManagementText('present')); ?></span>
+                <span class="stat"><strong><?php echo number_format($attendanceCounts['late']); ?></strong><?php echo safe(adminManagementText('late')); ?></span>
+                <span class="stat"><strong><?php echo number_format($attendanceCounts['absent']); ?></strong><?php echo safe(adminManagementText('absent')); ?></span>
+                <span class="stat"><strong><?php echo number_format($attendanceCounts['not_recorded']); ?></strong><?php echo safe(adminManagementText('attendance_not_recorded')); ?></span>
+            </div>
+        <?php endif; ?>
+        <?php if ($serviceFilter !== ''): ?>
+            <form method="post">
+                <input type="hidden" name="csrf_token" value="<?php echo safe($csrf); ?>">
+                <input type="hidden" name="action" value="record_bulk_attendance">
+                <input type="hidden" name="bulk_service_name" value="<?php echo safe($serviceFilter); ?>">
+                <input type="hidden" name="bulk_service_date" value="<?php echo safe($attendanceDate); ?>">
+                <p class="muted"><?php echo safe(adminManagementText('attendance_bulk_hint')); ?></p>
+        <?php endif; ?>
         <div class="table-wrap"><table><thead><tr><th><?php echo safe(adminManagementText('member')); ?></th><th><?php echo safe(adminManagementText('service_name')); ?></th><th><?php echo safe(adminManagementText('status')); ?></th><th><?php echo safe(adminManagementText('notes')); ?></th><th><?php echo safe(adminManagementText('recorded_by')); ?></th></tr></thead><tbody>
-        <?php if (!$attendanceRows): ?><tr><td colspan="5"><?php echo safe(adminManagementText('no_attendance')); ?></td></tr><?php else: foreach ($attendanceRows as $row): ?><tr><td><?php echo safe($row['full_name']); ?></td><td><?php echo safe($row['service_name']); ?></td><td class="status status-<?php echo safe($row['attendance_status']); ?>"><?php echo safe(adminManagementText($row['attendance_status'])); ?></td><td><?php echo safe($row['notes'] ?? ''); ?></td><td><?php echo safe($row['recorded_by'] ?? ''); ?></td></tr><?php endforeach; endif; ?>
+        <?php if (!$attendanceRows): ?><tr><td colspan="5"><?php echo safe(adminManagementText('no_attendance')); ?></td></tr><?php else: foreach ($attendanceRows as $row): $rowStatus = (string)($row['attendance_status'] ?? ''); ?><tr><td><?php echo safe($row['full_name']); ?></td><td><?php echo safe($row['service_name'] ?? $serviceFilter); ?></td><td class="status status-<?php echo safe($rowStatus !== '' ? $rowStatus : 'not-recorded'); ?>">
+            <?php if ($serviceFilter !== ''): ?>
+                <select name="bulk_status[<?php echo (int)$row['member_id']; ?>]" aria-label="<?php echo safe(adminManagementText('status') . ': ' . $row['full_name']); ?>">
+                    <option value="" <?php echo $rowStatus === '' ? 'selected' : ''; ?>><?php echo safe(adminManagementText('attendance_choose_status')); ?></option>
+                    <option value="present" <?php echo $rowStatus === 'present' ? 'selected' : ''; ?>><?php echo safe(adminManagementText('present')); ?></option>
+                    <option value="late" <?php echo $rowStatus === 'late' ? 'selected' : ''; ?>><?php echo safe(adminManagementText('late')); ?></option>
+                    <option value="absent" <?php echo $rowStatus === 'absent' ? 'selected' : ''; ?>><?php echo safe(adminManagementText('absent')); ?></option>
+                </select>
+            <?php else: ?><?php echo safe(adminManagementText($rowStatus !== '' ? $rowStatus : 'attendance_not_recorded')); ?><?php endif; ?>
+        </td><td><?php echo safe($row['notes'] ?? ''); ?></td><td><?php echo safe($row['recorded_by'] ?? ''); ?></td></tr><?php endforeach; endif; ?>
         </tbody></table></div>
+        <?php if ($serviceFilter !== ''): ?>
+                <button class="submit" type="submit"><?php echo safe(adminManagementText('attendance_bulk_save')); ?></button>
+            </form>
+        <?php endif; ?>
     </section>
     <section class="section" style="margin-top:18px">
         <div class="toolbar"><h3 style="margin:0"><?php echo safe(adminManagementText('members_list')); ?></h3><span class="muted"><?php echo safe(adminManagementText('latest_30')); ?></span></div>
